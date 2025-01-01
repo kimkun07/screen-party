@@ -7,7 +7,7 @@ on:
     branches: ['main']
 
 jobs:
-  check:
+  Continuous-Integration:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -34,7 +34,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Check format
+      - name: Prettier
         run: pnpm format:check
 
       - name: Lint
