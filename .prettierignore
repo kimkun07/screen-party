@@ -11,5 +11,6 @@ vite.config.js*
 # Ignore files for PNPM, NPM and YARN
 pnpm-lock.yaml
 pnpm-workspace.yaml
+.pnpm-store/
 package-lock.json
 yarn.lock

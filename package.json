@@ -4,16 +4,17 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
     "prettier": "^3.2.5",
     "prettier-plugin-svelte": "^3.2.2",
     "turbo": "^2.3.3"
   },
-  "packageManager": "pnpm@8.15.6",
+  "packageManager": "pnpm@9.15.2",
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "name": "with-svelte"
 }
