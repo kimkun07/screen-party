@@ -1,5 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalEnv": ["ELECTRON_RENDERER_URL"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

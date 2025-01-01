@@ -1,23 +1,10 @@
 module.exports = {
-  parserOptions: {
-    extraFileExtensions: ['.svelte']
-  },
-  extends: [
-    'eslint:recommended',
-    'plugin:svelte/recommended',
-    '@electron-toolkit/eslint-config-ts/recommended',
-    '@electron-toolkit/eslint-config-prettier'
-  ],
-  overrides: [
-    {
-      files: ['*.svelte'],
-      parser: 'svelte-eslint-parser',
-      parserOptions: {
-        parser: '@typescript-eslint/parser'
-      }
-    }
-  ],
-  rules: {
-    'svelte/no-unused-svelte-ignore': 'off'
-  }
-}
+	extends: [
+		'@repo/eslint-config/index.js',
+		'@electron-toolkit/eslint-config-ts/recommended',
+		'@electron-toolkit/eslint-config-prettier'
+	],
+	rules: {
+		'svelte/no-unused-svelte-ignore': 'off'
+	}
+};
