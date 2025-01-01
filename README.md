@@ -2,6 +2,18 @@
 
 This is an official starter Turborepo.
 
+## Install
+
+```sh
+pnpm install
+```
+
+## Usage
+
+```sh
+pnpm run dev
+```
+
 ## Using this example
 
 Run the following command:
