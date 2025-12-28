@@ -39,7 +39,7 @@
 
 | 우선순위 | Task | 상태 | 설명 | 의존성 |
 |---------|------|------|------|--------|
-| P0 | project-structure | 🟡 준비중 | Poetry monorepo 구조 설정 | - |
+| P0 | project-structure | ✅ 완료 | Poetry monorepo 구조 설정 | - |
 | P0 | session-management | 🟡 준비중 | 세션 생성/관리 (6자리 코드) | project-structure |
 | P0 | server-core | 🟡 준비중 | WebSocket 서버 기본 구조 | project-structure, session-management |
 | P0 | client-core | 🟡 준비중 | 클라이언트 기본 GUI 및 연결 | project-structure |
@@ -244,16 +244,32 @@ screen-party/
 
 ## 최근 업데이트
 
+### 2025-12-28 - P0 project-structure 완료
+
+**작업 내용**:
+- ✅ Python 3.13.4 설치 (pyenv)
+- ✅ Poetry 2.2.1 설치
+- ✅ Poetry monorepo 구조 생성
+  - 루트, server, client 각각 독립 pyproject.toml
+  - server: websockets 14.2
+  - client: PyQt6, scipy, numpy, qasync
+- ✅ 의존성 설치 및 import 테스트 성공
+
+**주요 결정**:
+- PyInstaller는 Python 3.13 미지원으로 P1까지 보류
+
+**다음 단계**:
+1. session-management: 6자리 세션 ID 생성
+2. server-core: WebSocket 서버 구현
+3. client-core: PyQt6 GUI 기본 구조
+
 ### 2025-12-28 - 프로젝트 초기 설정
 
 **작업 내용**:
 - CLAUDE.md 업데이트 (screen-party 프로젝트용)
-- devlog 디렉토리 구조 생성
+- devlog 디렉토리 구조 생성 (14개 task)
 - main.md 작성 (프로젝트 개요, Task 목록, 우선순위)
-
-**다음 단계**:
-1. 각 Task별 devlog 파일 생성
-2. project-structure task 시작 (Poetry monorepo 설정)
+- 우선순위 재조정 (테스트/배포 → P1)
 
 ---
 

@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "screen-party-server"
+version = "0.1.0"
+description = "Screen Party WebSocket 서버"
+authors = ["Your Name <your.email@example.com>"]
+readme = "README.md"
+packages = [{include = "screen_party_server", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.13"
+websockets = "^14.1"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.0"
+pytest-asyncio = "^0.24.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

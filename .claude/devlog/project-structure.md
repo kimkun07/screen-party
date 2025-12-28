@@ -7,11 +7,11 @@ Poetry monorepo 구조 설정 - 루트와 server/client 디렉토리에 각각 �
 ## 목표
 
 - [x] 루트 pyproject.toml 생성 (workspace 설정)
-- [ ] server/ 디렉토리 구조 및 pyproject.toml 생성
-- [ ] client/ 디렉토리 구조 및 pyproject.toml 생성
-- [ ] .gitignore 파일 생성 (Python 프로젝트용)
-- [ ] 기본 README.md 생성
-- [ ] Poetry 설치 및 의존성 초기화
+- [x] server/ 디렉토리 구조 및 pyproject.toml 생성
+- [x] client/ 디렉토리 구조 및 pyproject.toml 생성
+- [x] .gitignore 파일 생성 (Python 프로젝트용)
+- [x] 기본 README.md 생성
+- [x] Poetry 설치 및 의존성 초기화
 
 ## 상세 요구사항
 
@@ -69,13 +69,54 @@ screen-party/
 
 ## TODO
 
-- [ ] 루트 pyproject.toml 작성
-- [ ] server 디렉토리 구조 생성
-- [ ] client 디렉토리 구조 생성
-- [ ] .gitignore 작성
-- [ ] Poetry 의존성 설치 확인 (`poetry install`)
-- [ ] 각 패키지 import 테스트
+- [x] 루트 pyproject.toml 작성
+- [x] server 디렉토리 구조 생성
+- [x] client 디렉토리 구조 생성
+- [x] .gitignore 작성
+- [x] Poetry 의존성 설치 확인 (`poetry install`)
+- [x] 각 패키지 import 테스트
 
 ## 클로드 코드 일기
 
-_이 섹션은 작업 진행 시 업데이트됩니다._
+### 2025-12-28 - Poetry Monorepo 구조 완성
+
+**상태**: 🟡 준비중 → ✅ 완료
+
+**진행 내용**:
+- ✅ Python 3.13.4 설치 및 pyenv 설정
+- ✅ Poetry 2.2.1 설치
+- ✅ 루트 pyproject.toml 작성 (package-mode = false)
+- ✅ server/ 디렉토리 구조 생성
+  - pyproject.toml (websockets 14.2 포함)
+  - src/screen_party_server/__init__.py
+  - tests/__init__.py
+  - README.md
+- ✅ client/ 디렉토리 구조 생성
+  - pyproject.toml (PyQt6, scipy, numpy, qasync 포함)
+  - src/screen_party_client/__init__.py
+  - tests/__init__.py
+  - README.md
+- ✅ 각 패키지 의존성 설치 성공
+- ✅ Import 테스트 성공
+
+**주요 결정사항**:
+- Python 버전: 3.13.4 (최신 안정 버전)
+- PyInstaller: Python 3.13 미지원으로 P1 client-deployment까지 보류
+- 루트는 workspace 역할만 (package-mode = false)
+
+**테스트 결과**:
+- ✅ server import 성공 (version 0.1.0)
+- ✅ client import 성공 (version 0.1.0)
+
+**다음 단계**:
+P0 나머지 task 진행:
+1. session-management: 6자리 세션 ID 생성
+2. server-core: WebSocket 서버 구현
+3. client-core: PyQt6 GUI 기본 구조
+
+---
+
+> **다음 Claude Code에게**:
+> - server/client는 각각 독립적인 virtualenv를 가집니다
+> - 작업 시 `cd server && poetry run ...` 또는 `cd client && poetry run ...` 사용
+> - PyInstaller는 나중에 Python 3.13 지원 버전이 나오면 추가하세요
