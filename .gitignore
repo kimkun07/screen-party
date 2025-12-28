@@ -29,7 +29,6 @@ env/
 .venv
 
 # Poetry
-poetry.lock
 .poetry/
 
 # PyInstaller
@@ -64,9 +63,6 @@ desktop.ini
 
 # Jupyter Notebook
 .ipynb_checkpoints
-
-# pyenv
-.python-version
 
 # Environments
 .env
