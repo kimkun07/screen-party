@@ -39,11 +39,12 @@
 
 ## 기술 스택
 
-- **언어**: Python 3.11+
+- **언어**: Python 3.13+
 - **GUI**: PyQt6
 - **서버**: WebSocket (asyncio + websockets)
 - **드로잉**: scipy (Spline 보간), QPainter
-- **패키지 관리**: Poetry (monorepo)
+- **패키지 관리**: Pip + requirements.txt (Tweag monorepo 방식)
+- **빌드 시스템**: setuptools
 - **배포**:
   - 서버: Docker
   - 클라이언트: PyInstaller (Windows .exe, Linux binary)
@@ -117,23 +118,55 @@ screen-party/
 4. 작업 진행 및 devlog 업데이트
 5. 커밋 메시지 형식: `[task] 한글 설명`
 
-### 로컬 개발 (예정)
+### 개발 환경 설정
+
+#### VS Code Devcontainer (권장)
+
+이 프로젝트는 devcontainer를 지원합니다. VS Code에서 바로 개발 환경을 실행할 수 있습니다.
+
+1. VS Code에서 프로젝트 열기
+2. `Reopen in Container` 선택 (팝업 또는 Command Palette)
+3. 컨테이너가 빌드되고 시작됨 (Python 3.13 + Claude Code)
+4. 터미널에서 바로 작업 가능
+
+#### 로컬 개발
+
+Python 3.13 이상이 필요합니다.
 
 ```bash
-# Poetry 설치
-curl -sSL https://install.python-poetry.org | python3 -
+# 1. 가상환경 생성
+python3.13 -m venv .venv
 
-# 의존성 설치
-poetry install
+# 2. pip 및 의존성 설치
+.venv/bin/pip install -r pip-requirements.txt
+.venv/bin/pip install -r server/requirements.txt
+cd client && ../.venv/bin/pip install -r requirements.txt && cd ..
+.venv/bin/pip install -r dev-requirements.txt
 
-# 서버 실행
-cd server
-poetry run python -m screen_party_server.server
+# 3. 서버를 editable mode로 설치
+.venv/bin/pip install -e server/
 
-# 클라이언트 실행
-cd client
-poetry run python -m screen_party_client.main
+# 4. 테스트 실행
+.venv/bin/pytest -v
+
+# 5. 서버 실행 (개발 시)
+.venv/bin/python -m screen_party_server.server
+
+# 또는 가상환경 활성화 후 사용
+source .venv/bin/activate
+pytest -v
+python -m screen_party_server.server
 ```
+
+#### 의존성 구조
+
+이 프로젝트는 **Tweag Python monorepo** 방식을 사용합니다:
+
+- `pip-requirements.txt` - pip 버전 고정
+- `dev-requirements.txt` - 개발 도구 (pytest, black, ruff)
+- `server/requirements.txt` - 서버 의존성
+- `client/requirements.txt` - 클라이언트 의존성 + editable server (`-e ../server`)
+- `server/pyproject.toml`, `client/pyproject.toml` - setuptools 빌드 설정
 
 ## 라이선스
 

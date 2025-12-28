@@ -1,24 +1,5 @@
-[tool.poetry]
-name = "screen-party"
-version = "0.1.0"
-description = "실시간 화면 드로잉 공유 애플리케이션"
-authors = ["Your Name <your.email@example.com>"]
-readme = "README.md"
-package-mode = false
-
-[tool.poetry.dependencies]
-python = "^3.13"
-
-[tool.poetry.group.dev.dependencies]
-pytest = "^8.3.0"
-pytest-asyncio = "^0.24.0"
-pytest-cov = "^6.0.0"
-black = "^24.0.0"
-ruff = "^0.8.0"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+# Root configuration for development tools only
+# This file is not used for building packages
 
 [tool.black]
 line-length = 100
@@ -31,3 +12,6 @@ target-version = "py313"
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["server/tests", "client/tests"]
+
+[tool.pyright]
+pythonVersion = "3.13"

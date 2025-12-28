@@ -33,6 +33,7 @@ screen-party 프로젝트는 **여러 개의 독립적인 Task로 구성**되어
 
 ```
 screen-party/
+├── CLAUDE.md                   # 이 문서
 ├── server/                     # 서버 코드
 │   ├── pyproject.toml
 │   ├── src/
@@ -44,7 +45,6 @@ screen-party/
 ├── pyproject.toml              # 루트 monorepo 설정
 ├── Dockerfile                  # 서버 Docker 이미지
 └── .claude/
-    ├── CLAUDE.md               # 이 문서
     └── devlog/                 # Task 진행 상황 추적
         ├── main.md                     # 전체 프로젝트 진행 상황 (시작점)
         ├── project-structure.md        # Task: Poetry monorepo 구조

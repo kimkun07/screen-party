@@ -28,8 +28,9 @@ ENV/
 env/
 .venv
 
-# Poetry
+# Poetry (legacy - no longer used)
 .poetry/
+poetry.lock
 
 # PyInstaller
 *.manifest

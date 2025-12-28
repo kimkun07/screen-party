@@ -1,0 +1,2 @@
+# Server runtime dependencies
+websockets==14.1
