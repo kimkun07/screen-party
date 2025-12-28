@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tree:*)",
+      "Bash(docker compose:*)",
+      "WebSearch",
+      "WebFetch(domain:docs.docker.com)",
+      "WebFetch(domain:*.docker.com)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
