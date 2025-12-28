@@ -40,7 +40,7 @@
 | 우선순위 | Task | 상태 | 설명 | 의존성 |
 |---------|------|------|------|--------|
 | P0 | project-structure | ✅ 완료 | Poetry monorepo 구조 설정 | - |
-| P0 | session-management | 🟡 준비중 | 세션 생성/관리 (6자리 코드) | project-structure |
+| P0 | session-management | ✅ 완료 | 세션 생성/관리 (6자리 코드) | project-structure |
 | P0 | server-core | 🟡 준비중 | WebSocket 서버 기본 구조 | project-structure, session-management |
 | P0 | client-core | 🟡 준비중 | 클라이언트 기본 GUI 및 연결 | project-structure |
 | P1 | testing | 🟡 준비중 | 유닛 테스트 (간단한 클릭 소통) | server-core, client-core |
@@ -243,6 +243,28 @@ screen-party/
 - ❓ 색상 팔레트: 미리 정의된 색상? 커스텀 RGB?
 
 ## 최근 업데이트
+
+### 2025-12-28 - P0 session-management 완료
+
+**작업 내용**:
+- ✅ Session, Guest 데이터 모델 정의 (models.py)
+- ✅ SessionManager 클래스 구현 (session.py)
+  - 6자리 세션 ID 생성 (대문자+숫자, 최대 10회 재시도)
+  - 세션 CRUD 작업 (create, get, add_guest, remove_guest, expire, delete)
+  - 타임아웃 처리 (기본 60분)
+  - 백그라운드 cleanup 태스크 (5분마다)
+- ✅ 유닛 테스트 작성 (14개 테스트, 모두 통과)
+
+**테스트 결과**:
+- 14/14 tests passed in 1.06s
+
+**주요 결정**:
+- 세션 ID: 36^6 = 2.1B 조합으로 충돌 확률 극히 낮음
+- 백그라운드 cleanup: asyncio task로 자동 실행
+
+**다음 단계**:
+1. server-core: WebSocket 서버 구현 (SessionManager 통합)
+2. client-core: PyQt6 GUI 기본 구조
 
 ### 2025-12-28 - P0 project-structure 완료
 
