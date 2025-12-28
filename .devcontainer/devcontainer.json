@@ -3,18 +3,21 @@
 {
 	"name": "Screen Party - Python 3.13",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "mcr.microsoft.com/devcontainers/python:1-3.13-trixie",
+	"image": "mcr.microsoft.com/devcontainers/python:3.13-trixie",
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	"features": {
 		"ghcr.io/devcontainers-extra/features/claude-code:1": {}
 	},
+	
+	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+  "remoteUser": "root",
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	"postCreateCommand": "python3.13 -m venv .venv && .venv/bin/pip install -r pip-requirements.txt && .venv/bin/pip install -r server/requirements.txt && cd client && ../.venv/bin/pip install -r requirements.txt && cd .. && .venv/bin/pip install -r dev-requirements.txt && .venv/bin/pip install -e server/ && echo 'source /workspaces/screen-party/.venv/bin/activate' >> ~/.bashrc",
+	"postCreateCommand": "bash .devcontainer/postCreate.sh",
 
 	// Configure tool-specific properties.
 	"customizations": {
@@ -25,8 +28,5 @@
 				"terminal.integrated.defaultProfile.linux": "bash"
 			}
 		}
-	},
-
-	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
-	// "remoteUser": "root"
+	}
 }

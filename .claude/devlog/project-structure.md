@@ -1,8 +1,8 @@
-# Task: Project Structure (Poetry Monorepo)
+# Task: Project Structure (pip Monorepo)
 
 ## 개요
 
-Poetry monorepo 구조 설정 - 루트와 server/client 디렉토리에 각각 독립적인 pyproject.toml 생성
+pip 기반 monorepo 구조 설정 - requirements.txt로 의존성 관리, devcontainer로 개발환경 통일
 
 ## 목표
 
@@ -78,45 +78,81 @@ screen-party/
 
 ## 클로드 코드 일기
 
-### 2025-12-28 - Poetry Monorepo 구조 완성
+### 2025-12-28 - pip Monorepo로 전환 완료
 
-**상태**: 🟡 준비중 → ✅ 완료
+**상태**: ✅ 완료 → ✅ 업데이트 완료
+
+**진행 내용**:
+- ✅ Poetry 제거 및 pip 기반 monorepo로 전환
+- ✅ devcontainer 설정 추가 (.devcontainer/devcontainer.json)
+  - Python 3.13 이미지 사용
+  - 필요한 VS Code 확장 프로그램 자동 설치
+  - Git 설정 자동화
+- ✅ requirements.txt 파일들 생성
+  - `server/requirements.txt`: websockets, pytest-asyncio
+  - `client/requirements.txt`: PyQt6, websockets, scipy, numpy, qasync
+  - `dev-requirements.txt`: black, ruff, pytest 등 개발 도구
+  - `pip-requirements.txt`: 루트 의존성
+- ✅ pyproject.toml 간소화 (도구 설정만 유지)
+  - black, ruff, pytest, pyright 설정
+
+**주요 결정사항**:
+- Poetry → pip: 더 간단하고 표준적인 의존성 관리
+- devcontainer: 팀원 간 개발환경 통일
+- Python 버전: 3.13.5 (devcontainer)
+- 모든 의존성을 requirements.txt로 관리
+
+**테스트 결과**:
+- ✅ pytest 29개 테스트 모두 통과
+- ✅ 서버/클라이언트 import 성공
+
+**다음 단계**:
+1. client-core: PyQt6 GUI 완성
+2. testing: 통합 테스트 작성
+
+---
+
+### 2025-12-28 - devcontainer 권한 문제 해결
+
+**상태**: ✅ 해결 완료
+
+**문제**:
+- devcontainer에서 생성된 파일이 uid 100999로 소유됨
+- 호스트(WSL2)에서 파일 읽기 권한 없음 (permission denied)
+
+**해결 방법**:
+1. **호스트에서 파일 소유권 변경**:
+   ```bash
+   sudo chown -R $USER:$USER /home/simelvia/Develop-WSL/screen-party
+   ```
+
+2. **devcontainer를 root 사용자로 실행**:
+   - `.devcontainer/devcontainer.json`에 `"remoteUser": "root"` 추가
+   - 이렇게 하면 컨테이너에서 모든 파일에 접근 가능
+
+3. **postCreateCommand 분리**:
+   - `.devcontainer/postCreate.sh` 스크립트로 분리하여 관리 용이
+
+**결과**:
+- ✅ 호스트(WSL2)와 devcontainer 양쪽 모두에서 파일 편집 가능
+- ✅ 권한 충돌 없이 개발 가능
+
+---
+
+### 2025-12-28 - Poetry Monorepo 구조 완성 (레거시)
+
+**상태**: 🟡 준비중 → ✅ 완료 → ⏸️ Poetry 제거됨
 
 **진행 내용**:
 - ✅ Python 3.13.4 설치 및 pyenv 설정
 - ✅ Poetry 2.2.1 설치
-- ✅ 루트 pyproject.toml 작성 (package-mode = false)
-- ✅ server/ 디렉토리 구조 생성
-  - pyproject.toml (websockets 14.2 포함)
-  - src/screen_party_server/__init__.py
-  - tests/__init__.py
-  - README.md
-- ✅ client/ 디렉토리 구조 생성
-  - pyproject.toml (PyQt6, scipy, numpy, qasync 포함)
-  - src/screen_party_client/__init__.py
-  - tests/__init__.py
-  - README.md
-- ✅ 각 패키지 의존성 설치 성공
-- ✅ Import 테스트 성공
-
-**주요 결정사항**:
-- Python 버전: 3.13.4 (최신 안정 버전)
-- PyInstaller: Python 3.13 미지원으로 P1 client-deployment까지 보류
-- 루트는 workspace 역할만 (package-mode = false)
-
-**테스트 결과**:
-- ✅ server import 성공 (version 0.1.0)
-- ✅ client import 성공 (version 0.1.0)
-
-**다음 단계**:
-P0 나머지 task 진행:
-1. session-management: 6자리 세션 ID 생성
-2. server-core: WebSocket 서버 구현
-3. client-core: PyQt6 GUI 기본 구조
+- ✅ Poetry monorepo 구조 생성
+- ⚠️ 이후 pip monorepo로 전환 (상단 참조)
 
 ---
 
 > **다음 Claude Code에게**:
-> - server/client는 각각 독립적인 virtualenv를 가집니다
-> - 작업 시 `cd server && poetry run ...` 또는 `cd client && poetry run ...` 사용
-> - PyInstaller는 나중에 Python 3.13 지원 버전이 나오면 추가하세요
+> - Poetry는 제거되었습니다. pip와 requirements.txt를 사용하세요
+> - devcontainer에서 작업하면 모든 의존성이 자동으로 설치됩니다
+> - 테스트 실행: `pytest` (루트에서)
+> - 개발 도구: black, ruff (pyproject.toml에 설정됨)
