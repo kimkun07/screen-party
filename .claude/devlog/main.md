@@ -41,7 +41,7 @@
 |---------|------|------|------|--------|
 | P0 | project-structure | ✅ 완료 | Poetry monorepo 구조 설정 | - |
 | P0 | session-management | ✅ 완료 | 세션 생성/관리 (6자리 코드) | project-structure |
-| P0 | server-core | 🟡 준비중 | WebSocket 서버 기본 구조 | project-structure, session-management |
+| P0 | server-core | ✅ 완료 | WebSocket 서버 기본 구조 | project-structure, session-management |
 | P0 | client-core | 🟡 준비중 | 클라이언트 기본 GUI 및 연결 | project-structure |
 | P1 | testing | 🟡 준비중 | 유닛 테스트 (간단한 클릭 소통) | server-core, client-core |
 | P1 | server-deployment | 🟡 준비중 | Docker 이미지 및 배포 | server-core, testing |
@@ -243,6 +243,29 @@ screen-party/
 - ❓ 색상 팔레트: 미리 정의된 색상? 커스텀 RGB?
 
 ## 최근 업데이트
+
+### 2025-12-28 - P0 server-core 완료
+
+**작업 내용**:
+- ✅ ScreenPartyServer 클래스 구현 (server.py)
+  - WebSocket 연결 관리 (clients, websocket_to_user)
+  - 메시지 핸들러 (create_session, join_session, ping, drawing_message)
+  - 브로드캐스트 시스템 (exclude 옵션 지원)
+  - 클라이언트 정리 로직 (호스트/게스트 disconnection)
+  - 에러 처리 및 로깅
+  - CLI 진입점 (환경 변수 지원)
+- ✅ 유닛 테스트 15개 작성 및 통과
+
+**테스트 결과**:
+- 15/15 tests passed in 0.08s
+
+**주요 결정**:
+- websockets 14.x 최신 API 사용 (ServerConnection)
+- 기본 포트: 8765 (환경 변수로 변경 가능)
+- 호스트 disconnection 시 세션 만료 전 알림 전송
+
+**다음 단계**:
+1. client-core: PyQt6 GUI 및 WebSocket 클라이언트
 
 ### 2025-12-28 - P0 session-management 완료
 
