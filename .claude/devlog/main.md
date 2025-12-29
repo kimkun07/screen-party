@@ -26,11 +26,14 @@
 
 ### 기술 스택
 
-- **언어**: Python 3.11+
-- **패키지 관리**: Poetry (monorepo)
+- **언어**: Python 3.13+
+- **패키지 관리**: pip (requirements.txt)
+- **개발환경**: devcontainer (VS Code)
 - **서버**: WebSocket (asyncio, websockets 라이브러리)
 - **클라이언트 GUI**: PyQt6 (크로스 플랫폼 지원)
 - **드로잉**: scipy (Spline 보간), PyQt6 QPainter
+- **테스트**: pytest, pytest-asyncio, pytest-cov
+- **코드 품질**: black, ruff, pyright
 - **배포**:
   - 서버: Docker 이미지
   - 클라이언트: PyInstaller (Windows .exe, Linux AppImage/Binary)
@@ -39,11 +42,11 @@
 
 | 우선순위 | Task | 상태 | 설명 | 의존성 |
 |---------|------|------|------|--------|
-| P0 | project-structure | ✅ 완료 | Poetry monorepo 구조 설정 | - |
+| P0 | project-structure | ✅ 완료 | pip monorepo 구조 설정 + devcontainer | - |
 | P0 | session-management | ✅ 완료 | 세션 생성/관리 (6자리 코드) | project-structure |
 | P0 | server-core | ✅ 완료 | WebSocket 서버 기본 구조 | project-structure, session-management |
-| P0 | client-core | 🟡 준비중 | 클라이언트 기본 GUI 및 연결 | project-structure |
-| P1 | testing | 🟡 준비중 | 유닛 테스트 (간단한 클릭 소통) | server-core, client-core |
+| P0 | client-core | 🟢 진행중 | 클라이언트 기본 GUI 및 연결 (테스트 필요) | project-structure |
+| P1 | testing | 🟢 진행중 | 유닛 테스트 (서버 완료, 클라이언트/통합 필요) | server-core, client-core |
 | P1 | server-deployment | 🟡 준비중 | Docker 이미지 및 배포 | server-core, testing |
 | P1 | client-deployment | 🟡 준비중 | 클라이언트 실행 파일 빌드 | client-core, testing |
 | P2 | host-overlay | 🟡 준비중 | 호스트 투명 오버레이 | client-core, testing |
@@ -243,6 +246,73 @@ screen-party/
 - ❓ 색상 팔레트: 미리 정의된 색상? 커스텀 RGB?
 
 ## 최근 업데이트
+
+### 2025-12-28 - 개발환경을 pip monorepo로 전환
+
+**작업 내용**:
+- ✅ Poetry 제거 및 pip 기반 monorepo로 전환
+- ✅ devcontainer 설정 추가 (.devcontainer/devcontainer.json)
+  - Python 3.13 이미지 사용
+  - VS Code 확장 프로그램 자동 설치
+  - Git 설정 자동화
+- ✅ requirements.txt 파일들 생성
+  - `server/requirements.txt`: websockets, pytest-asyncio
+  - `client/requirements.txt`: PyQt6, websockets, scipy, numpy, qasync
+  - `dev-requirements.txt`: black, ruff, pytest 등
+- ✅ pyproject.toml 간소화 (도구 설정만)
+
+**주요 결정**:
+- Poetry → pip: 더 간단하고 표준적인 의존성 관리
+- devcontainer: 팀원 간 개발환경 통일
+- Python 3.13.5 사용
+
+**다음 단계**:
+1. client-core 완성 (테스트 작성)
+2. 통합 테스트 작성
+
+---
+
+### 2025-12-28 - 클라이언트 기본 구조 구현
+
+**작업 내용**:
+- ✅ MainWindow 클래스 구현 (276 lines)
+  - PyQt6 기반 GUI (Host/Guest 모드)
+  - 세션 ID 표시 및 입력
+  - PyQt Signal/Slot 이벤트 처리
+- ✅ WebSocketClient 클래스 구현 (137 lines)
+  - websockets 14.x 비동기 연결
+  - JSON 메시지 송수신
+  - 에러 처리 및 로깅
+- ✅ Host/Guest 모드 플로우 구현
+
+**주요 결정**:
+- qasync로 asyncio와 PyQt6 통합
+- Signal/Slot으로 UI 업데이트
+
+**다음 단계**:
+1. 클라이언트 유닛 테스트 작성
+2. 서버-클라이언트 통합 테스트
+3. 투명 오버레이 창 구현 (host-overlay)
+
+---
+
+### 2025-12-28 - 서버 유닛 테스트 완료
+
+**작업 내용**:
+- ✅ test_session.py (14개 테스트)
+- ✅ test_server.py (15개 테스트)
+- ✅ pytest 설정 (pyproject.toml)
+
+**테스트 결과**:
+- ✅ 29/29 테스트 통과 (100%)
+- 실행 시간: 1.09초
+
+**다음 단계**:
+1. 클라이언트 테스트 작성
+2. 통합 테스트 작성
+3. CI/CD 설정 (GitHub Actions)
+
+---
 
 ### 2025-12-28 - P0 server-core 완료
 

@@ -94,14 +94,71 @@ class WebSocketClient:
 
 ## TODO
 
-- [ ] MainWindow 클래스 구현 (gui/main_window.py)
-- [ ] WebSocketClient 클래스 구현 (network/client.py)
-- [ ] Host Mode UI 및 로직
-- [ ] Guest Mode UI 및 로직
-- [ ] qasync 통합 (main.py)
-- [ ] 에러 처리 및 사용자 피드백
+- [x] MainWindow 클래스 구현 (gui/main_window.py)
+- [x] WebSocketClient 클래스 구현 (network/client.py)
+- [x] Host Mode UI 및 로직
+- [x] Guest Mode UI 및 로직
+- [x] qasync 통합 (main.py)
+- [x] 에러 처리 및 사용자 피드백
 - [ ] 유닛 테스트 작성 (test_main_window.py, test_client.py)
+- [ ] 실제 서버 연결 테스트
+- [ ] 오버레이 창 구현 (host-overlay task로 이동 예정)
 
 ## 클로드 코드 일기
 
-_이 섹션은 작업 진행 시 업데이트됩니다._
+### 2025-12-28 - 클라이언트 기본 구조 구현 완료
+
+**상태**: 🟡 준비중 → 🟢 진행중
+
+**진행 내용**:
+- ✅ MainWindow 클래스 구현 완료 (276 lines)
+  - PyQt6 기반 GUI 구현
+  - Host/Guest 모드 선택 UI
+  - 세션 ID 표시 및 입력
+  - 연결 상태 표시
+  - 에러 메시지 표시 (QMessageBox)
+  - PyQt Signal/Slot 시스템으로 이벤트 처리
+- ✅ WebSocketClient 클래스 구현 완료 (137 lines)
+  - websockets 14.x 사용 (ClientConnection)
+  - 비동기 연결/연결 종료
+  - 메시지 송수신 (JSON)
+  - 에러 처리 (ConnectionClosed, WebSocketException)
+  - 메시지 핸들러 콜백 지원
+  - 로깅 시스템 통합
+- ✅ Host Mode 플로우 구현
+  - "Host Mode" 버튼 → 서버 연결 → create_session → 세션 ID 표시
+- ✅ Guest Mode 플로우 구현
+  - "Guest Mode" 버튼 → 세션 ID 입력 → 서버 연결 → join_session
+- ✅ qasync 통합 준비 완료 (main.py에서 사용)
+
+**주요 결정사항**:
+- PyQt6 Signal/Slot: UI 업데이트를 메인 스레드에서 안전하게 처리
+- 비동기 처리: qasync로 asyncio와 PyQt6 이벤트 루프 통합
+- 에러 처리: try/except + QMessageBox로 사용자에게 명확한 피드백
+- 로깅: logging 모듈로 디버깅 정보 기록
+
+**구현된 기능**:
+- ✅ 모드 선택 (Host/Guest)
+- ✅ WebSocket 연결 관리
+- ✅ 세션 생성 (Host)
+- ✅ 세션 참여 (Guest)
+- ✅ 에러 메시지 표시
+- ✅ 연결 상태 UI 업데이트
+
+**미구현/다음 단계**:
+- [ ] 유닛 테스트 작성
+- [ ] 실제 서버와 통신 테스트 (server-core와 통합)
+- [ ] 게스트 리스트 표시
+- [ ] 드로잉 메시지 송수신 (drawing-engine task에서 구현)
+- [ ] 투명 오버레이 창 (host-overlay task로 분리)
+
+**테스트 결과**:
+- ⚠️ 유닛 테스트 아직 미작성 (P1 testing task에서 진행 예정)
+
+---
+
+> **다음 Claude Code에게**:
+> - MainWindow와 WebSocketClient는 구현되어 있지만 **실제 서버와의 통합 테스트가 필요**합니다
+> - qasync를 사용하여 비동기 처리를 합니다 (예제: main.py 참조)
+> - 클라이언트 테스트 작성 시 Mock WebSocket을 사용하세요
+> - 투명 오버레이는 host-overlay task에서 별도로 구현합니다

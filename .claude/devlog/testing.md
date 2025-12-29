@@ -158,8 +158,8 @@ jobs:
 ## TODO
 
 ### P1: 초기 테스트 (지금 구현)
-- [ ] test_session.py 작성 (세션 생성, 조회만)
-- [ ] test_server.py 작성 (클릭 메시지 브로드캐스트)
+- [x] test_session.py 작성 (세션 생성, 조회만) - ✅ 14개 테스트
+- [x] test_server.py 작성 (클릭 메시지 브로드캐스트) - ✅ 15개 테스트
 - [ ] test_client.py 작성 (WebSocket 연결)
 - [ ] test_integration.py 작성 (간단한 클릭 소통 시나리오)
 - [ ] .github/workflows/test.yml 작성 (CI/CD)
@@ -173,4 +173,57 @@ jobs:
 
 ## 클로드 코드 일기
 
-_이 섹션은 작업 진행 시 업데이트됩니다._
+### 2025-12-28 - 서버 유닛 테스트 완료
+
+**상태**: 🟡 준비중 → 🟢 진행중
+
+**진행 내용**:
+- ✅ test_session.py 작성 완료 (14개 테스트)
+  - 세션 ID 생성 및 중복 방지
+  - 세션 CRUD 작업
+  - 게스트 추가/제거
+  - 세션 만료 및 cleanup
+  - 백그라운드 cleanup 태스크
+  - 세션 활동 시간 업데이트
+- ✅ test_server.py 작성 완료 (15개 테스트)
+  - 서버 초기화
+  - 세션 생성/참여
+  - 핑/퐁
+  - 브로드캐스트 (일반, 특정 사용자 제외)
+  - 사용자 세션 찾기
+  - 클라이언트 정리 (호스트/게스트)
+  - 에러 처리
+  - 드로잉 메시지 처리
+- ✅ pytest 설정 완료 (pyproject.toml)
+  - asyncio_mode = "auto"
+  - testpaths = ["server/tests", "client/tests"]
+
+**테스트 결과**:
+- ✅ **29/29 테스트 통과** (100%)
+- 실행 시간: 1.09초
+- Python 3.13.5, pytest 8.3.4
+- pytest-asyncio 사용
+
+**주요 결정사항**:
+- AsyncMock 사용: WebSocket 연결을 Mock으로 대체
+- pytest.mark.asyncio: 비동기 테스트 지원
+- 각 테스트는 독립적으로 실행 가능
+- 서버 테스트에서는 실제 WebSocket 서버를 띄우지 않음 (유닛 테스트)
+
+**미구현/다음 단계**:
+- [ ] test_client.py 작성 (클라이언트 WebSocket 연결)
+- [ ] test_integration.py 작성 (실제 서버-클라이언트 통합 테스트)
+- [ ] GitHub Actions CI/CD 설정
+- [ ] 커버리지 측정 및 리포트
+
+**커버리지**:
+- 아직 측정 안 함 (pytest-cov 설치되어 있음)
+- 다음 명령어로 측정 가능: `pytest --cov=server/src --cov-report=term-missing`
+
+---
+
+> **다음 Claude Code에게**:
+> - 서버 유닛 테스트는 완료되었습니다
+> - 클라이언트 테스트가 필요합니다 (test_client.py)
+> - 통합 테스트를 작성하여 실제 서버-클라이언트 통신을 검증하세요
+> - CI/CD 설정을 추가하면 PR마다 자동 테스트가 실행됩니다

@@ -11,11 +11,14 @@
 
 ### 기술 스택
 
-- **언어**: Python 3.11+
-- **패키지 관리**: Poetry (monorepo)
-- **서버**: WebSocket (asyncio 기반)
-- **클라이언트**: GUI 프레임워크 (TBD: PyQt6/Tkinter/etc)
-- **배포**: Docker (서버), Standalone executable (클라이언트)
+- **언어**: Python 3.13+
+- **패키지 관리**: pip (requirements.txt)
+- **개발환경**: devcontainer (VS Code)
+- **서버**: WebSocket (asyncio, websockets 14.x)
+- **클라이언트**: PyQt6 (GUI), qasync (비동기 통합)
+- **테스트**: pytest, pytest-asyncio, pytest-cov
+- **코드 품질**: black, ruff, pyright
+- **배포**: Docker (서버), PyInstaller (클라이언트)
 
 ## 프로젝트 구조
 
@@ -34,23 +37,27 @@ screen-party 프로젝트는 **여러 개의 독립적인 Task로 구성**되어
 ```
 screen-party/
 ├── CLAUDE.md                   # 이 문서
+├── .devcontainer/              # devcontainer 설정
+│   └── devcontainer.json
 ├── server/                     # 서버 코드
-│   ├── pyproject.toml
+│   ├── requirements.txt        # 서버 의존성
 │   ├── src/
 │   └── tests/
 ├── client/                     # 클라이언트 코드
-│   ├── pyproject.toml
+│   ├── requirements.txt        # 클라이언트 의존성
 │   ├── src/
 │   └── tests/
-├── pyproject.toml              # 루트 monorepo 설정
+├── pyproject.toml              # 개발 도구 설정 (black, ruff, pytest)
+├── dev-requirements.txt        # 개발 도구 의존성
+├── pip-requirements.txt        # 루트 의존성
 ├── Dockerfile                  # 서버 Docker 이미지
 └── .claude/
     └── devlog/                 # Task 진행 상황 추적
         ├── main.md                     # 전체 프로젝트 진행 상황 (시작점)
-        ├── project-structure.md        # Task: Poetry monorepo 구조
+        ├── project-structure.md        # Task: pip monorepo + devcontainer
         ├── session-management.md       # Task: 세션 관리 시스템
         ├── server-core.md              # Task: WebSocket 서버
-        ├── client-core.md              # Task: 클라이언트 기본 구조
+        ├── client-core.md              # Task: 클라이언트 기본 구조 (PyQt6)
         ├── host-overlay.md             # Task: 호스트 투명 오버레이
         ├── guest-calibration.md        # Task: 게스트 영역 설정
         ├── drawing-engine.md           # Task: 실시간 드로잉 엔진
