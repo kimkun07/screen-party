@@ -4,6 +4,3 @@ websockets==14.1
 scipy==1.15.0
 numpy==2.2.1
 qasync==0.27.1
-
-# Editable install of server package (for shared code if needed)
--e ../server
