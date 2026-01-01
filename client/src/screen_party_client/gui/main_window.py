@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QPushButton,
     QLabel, QInputDialog, QMessageBox, QHBoxLayout
 )
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from PyQt6.QtGui import QFont
 
 from ..network.client import WebSocketClient
@@ -112,20 +112,16 @@ class MainWindow(QMainWindow):
                 self.user_id = response["host_id"]
                 self.is_host = True
 
-                self.set_status("Session created!")
-                self.session_info_label.setText(f"Session ID: {self.session_id}")
-
-                # Listen 태스크 시작 (qasync 환경에서는 ensure_future 사용)
-                self.listen_task = asyncio.ensure_future(self.client.listen())
-
-                # 성공 다이얼로그
-                QMessageBox.information(
-                    self,
-                    "Session Created",
-                    f"Session ID: {self.session_id}\n\nShare this ID with guests!"
+                self.set_status(f"Session created! ID: {self.session_id}")
+                self.session_info_label.setText(
+                    f"Session ID: {self.session_id}\n"
+                    f"Share this ID with guests!"
                 )
 
                 self.session_created.emit(self.session_id, self.user_id)
+
+                # Listen 태스크 시작 (QTimer로 지연시켜 이벤트 루프 블록 방지)
+                QTimer.singleShot(100, self._start_listen_task)
 
             elif response.get("type") == "error":
                 raise RuntimeError(response.get("message", "Unknown error"))
@@ -172,20 +168,16 @@ class MainWindow(QMainWindow):
                 self.user_id = response["user_id"]
                 self.is_host = False
 
-                self.set_status("Joined session!")
-                self.session_info_label.setText(f"Session ID: {self.session_id}")
-
-                # Listen 태스크 시작 (qasync 환경에서는 ensure_future 사용)
-                self.listen_task = asyncio.ensure_future(self.client.listen())
-
-                # 성공 다이얼로그
-                QMessageBox.information(
-                    self,
-                    "Session Joined",
-                    f"Successfully joined session: {self.session_id}"
+                self.set_status(f"Joined session: {self.session_id}")
+                self.session_info_label.setText(
+                    f"Session ID: {self.session_id}\n"
+                    f"Successfully joined!"
                 )
 
                 self.session_joined.emit(self.session_id, self.user_id)
+
+                # Listen 태스크 시작 (QTimer로 지연시켜 이벤트 루프 블록 방지)
+                QTimer.singleShot(100, self._start_listen_task)
 
             elif response.get("type") == "error":
                 raise RuntimeError(response.get("message", "Unknown error"))
@@ -266,6 +258,12 @@ class MainWindow(QMainWindow):
         self.is_host = False
         self.session_info_label.setText("")
         self.enable_buttons()
+
+    def _start_listen_task(self):
+        """Listen 태스크 시작 (QTimer 콜백용)"""
+        if self.client:
+            self.listen_task = asyncio.ensure_future(self.client.listen())
+            logger.info("Listen task started")
 
     def closeEvent(self, event):
         """윈도우 종료 시 호출"""
