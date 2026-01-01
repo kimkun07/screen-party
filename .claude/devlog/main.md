@@ -27,7 +27,7 @@
 ### 기술 스택
 
 - **언어**: Python 3.13+
-- **패키지 관리**: pip (requirements.txt)
+- **패키지 관리**: uv (workspace 기반 monorepo)
 - **개발환경**: devcontainer (VS Code)
 - **서버**: WebSocket (asyncio, websockets 라이브러리)
 - **클라이언트 GUI**: PyQt6 (크로스 플랫폼 지원)
@@ -35,7 +35,7 @@
 - **테스트**: pytest, pytest-asyncio, pytest-cov
 - **코드 품질**: black, ruff, pyright
 - **배포**:
-  - 서버: Docker 이미지
+  - 서버: Docker 이미지 (uv 기반)
   - 클라이언트: PyInstaller (Windows .exe, Linux AppImage/Binary)
 
 ## Task 진행 상황
@@ -86,20 +86,28 @@
                     └─> [client-deployment] (P1)
 ```
 
-## 프로젝트 구조 (예정)
+## 프로젝트 구조
 
 ```
 screen-party/
-├── pyproject.toml              # 루트 monorepo 설정 (workspace)
-├── poetry.lock
+├── pyproject.toml              # uv workspace 루트
+├── uv.lock                     # 의존성 잠금 파일
+├── common/                     # 공통 패키지
+│   ├── pyproject.toml
+│   ├── src/
+│   │   └── screen_party_common/
+│   │       ├── __init__.py
+│   │       ├── models.py       # Session, Guest
+│   │       └── constants.py    # 공통 상수
+│   └── tests/
 ├── server/
 │   ├── pyproject.toml          # 서버 의존성
+│   ├── Dockerfile              # 서버 Docker 이미지 (uv 기반)
 │   ├── src/
 │   │   └── screen_party_server/
 │   │       ├── __init__.py
 │   │       ├── server.py       # WebSocket 서버
 │   │       ├── session.py      # 세션 관리
-│   │       ├── models.py       # 데이터 모델
 │   │       └── utils.py
 │   └── tests/
 │       ├── test_server.py
@@ -123,7 +131,6 @@ screen-party/
 │   └── tests/
 │       ├── test_overlay.py
 │       └── test_drawing.py
-├── Dockerfile                  # 서버 Docker 이미지
 ├── docker-compose.yml          # 로컬 테스트용
 ├── .gitignore
 ├── README.md
@@ -247,7 +254,29 @@ screen-party/
 
 ## 최근 업데이트
 
-### 2025-12-28 - 개발환경을 pip monorepo로 전환
+### 2025-12-30 - uv Workspace로 마이그레이션
+
+**작업 내용**:
+- ✅ pip monorepo → uv workspace 마이그레이션 완료
+- ✅ common/ 패키지 생성 (Session, Guest 모델 분리)
+- ✅ server/client에서 common 참조하도록 변경
+- ✅ Dockerfile 작성 (uv 기반 multi-stage build)
+- ✅ uv sync로 의존성 관리 (uv.lock)
+- ✅ pytest 29개 테스트 모두 통과
+
+**주요 변경사항**:
+- 패키지 관리자: pip → uv
+- 공통 코드: server에서 common/으로 분리
+- Docker: server/Dockerfile에서 uv 사용
+- 의존성: uv.lock으로 잠금
+
+**다음 단계**:
+1. Dockerfile 빌드 테스트
+2. devcontainer.json에 uv 추가
+
+---
+
+### 2025-12-28 - 개발환경을 pip monorepo로 전환 (레거시)
 
 **작업 내용**:
 - ✅ Poetry 제거 및 pip 기반 monorepo로 전환
@@ -388,18 +417,59 @@ screen-party/
 
 ---
 
+## Quick Start 가이드
+
+### 1. uv 설치 및 의존성 설치
+
+```bash
+# uv 설치
+curl -LsSf https://astral.sh/uv/install.sh | sh  # Linux/macOS
+export PATH="$HOME/.local/bin:$PATH"
+
+# 의존성 설치
+uv sync --all-groups
+```
+
+### 2. 개발 명령어
+
+```bash
+# 서버 실행
+uv run python -m screen_party_server.server
+
+# 클라이언트 실행
+uv run python -m screen_party_client.gui.main_window
+
+# 테스트 실행
+uv run pytest server/tests/ -v
+
+# 코드 포맷팅
+uv run black server/ client/ common/
+
+# 린팅
+uv run ruff check server/ client/ common/
+```
+
+### 3. Docker 사용
+
+```bash
+# 서버 이미지 빌드 및 실행
+docker build -f server/Dockerfile -t screen-party-server:latest .
+docker run -p 8765:8765 screen-party-server:latest
+
+# docker-compose 사용
+docker-compose up
+```
+
+자세한 내용은 루트 README.md 및 각 패키지의 README.md를 참고하세요.
+
+---
+
 ## 다음 클로드 코드 세션을 위한 가이드
 
 ### 시작 시 읽어야 할 파일 (순서대로)
 1. `.claude/devlog/main.md` (이 파일)
 2. `.claude/CLAUDE.md` (프로젝트 규칙)
 3. 현재 작업 중인 task의 devlog 파일
-
-### 첫 번째 작업: project-structure
-- `project-structure.md` 파일 참조
-- Poetry workspace 설정 (루트 pyproject.toml)
-- 서버/클라이언트 독립 pyproject.toml 생성
-- 기본 디렉토리 구조 생성
 
 ### 작업 완료 시 체크리스트
 - [ ] 해당 task devlog 업데이트 (TODO 체크, 일기 작성)

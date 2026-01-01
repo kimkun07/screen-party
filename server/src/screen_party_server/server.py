@@ -12,7 +12,7 @@ from websockets.asyncio.server import ServerConnection
 from websockets.exceptions import ConnectionClosed
 
 from .session import SessionManager
-from .models import Guest
+from screen_party_common import Guest
 
 logging.basicConfig(
     level=logging.INFO,

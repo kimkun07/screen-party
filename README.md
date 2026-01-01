@@ -40,141 +40,166 @@
 ## 기술 스택
 
 - **언어**: Python 3.13+
+- **패키지 관리**: uv (workspace 기반 monorepo)
 - **GUI**: PyQt6
 - **서버**: WebSocket (asyncio + websockets)
 - **드로잉**: scipy (Spline 보간), QPainter
-- **패키지 관리**: Pip + requirements.txt (Tweag monorepo 방식)
-- **빌드 시스템**: setuptools
+- **테스트**: pytest, pytest-asyncio, pytest-cov
 - **배포**:
-  - 서버: Docker
-  - 클라이언트: PyInstaller (Windows .exe, Linux binary)
+  - 서버: Docker (uv 기반 multi-stage build)
+  - 클라이언트: PyInstaller (예정)
 
-## 프로젝트 상태
-
-현재 기획 및 초기 설정 단계입니다.
-
-### 진행 상황
-
-자세한 개발 진행 상황은 [`.claude/devlog/main.md`](.claude/devlog/main.md)를 참고하세요.
-
-| 우선순위 | Task | 상태 |
-|---------|------|------|
-| P0 | Project Structure | 🟡 준비중 |
-| P0 | Session Management | 🟡 준비중 |
-| P0 | Server Core | 🟡 준비중 |
-| P0 | Client Core | 🟡 준비중 |
-| P1 | Testing (간단한 클릭 소통) | 🟡 준비중 |
-| P1 | Server Deployment | 🟡 준비중 |
-| P1 | Client Deployment | 🟡 준비중 |
-| P2 | Host Overlay | 🟡 준비중 |
-| P2 | Guest Calibration | 🟡 준비중 |
-| P2 | Drawing Engine | 🟡 준비중 |
-| P2 | Fade Animation | 🟡 준비중 |
-| P3 | Persistence Mode | 🟡 준비중 |
-| P3 | Color System | 🟡 준비중 |
-| P3 | Window Sync | 🟡 준비중 |
-
-## 프로젝트 구조 (예정)
+## 프로젝트 구조
 
 ```
 screen-party/
-├── pyproject.toml              # 루트 monorepo 설정
+├── pyproject.toml              # uv workspace 루트
+├── uv.lock                     # 의존성 잠금 파일
+├── common/                     # 공통 패키지
+│   └── src/screen_party_common/
+│       ├── models.py           # Session, Guest
+│       └── constants.py        # 공통 상수
 ├── server/
-│   ├── pyproject.toml
-│   ├── src/
-│   │   └── screen_party_server/
-│   │       ├── server.py       # WebSocket 서버
-│   │       ├── session.py      # 세션 관리
-│   │       └── models.py       # 데이터 모델
+│   ├── Dockerfile              # 서버 Docker 이미지
+│   ├── src/screen_party_server/
+│   │   ├── server.py           # WebSocket 서버
+│   │   └── session.py          # 세션 관리
 │   └── tests/
 ├── client/
-│   ├── pyproject.toml
-│   ├── src/
-│   │   └── screen_party_client/
-│   │       ├── main.py         # GUI 진입점
-│   │       ├── gui/            # PyQt6 GUI
-│   │       ├── network/        # WebSocket 클라이언트
-│   │       └── drawing/        # 드로잉 엔진, Spline
+│   ├── src/screen_party_client/
+│   │   ├── main.py             # GUI 진입점
+│   │   ├── gui/                # PyQt6 GUI
+│   │   ├── network/            # WebSocket 클라이언트
+│   │   └── drawing/            # 드로잉 엔진 (예정)
 │   └── tests/
-├── Dockerfile                  # 서버 Docker 이미지
 ├── docker-compose.yml          # 로컬 테스트용
 └── .claude/
     ├── CLAUDE.md               # Claude Code 가이드
     └── devlog/                 # 개발 진행 상황
-        ├── main.md
-        ├── project-structure.md
-        └── ...
 ```
 
-## 개발 가이드
+## 개발 환경
 
-이 프로젝트는 **task & devlog 시스템**을 사용하여 개발 작업을 관리합니다.
+### 현재 개발 환경 구성
 
-### Claude Code로 작업하기
+이 프로젝트는 다음과 같은 **하이브리드 환경**에서 개발하고 있습니다:
 
-1. `.claude/devlog/main.md` 읽기 (프로젝트 전체 개요)
-2. `.claude/CLAUDE.md` 읽기 (프로젝트 규칙 및 가이드)
-3. 해당 task의 devlog 파일 읽기 (예: `project-structure.md`)
-4. 작업 진행 및 devlog 업데이트
-5. 커밋 메시지 형식: `[task] 한글 설명`
+- **WSL (Ubuntu)**: 프로젝트 저장소 위치, devcontainer 실행
+- **devcontainer (Linux)**: 서버 개발 및 테스트 환경
+- **Windows**: 클라이언트 GUI (PyQt6) 테스트 환경
 
-### 개발 환경 설정
+**이유**: PyQt6 GUI를 Windows에서 직접 테스트하면서, Linux 환경에서 서버를 개발할 수 있음.
 
-#### VS Code Devcontainer (권장)
+### 환경 구성 방법
 
-이 프로젝트는 devcontainer를 지원합니다. VS Code에서 바로 개발 환경을 실행할 수 있습니다.
-
-1. VS Code에서 프로젝트 열기
-2. `Reopen in Container` 선택 (팝업 또는 Command Palette)
-3. 컨테이너가 빌드되고 시작됨 (Python 3.13 + Claude Code)
-4. 터미널에서 바로 작업 가능
-
-#### 로컬 개발
-
-Python 3.13 이상이 필요합니다.
+#### 1단계: WSL에 프로젝트 클론
 
 ```bash
-# 1. 가상환경 생성
-python3.13 -m venv .venv
-
-# 2. pip 및 의존성 설치
-.venv/bin/pip install -r pip-requirements.txt
-.venv/bin/pip install -r server/requirements.txt
-cd client && ../.venv/bin/pip install -r requirements.txt && cd ..
-.venv/bin/pip install -r dev-requirements.txt
-
-# 3. 서버를 editable mode로 설치
-.venv/bin/pip install -e server/
-
-# 4. 테스트 실행
-.venv/bin/pytest -v
-
-# 5. 서버 실행 (개발 시)
-.venv/bin/python -m screen_party_server.server
-
-# 또는 가상환경 활성화 후 사용
-source .venv/bin/activate
-pytest -v
-python -m screen_party_server.server
+# WSL (Ubuntu) 터미널에서
+cd ~
+git clone https://github.com/your-username/screen-party.git
+cd screen-party
 ```
 
-#### 의존성 구조
+#### 2단계: VS Code에서 devcontainer 열기
 
-이 프로젝트는 **Tweag Python monorepo** 방식을 사용합니다:
+1. Windows에서 VS Code 실행
+2. `F1` → `Dev Containers: Open Folder in Container...`
+3. WSL 경로 선택: `\\wsl$\Ubuntu\home\username\screen-party`
+4. devcontainer가 자동으로 빌드되고 실행됨
 
-- `pip-requirements.txt` - pip 버전 고정
-- `dev-requirements.txt` - 개발 도구 (pytest, black, ruff)
-- `server/requirements.txt` - 서버 의존성
-- `client/requirements.txt` - 클라이언트 의존성 + editable server (`-e ../server`)
-- `server/pyproject.toml`, `client/pyproject.toml` - setuptools 빌드 설정
+**자동 설정 내용** (`.devcontainer/postCreate.sh`):
+- uv 설치
+- `.venv-linux` 가상환경 생성
+- `uv sync --all-groups`로 모든 의존성 설치
+- bashrc에 가상환경 자동 활성화 추가
 
-## 라이선스
+#### 3단계: Windows에서 프로젝트 심볼릭 링크 생성
 
-TBD
+Windows에서 클라이언트를 실행하려면 WSL 경로 대신 **로컬 경로**가 필요합니다.
 
-## 기여
+```powershell
+# PowerShell (관리자 권한)
+# D:\Data\Develop 디렉토리에 심볼릭 링크 생성
+mklink /D "D:\Data\Develop\screen-party-mirrored" "\\wsl$\Ubuntu\home\username\screen-party"
+```
 
-TBD
+> **중요**: `\\wsl$` 경로에서 직접 uv를 실행했을 때 **실패**했습니다.
+> Windows 드라이브(C:, D: 등)에 심볼릭 링크를 만든 뒤, 절대 경로로 실행했을 때 성공했습니다.
+
+#### 4단계: Windows에 uv 및 가상환경 설치
+
+```powershell
+# PowerShell (관리자 권한)
+
+# 1. uv 설치
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+# 2. 심볼릭 링크 경로로 이동
+cd D:\Data\Develop\screen-party-mirrored
+
+# 3. Windows용 가상환경 생성
+C:\Users\YourUsername\.local\bin\uv.exe venv venv-windows
+
+# 4. 가상환경 활성화
+D:\Data\Develop\screen-party-mirrored\venv-windows\Scripts\activate.ps1
+
+# 5. 의존성 설치
+C:\Users\YourUsername\.local\bin\uv.exe sync --active --all-groups
+```
+
+**가상환경 활성화 오류 시**:
+```powershell
+# PowerShell 실행 정책 변경
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+#### 5단계: 개발 워크플로우
+
+**서버 실행** (devcontainer에서):
+```bash
+# devcontainer 터미널에서
+uv run python -m screen_party_server.server
+```
+
+**클라이언트 실행** (Windows에서):
+```powershell
+# PowerShell
+cd D:\Data\Develop\screen-party-mirrored
+D:\Data\Develop\screen-party-mirrored\venv-windows\Scripts\activate.ps1
+C:\Users\YourUsername\.local\bin\uv.exe run --active python -m screen_party_client.gui.main_window
+```
+
+**테스트 실행** (devcontainer에서):
+```bash
+# 모든 테스트 실행
+uv run pytest
+
+# 서버 테스트만 실행
+uv run pytest server/tests/ -v
+
+# 클라이언트 테스트만 실행
+uv run pytest client/tests/ -v
+
+# 커버리지 포함
+uv run pytest --cov=server --cov=client
+```
+
+**코드 품질 검사** (devcontainer에서):
+```bash
+# Black (포맷팅)
+uv run black server/ client/ common/
+
+# Ruff (린팅)
+uv run ruff check server/ client/ common/
+```
+
+#### 6단계: 배포 워크플로우
+
+**서버 Docker 이미지 (작성 예정)**
+
+**클라이언트 앱 (작성 예정)**
+
 
 ---
 

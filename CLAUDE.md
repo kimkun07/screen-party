@@ -12,13 +12,13 @@
 ### 기술 스택
 
 - **언어**: Python 3.13+
-- **패키지 관리**: pip (requirements.txt)
+- **패키지 관리**: uv (workspace 기반 monorepo)
 - **개발환경**: devcontainer (VS Code)
-- **서버**: WebSocket (asyncio, websockets 14.x)
+- **서버**: WebSocket (asyncio, websockets 14.x+)
 - **클라이언트**: PyQt6 (GUI), qasync (비동기 통합)
 - **테스트**: pytest, pytest-asyncio, pytest-cov
 - **코드 품질**: black, ruff, pyright
-- **배포**: Docker (서버), PyInstaller (클라이언트)
+- **배포**: Docker (서버, uv 기반), PyInstaller (클라이언트)
 
 ## 프로젝트 구조
 
@@ -39,22 +39,29 @@ screen-party/
 ├── CLAUDE.md                   # 이 문서
 ├── .devcontainer/              # devcontainer 설정
 │   └── devcontainer.json
+├── pyproject.toml              # uv workspace 루트
+├── uv.lock                     # 의존성 잠금 파일
+├── common/                     # 공통 패키지
+│   ├── pyproject.toml
+│   ├── src/
+│   │   └── screen_party_common/
+│   │       ├── models.py       # Session, Guest
+│   │       └── constants.py    # 공통 상수
+│   └── tests/
 ├── server/                     # 서버 코드
-│   ├── requirements.txt        # 서버 의존성
+│   ├── pyproject.toml
+│   ├── Dockerfile              # 서버 Docker 이미지 (uv 기반)
 │   ├── src/
 │   └── tests/
 ├── client/                     # 클라이언트 코드
-│   ├── requirements.txt        # 클라이언트 의존성
+│   ├── pyproject.toml
 │   ├── src/
 │   └── tests/
-├── pyproject.toml              # 개발 도구 설정 (black, ruff, pytest)
-├── dev-requirements.txt        # 개발 도구 의존성
-├── pip-requirements.txt        # 루트 의존성
-├── Dockerfile                  # 서버 Docker 이미지
+├── docker-compose.yml          # 로컬 테스트용
 └── .claude/
     └── devlog/                 # Task 진행 상황 추적
         ├── main.md                     # 전체 프로젝트 진행 상황 (시작점)
-        ├── project-structure.md        # Task: pip monorepo + devcontainer
+        ├── project-structure.md        # Task: uv workspace + devcontainer
         ├── session-management.md       # Task: 세션 관리 시스템
         ├── server-core.md              # Task: WebSocket 서버
         ├── client-core.md              # Task: 클라이언트 기본 구조 (PyQt6)

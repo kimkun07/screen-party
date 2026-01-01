@@ -1,5 +1,30 @@
-# Root configuration for development tools only
-# This file is not used for building packages
+[project]
+name = "screen-party"
+version = "0.1.0"
+description = "Screen Party - 실시간 화면 드로잉 공유 애플리케이션"
+requires-python = ">=3.13"
+dependencies = [
+    "screen-party-common",
+    "screen-party-server",
+    "screen-party-client",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "black>=24.0.0",
+    "ruff>=0.8.0",
+]
+
+[tool.uv.workspace]
+members = ["common", "server", "client"]
+
+[tool.uv.sources]
+screen-party-common = { workspace = true }
+screen-party-server = { workspace = true }
+screen-party-client = { workspace = true }
 
 [tool.black]
 line-length = 100
@@ -11,7 +36,7 @@ target-version = "py313"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-testpaths = ["server/tests", "client/tests"]
+testpaths = ["server/tests", "client/tests", "common/tests"]
 
 [tool.pyright]
 pythonVersion = "3.13"

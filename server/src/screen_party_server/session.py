@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Dict, Optional
 
-from .models import Guest, Session
+from screen_party_common import Guest, Session
 
 
 class SessionManager:

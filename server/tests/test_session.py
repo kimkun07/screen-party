@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from screen_party_server.models import Guest, Session
+from screen_party_common import Guest, Session
 from screen_party_server.session import SessionManager
 
 

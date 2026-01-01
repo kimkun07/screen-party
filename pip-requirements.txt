@@ -1,2 +1,0 @@
-# Pin pip version for consistency
-pip==24.3.1

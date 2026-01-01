@@ -1,30 +1,27 @@
-[build-system]
-requires = ["setuptools>=68.0.0", "wheel"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "screen-party-server"
 version = "0.1.0"
 description = "Screen Party WebSocket 서버"
-authors = [{name = "Your Name", email = "your.email@example.com"}]
-readme = "README.md"
 requires-python = ">=3.13"
+authors = [
+    {name = "Screen Party Team"}
+]
+readme = "README.md"
 dependencies = [
     "websockets>=14.1",
+    "screen-party-common",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8.3.0",
     "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
 ]
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-[tool.black]
-line-length = 100
-target-version = ['py313']
-
-[tool.pyright]
-pythonVersion = "3.13"
+[tool.hatch.build.targets.wheel]
+packages = ["src/screen_party_server"]

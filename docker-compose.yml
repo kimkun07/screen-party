@@ -1,0 +1,11 @@
+services:
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    ports:
+      - "8765:8765"
+    environment:
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=8765
+    restart: unless-stopped

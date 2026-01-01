@@ -6,7 +6,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from screen_party_server.server import ScreenPartyServer
-from screen_party_server.models import Session, Guest
+from screen_party_common import Session, Guest
 
 
 @pytest.fixture

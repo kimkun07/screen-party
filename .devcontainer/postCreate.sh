@@ -3,26 +3,26 @@ set -e
 
 echo "▶ postCreate start"
 
-# Install happy-coder
-npm install -g happy-coder
+# Install happy-coder (should be first on postCreate script)
+if command -v npm &> /dev/null; then
+    echo "▶ Installing happy-coder..."
+    npm install -g happy-coder
+fi
 
-# Create .venv-linux and install dependencies
-echo "▶ Creating .venv-linux..."
-python -m venv /workspaces/screen-party/.venv-linux
+# Install uv
+echo "▶ Installing uv..."
+curl -LsSf https://astral.sh/uv/install.sh | sh
+export PATH="$HOME/.local/bin:$PATH"
 
-echo "▶ Installing dependencies..."
-source /workspaces/screen-party/.venv-linux/bin/activate
-
-# Install pip requirements
-python -m pip install --upgrade pip
-pip install -r /workspaces/screen-party/pip-requirements.txt
-pip install -r /workspaces/screen-party/dev-requirements.txt
-
-# Install server and client packages in editable mode
-pip install -e /workspaces/screen-party/server
-pip install -r /workspaces/screen-party/client/requirements.txt
+# Create .venv-linux and install dependencies using uv
+echo "▶ Creating .venv-linux and installing dependencies..."
+cd /workspaces/screen-party
+uv venv .venv-linux
+uv sync --all-groups
 
 # Add venv activation to bashrc
-echo 'source /workspaces/screen-party/.venv-linux/bin/activate' >> ~/.bashrc
+if ! grep -q "source /workspaces/screen-party/.venv-linux/bin/activate" ~/.bashrc; then
+    echo 'source /workspaces/screen-party/.venv-linux/bin/activate' >> ~/.bashrc
+fi
 
 echo "▶ postCreate done"
