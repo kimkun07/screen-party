@@ -166,28 +166,41 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 **서버 실행** (devcontainer에서):
 ```bash
-# devcontainer 터미널에서
-uv run python -m screen_party_server.server
+# 기본 실행
+uv run python server/main.py
+
+# 도움말 보기
+uv run python server/main.py --help
+
+# 커스텀 호스트/포트
+uv run python server/main.py --host localhost --port 9000
 ```
 
 **클라이언트 실행** (Windows에서):
 ```powershell
 # PowerShell
 cd D:\Data\Develop\screen-party-mirrored
-D:\Data\Develop\screen-party-mirrored\venv-windows\Scripts\activate.ps1
-C:\Users\YourUsername\.local\bin\uv.exe run --active python -m screen_party_client.gui.main_window
+
+# 기본 실행
+uv run python client/main.py
+
+# 도움말 보기
+uv run python client/main.py --help
+
+# 커스텀 서버 연결
+uv run python client/main.py --server ws://192.168.1.100:8765
 ```
 
 **테스트 실행** (devcontainer에서):
 ```bash
-# 모든 테스트 실행
+# 유닛 테스트 (서버 + 클라이언트)
 uv run pytest
+
+# 통합 테스트
+uv run pytest integration/tests/test_integration.py -v
 
 # 서버 테스트만 실행
 uv run pytest server/tests/ -v
-
-# 클라이언트 테스트만 실행
-uv run pytest client/tests/ -v
 
 # 커버리지 포함
 uv run pytest --cov=server --cov=client
