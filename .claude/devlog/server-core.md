@@ -150,7 +150,7 @@ P1 tasks (서버 완료 후):
 ---
 
 > **다음 Claude Code에게**:
-> - 서버 실행: `cd server && poetry run python -m screen_party_server.server`
+> - 서버 실행: `uv run python server/main.py`
 > - 환경 변수로 호스트/포트 변경 가능
 > - SessionManager cleanup task는 자동으로 백그라운드 실행됨
 > - websockets 14.x 사용 (legacy API deprecated)

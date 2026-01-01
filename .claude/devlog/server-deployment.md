@@ -58,7 +58,7 @@ ENV SCREEN_PARTY_PORT=8765
 
 EXPOSE 8765
 
-CMD ["python", "-m", "screen_party_server.server"]
+CMD ["python", "/app/server/main.py"]
 ```
 
 ### docker-compose.yml (로컬 테스트)

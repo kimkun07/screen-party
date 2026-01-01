@@ -246,7 +246,7 @@ async def main():
     ping_ok = await test_ping()
     if not ping_ok:
         print("\n❌ 핑 테스트 실패. 서버가 실행 중인지 확인하세요.")
-        print("   서버 실행: python run_server.py")
+        print("   서버 실행: python server/main.py")
         return
 
     # 2. 전체 세션 테스트
@@ -262,11 +262,11 @@ async def main():
     print("\n서버-클라이언트 연결이 정상적으로 작동합니다.")
     print("\nGUI 클라이언트는 로컬 머신에서 실행하세요:")
     print("  1. 이 저장소를 로컬에 clone")
-    print("  2. pip install -r client/requirements.txt")
-    print("  3. SCREEN_PARTY_SERVER=ws://<서버IP>:8765 python run_client.py")
+    print("  2. uv sync --all-groups")
+    print("  3. SCREEN_PARTY_SERVER=ws://<서버IP>:8765 uv run python client/main.py")
     print("\n또는 터미널 2개를 열어서:")
-    print("  터미널 1: python run_server.py")
-    print("  터미널 2 (로컬): python run_client.py")
+    print("  터미널 1: uv run python server/main.py")
+    print("  터미널 2 (로컬): uv run python client/main.py")
 
 
 if __name__ == "__main__":

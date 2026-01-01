@@ -253,16 +253,16 @@ uv sync --all-groups
 
 ```bash
 # 기본 실행
-uv run python -m screen_party_server.server
+uv run python server/main.py
 
 # 환경 변수 지정
-SERVER_PORT=9000 uv run python -m screen_party_server.server
+SERVER_PORT=9000 uv run python server/main.py
 ```
 
 ### 4. 클라이언트 실행
 
 ```bash
-uv run python -m screen_party_client.gui.main_window
+uv run python client/main.py
 ```
 
 ### 5. 테스트
@@ -322,8 +322,8 @@ pyinstaller --onefile client/src/screen_party_client/gui/main_window.py
 > - **패키지 관리자**: uv를 사용합니다 (Poetry와 pip는 제거됨)
 > - **의존성 설치**: `uv sync --all-groups`
 > - **테스트 실행**: `uv run pytest server/tests/ -v`
-> - **서버 실행**: `uv run python -m screen_party_server.server`
-> - **클라이언트 실행**: `uv run python -m screen_party_client.gui.main_window`
+> - **서버 실행**: `uv run python server/main.py`
+> - **클라이언트 실행**: `uv run python client/main.py`
 > - **공통 패키지**: common/에 Session, Guest 모델 및 상수 정의
 > - **workspace 구조**: common, server, client 모두 독립 패키지
 > - **Docker**: server/Dockerfile에서 uv 기반 multi-stage build 사용

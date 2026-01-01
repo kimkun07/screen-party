@@ -494,10 +494,10 @@ uv sync --all-groups
 
 ```bash
 # 서버 실행
-uv run python -m screen_party_server.server
+uv run python server/main.py
 
 # 클라이언트 실행
-uv run python -m screen_party_client.gui.main_window
+uv run python client/main.py
 
 # 테스트 실행
 uv run pytest server/tests/ -v
