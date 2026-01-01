@@ -9,6 +9,35 @@
 - 게스트들이 디스코드 화면공유를 보면서 실시간으로 그림을 그림
 - 모든 참여자가 동시에 드로잉을 보며 협업 가능
 
+## ⚠️ 중요 주의사항
+
+### README.md 수정 시 주의사항
+
+**Windows 클라이언트 실행 방법을 절대 변경하지 마세요!**
+
+README의 "클라이언트 실행 (Windows에서)" 섹션에는 다음과 같은 **필수** 사항이 있습니다:
+
+1. **가상환경을 먼저 activate해야 함**
+   ```powershell
+   D:\Data\Develop\screen-party-mirrored\venv-windows\Scripts\activate.ps1
+   ```
+
+2. **uv는 절대 경로로 실행해야 함**
+   ```powershell
+   C:\Users\YourUsername\.local\bin\uv.exe run --active python client/main.py
+   ```
+
+3. **`--active` 옵션이 필수**
+   - `uv run --active`를 사용해야 함
+   - activate된 환경을 사용하기 위해 필요
+   - 이 옵션 없이 상대 경로로 실행하면 에러 발생
+
+4. **심볼릭 링크 경로에서 실행해야 함**
+   - `\\wsl$` 경로에서 직접 실행 시 실패
+   - `D:\Data\Develop\screen-party-mirrored`에서 실행해야 함
+
+**이유**: Windows에서 WSL 프로젝트를 사용할 때의 환경 제약 사항입니다. 이를 무시하고 간단하게 변경하면 실행이 실패합니다.
+
 ### 기술 스택
 
 - **언어**: Python 3.13+

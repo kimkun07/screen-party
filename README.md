@@ -177,18 +177,29 @@ uv run python server/main.py --host localhost --port 9000
 ```
 
 **클라이언트 실행** (Windows에서):
+
+> **중요**: Windows에서는 반드시 아래 순서대로 실행해야 합니다.
+> - \\wsl$ 경로에서 직접 uv 실행 시 실패
+> - 심볼릭 링크 경로(D:\Data\Develop\...)에서 실행해야 함
+> - 가상환경을 먼저 activate한 후 절대 경로로 uv 실행
+> - `--active` 옵션 필수 (activate된 환경 사용)
+
 ```powershell
 # PowerShell
 cd D:\Data\Develop\screen-party-mirrored
 
+# 1. 가상환경 활성화
+D:\Data\Develop\screen-party-mirrored\venv-windows\Scripts\activate.ps1
+
+# 2. 절대 경로로 uv 실행 (--active 옵션 필수)
 # 기본 실행
-uv run python client/main.py
+C:\Users\YourUsername\.local\bin\uv.exe run --active python client/main.py
 
 # 도움말 보기
-uv run python client/main.py --help
+C:\Users\YourUsername\.local\bin\uv.exe run --active python client/main.py --help
 
 # 커스텀 서버 연결
-uv run python client/main.py --server ws://192.168.1.100:8765
+C:\Users\YourUsername\.local\bin\uv.exe run --active python client/main.py --server ws://192.168.1.100:8765
 ```
 
 **테스트 실행** (devcontainer에서):
