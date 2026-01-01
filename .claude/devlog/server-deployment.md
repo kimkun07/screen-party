@@ -146,4 +146,64 @@ jobs:
 
 ## 클로드 코드 일기
 
-_이 섹션은 작업 진행 시 업데이트됩니다._
+### 2026-01-01 - Docker 배포 준비
+
+**상태**: 🟡 준비중 → 🟢 진행중
+
+**진행 내용**:
+- ✅ feature/server-deployment 브랜치 생성
+- ✅ 기존 Dockerfile 검토 (uv 기반 multi-stage build 이미 작성됨)
+- ✅ Dockerfile 보안 개선: 비 root 유저 추가 (appuser, UID 1000)
+- ✅ devcontainer.json에 docker-in-docker feature 추가
+- ✅ docker-compose.yml 확인 (기본 설정 완료)
+- ✅ .dockerignore 파일 확인 (루트 및 server/ 모두 존재)
+
+**현재 상태**:
+- Dockerfile은 준비 완료 (보안 개선 포함)
+- docker-compose.yml 준비 완료
+- devcontainer rebuild 필요 (Docker 사용을 위해)
+
+**테스트 명령어** (호스트 또는 rebuild된 devcontainer에서 실행):
+```bash
+# 1. Docker 이미지 빌드
+docker build -f server/Dockerfile -t screen-party-server:latest .
+
+# 2. docker-compose로 서버 실행
+docker-compose up -d
+
+# 3. 서버 로그 확인
+docker-compose logs -f server
+
+# 4. 클라이언트에서 연결 테스트
+# devcontainer에서:
+uv run python client/main.py
+# 또는 호스트에서:
+python client/main.py
+# 서버 주소: localhost:8765
+
+# 5. 정리
+docker-compose down
+```
+
+**주요 개선사항**:
+- **보안**: 비 root 유저로 실행 (appuser, UID 1000)
+- **소유권 설정**: /app 디렉토리 appuser 소유
+
+**다음 단계**:
+1. devcontainer rebuild (Docker-in-Docker 활성화)
+2. Docker 이미지 빌드 테스트
+3. docker-compose로 서버 실행 테스트
+4. 클라이언트 연결 테스트
+5. GitHub Actions 워크플로우 작성 (선택)
+6. 배포 가이드 README 업데이트
+
+**블로커**:
+- devcontainer rebuild 필요 (또는 호스트 환경에서 테스트)
+
+---
+
+> **다음 클로드 코드에게**:
+> - devcontainer를 rebuild하거나 호스트 환경에서 Docker 테스트 실행
+> - 위의 "테스트 명령어" 섹션을 참고하세요
+> - 빌드가 성공하면 실제 연결 테스트까지 진행
+> - 모든 테스트가 통과하면 devlog 완료 표시 및 커밋

@@ -32,11 +32,18 @@ COPY --from=builder /app/common /app/common
 COPY --from=builder /app/server /app/server
 COPY --from=builder /app/pyproject.toml /app/pyproject.toml
 
+# Create non-root user (UID 1000 for compatibility)
+RUN useradd -m -u 1000 appuser && \
+    chown -R appuser:appuser /app
+
 # Set environment variables
 ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONPATH="/app/server/src:/app/common/src"
 ENV SERVER_HOST="0.0.0.0"
 ENV SERVER_PORT="8765"
+
+# Switch to non-root user
+USER appuser
 
 # Expose server port
 EXPOSE 8765
