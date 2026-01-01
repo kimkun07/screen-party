@@ -17,7 +17,7 @@ export PATH="$HOME/.local/bin:$PATH"
 # Create .venv and install dependencies using uv
 echo "▶ Creating venv and installing dependencies..."
 cd /workspaces/screen-party
-uv venv
+uv venv --clear
 uv sync --all-groups
 
 # Add venv activation to bashrc
