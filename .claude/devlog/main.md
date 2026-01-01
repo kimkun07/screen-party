@@ -47,7 +47,7 @@
 | P0 | server-core | ✅ 완료 | WebSocket 서버 기본 구조 | project-structure, session-management |
 | P0 | client-core | ✅ 완료 | 클라이언트 기본 GUI 및 연결 (통합 테스트 완료) | project-structure |
 | P1 | testing | 🟢 진행중 | 유닛 테스트 (서버 29개) + 통합 테스트 (3개) 완료 | server-core, client-core |
-| P1 | server-deployment | 🟢 진행중 | Docker 이미지 및 배포 | server-core, testing |
+| P1 | server-deployment | ✅ 완료 | Docker 이미지 및 배포 | server-core, testing |
 | P1 | client-deployment | 🟡 준비중 | 클라이언트 실행 파일 빌드 | client-core, testing |
 | P2 | host-overlay | 🟡 준비중 | 호스트 투명 오버레이 | client-core, testing |
 | P2 | guest-calibration | 🟡 준비중 | 게스트 영역 설정 (좌표 매핑) | client-core, testing |
@@ -254,22 +254,31 @@ screen-party/
 
 ## 최근 업데이트
 
-### 2026-01-01 - 서버 배포 준비 (Docker)
+### 2026-01-01 - 서버 배포 완료 (Docker)
 
 **작업 내용**:
 - ✅ feature/server-deployment 브랜치 생성
 - ✅ Dockerfile 보안 개선: 비 root 유저 추가 (appuser, UID 1000)
 - ✅ devcontainer.json에 docker-in-docker feature 추가
-- ✅ server-deployment.md devlog 업데이트
+- ✅ devcontainer rebuild 완료
+- ✅ Docker 이미지 빌드 테스트 성공
+- ✅ docker-compose로 서버 실행 테스트 성공
+- ✅ 클라이언트 연결 및 세션 생성 테스트 성공
 
-**주요 변경사항**:
-- Dockerfile에 비 root 유저 추가로 보안 강화
-- devcontainer에서 Docker 사용 가능하도록 설정
+**테스트 결과**:
+- ✅ Docker 이미지 빌드 성공 (screen-party-server:latest)
+- ✅ 서버 정상 실행 (0.0.0.0:8765)
+- ✅ 클라이언트 WebSocket 연결 성공
+- ✅ 세션 생성 API 정상 동작
 
-**다음 단계**:
-1. devcontainer rebuild (Docker-in-Docker 활성화)
-2. Docker 이미지 빌드 테스트
-3. docker-compose로 서버 실행 및 연결 테스트
+**주요 개선사항**:
+- Dockerfile 보안 강화 (비 root 유저)
+- Multi-stage build로 이미지 최적화
+- uv 기반 의존성 관리
+
+**완료 상태**:
+- ✅ **P1 server-deployment Task 완료**
+- 프로덕션 배포 준비 완료
 
 ---
 
