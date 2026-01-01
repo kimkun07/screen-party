@@ -33,12 +33,7 @@ venv/
 ENV/
 env/
 .venv
-.venv-linux
 venv-windows
-
-# Poetry (legacy - no longer used)
-.poetry/
-poetry.lock
 
 # PyInstaller
 *.manifest

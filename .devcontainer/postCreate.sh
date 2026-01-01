@@ -14,15 +14,15 @@ echo "▶ Installing uv..."
 curl -LsSf https://astral.sh/uv/install.sh | sh
 export PATH="$HOME/.local/bin:$PATH"
 
-# Create .venv-linux and install dependencies using uv
-echo "▶ Creating .venv-linux and installing dependencies..."
+# Create .venv and install dependencies using uv
+echo "▶ Creating venv and installing dependencies..."
 cd /workspaces/screen-party
-uv venv .venv-linux
+uv venv
 uv sync --all-groups
 
 # Add venv activation to bashrc
-if ! grep -q "source /workspaces/screen-party/.venv-linux/bin/activate" ~/.bashrc; then
-    echo 'source /workspaces/screen-party/.venv-linux/bin/activate' >> ~/.bashrc
+if ! grep -q "source /workspaces/screen-party/.venv/bin/activate" ~/.bashrc; then
+    echo 'source /workspaces/screen-party/.venv/bin/activate' >> ~/.bashrc
 fi
 
 echo "▶ postCreate done"

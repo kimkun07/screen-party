@@ -6,9 +6,9 @@
 
 ## 목표
 
-- [ ] devcontainer에서 Claude Code 개발 환경 완성
-- [ ] Windows 호스트에서 PyQt6 클라이언트 테스트 환경 구성
-- [ ] WSL과 Windows 호스트 간 원활한 파일 접근 설정
+- [x] devcontainer에서 Claude Code 개발 환경 완성
+- [x] Windows 호스트에서 PyQt6 클라이언트 테스트 환경 구성
+- [x] WSL과 Windows 호스트 간 원활한 파일 접근 설정
 
 ## 환경 구조
 
@@ -45,14 +45,15 @@ Windows 호스트 (윈도우 앱 테스트)
 
 - [x] 파일 구조 결정 (WSL 원본 + Windows symlink)
 - [x] devcontainer IS_SANDBOX 환경변수 자동 설정
-- [x] .venv-linux 자동 생성 및 의존성 설치
+- [x] .venv 자동 생성 및 의존성 설치
 - [x] CLAUDE_CONFIG_DIR 설정 (인증 영속성)
 - [x] HAPPY_HOME_DIR 설정 (Happy Coder 인증 영속성)
 - [x] postCreate.sh pip 설치 에러 수정 (editable 패키지)
 - [x] 컨테이너 재빌드 및 테스트
-- [ ] Windows 호스트에서 Python 가상환경 구성 완료
-- [ ] Windows symlink에서 venv 정상 작동 확인
-- [ ] 클라이언트 테스트 워크플로우 확립
+- [x] Windows 호스트에서 Python 가상환경 구성 완료
+- [x] Windows symlink에서 venv 정상 작동 확인
+- [x] 클라이언트 테스트 워크플로우 확립
+- [x] .venv-linux → .venv 마이그레이션
 
 ## 클로드 코드 일기
 
@@ -131,11 +132,11 @@ Windows 호스트 (윈도우 앱 테스트)
    - `IS_SANDBOX=1` 자동 설정
    - 매번 `IS_SANDBOX=1 claude` 입력 불필요
 
-2. **.venv-linux 자동 생성** ✅
+2. **.venv 자동 생성** ✅
    - `postCreate.sh` 업데이트
-   - 컨테이너 생성 시 `.venv-linux` 자동 생성
+   - 컨테이너 생성 시 `.venv` 자동 생성
    - 모든 의존성 자동 설치 (pip, dev, server, client)
-   - `python.defaultInterpreterPath` → `.venv-linux` 설정
+   - `python.defaultInterpreterPath` → `.venv` 설정
 
 3. **CLAUDE_CONFIG_DIR 설정** ✅
    - `.claude/claude-config/` 디렉토리 사용 (프로젝트 내부)
@@ -144,27 +145,27 @@ Windows 호스트 (윈도우 앱 테스트)
    - 컨테이너 재시작 시에도 Claude 인증 유지
 
 4. **.gitignore 업데이트** ✅
-   - `.venv-linux` 추가
+   - `.venv` 추가
    - `venv-windows` 추가
    - `.claude/claude-config/` 추가 (인증 정보 제외)
 
 **주요 파일 변경**:
 - `.devcontainer/devcontainer.json`:
   - `containerEnv` 추가 (IS_SANDBOX, CLAUDE_CONFIG_DIR)
-  - `python.defaultInterpreterPath` 변경 (.venv → .venv-linux)
+  - `python.defaultInterpreterPath` 변경 (.venv)
   - ~~`mounts` 제거 (불필요 - 프로젝트 내부 디렉토리 사용)~~
 - `.devcontainer/postCreate.sh`:
   - `.claude/claude-config/` 디렉토리 생성
-  - `.venv-linux` 생성 로직 추가
+  - `.venv` 생성 로직 추가
   - 의존성 자동 설치 추가
 - `.gitignore`:
-  - 가상환경 패턴 추가 (.venv-linux, venv-windows)
+  - 가상환경 패턴 추가 (.venv, venv-windows)
   - Claude 인증 디렉토리 추가 (.claude/claude-config/)
 
 **테스트 필요**:
-- [ ] 컨테이너 재빌드 후 `.venv-linux` 정상 생성 확인
-- [ ] `claude` 명령어 (IS_SANDBOX 없이) 정상 작동 확인
-- [ ] Claude 인증 영속성 확인 (재시작 후에도 유지)
+- [x] 컨테이너 재빌드 후 `.venv` 정상 생성 확인
+- [x] `claude` 명령어 (IS_SANDBOX 없이) 정상 작동 확인
+- [x] Claude 인증 영속성 확인 (재시작 후에도 유지)
 
 ---
 
@@ -243,9 +244,9 @@ Windows 호스트 (윈도우 앱 테스트)
 >
 > **devcontainer 설정 완료**:
 > - ✅ `IS_SANDBOX=1` 자동 설정됨 (매번 입력 불필요)
-> - ✅ `.venv-linux` 자동 생성 및 의존성 설치
+> - ✅ `.venv` 자동 생성 및 의존성 설치
 > - ✅ `CLAUDE_CONFIG_DIR=.claude/claude-config` (프로젝트 내부, 인증 영속성)
-> - Python 인터프리터: `.venv-linux/bin/python` 사용
+> - Python 인터프리터: `.venv/bin/python` 사용
 > - **중요**: `.claude/claude-config/`는 git에 포함되지 않음 (인증 정보)
 >
 > **주의사항**:

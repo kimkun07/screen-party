@@ -110,7 +110,7 @@ cd screen-party
 
 **자동 설정 내용** (`.devcontainer/postCreate.sh`):
 - uv 설치
-- `.venv-linux` 가상환경 생성
+- `.venv` 가상환경 생성
 - `uv sync --all-groups`로 모든 의존성 설치
 - bashrc에 가상환경 자동 활성화 추가
 
