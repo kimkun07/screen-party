@@ -115,8 +115,8 @@ class MainWindow(QMainWindow):
                 self.set_status("Session created!")
                 self.session_info_label.setText(f"Session ID: {self.session_id}")
 
-                # Listen 태스크 시작
-                self.listen_task = asyncio.create_task(self.client.listen())
+                # Listen 태스크 시작 (qasync 환경에서는 ensure_future 사용)
+                self.listen_task = asyncio.ensure_future(self.client.listen())
 
                 # 성공 다이얼로그
                 QMessageBox.information(
@@ -175,8 +175,8 @@ class MainWindow(QMainWindow):
                 self.set_status("Joined session!")
                 self.session_info_label.setText(f"Session ID: {self.session_id}")
 
-                # Listen 태스크 시작
-                self.listen_task = asyncio.create_task(self.client.listen())
+                # Listen 태스크 시작 (qasync 환경에서는 ensure_future 사용)
+                self.listen_task = asyncio.ensure_future(self.client.listen())
 
                 # 성공 다이얼로그
                 QMessageBox.information(
