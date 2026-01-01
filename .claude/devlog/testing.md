@@ -160,8 +160,8 @@ jobs:
 ### P1: 초기 테스트 (지금 구현)
 - [x] test_session.py 작성 (세션 생성, 조회만) - ✅ 14개 테스트
 - [x] test_server.py 작성 (클릭 메시지 브로드캐스트) - ✅ 15개 테스트
-- [ ] test_client.py 작성 (WebSocket 연결)
-- [ ] test_integration.py 작성 (간단한 클릭 소통 시나리오)
+- [x] test_integration.py 작성 (서버-호스트-게스트 간 양방향 통신) - ✅ 3개 테스트
+- [ ] test_client.py 작성 (WebSocket 클라이언트 유닛 테스트)
 - [ ] .github/workflows/test.yml 작성 (CI/CD)
 
 ### P2 이후: 확장 테스트 (나중에 추가)
@@ -222,8 +222,45 @@ jobs:
 
 ---
 
+### 2026-01-01 - 통합 테스트 완료 및 드로잉 메시지 브로드캐스트 수정
+
+**상태**: 🟢 진행중
+
+**진행 내용**:
+- ✅ test_integration.py 작성 완료 (3개 테스트)
+  - 호스트 세션 생성 + 게스트 2명 참여 + 양방향 통신 (드로잉 메시지)
+  - 게스트 나가기 → 호스트가 guest_left 알림 수신
+  - 호스트 나가기 → 게스트가 session_expired 알림 수신
+- ✅ 서버 코드 버그 수정
+  - `handle_drawing_message`에서 브로드캐스트 시 **송신자를 제외**하도록 수정
+  - 기존: `await self.broadcast(session_id, data)`
+  - 수정: `await self.broadcast(session_id, data, exclude_user_id=user_id)`
+- ✅ 서버 유닛 테스트 수정
+  - `test_drawing_message_broadcast`: 송신자가 자신의 메시지를 받지 않도록 테스트 변경
+- ✅ 패키지 __init__.py 수정
+  - `screen_party_server/__init__.py`에 ScreenPartyServer export 추가
+  - `screen_party_client/__init__.py`에 WebSocketClient export 추가
+
+**테스트 결과**:
+- ✅ **유닛 테스트 29개 통과** (1.07초)
+- ✅ **통합 테스트 3개 통과** (1.95초)
+- ✅ **총 32개 테스트 100% 통과**
+
+**주요 결정사항**:
+- 통합 테스트는 `tests/` 디렉토리에 별도로 관리
+- pytest 실행: `uv run pytest` (유닛 테스트만), `uv run pytest tests/test_integration.py` (통합 테스트)
+- 드로잉 메시지는 송신자에게 에코백하지 않음 (다른 참여자에게만 브로드캐스트)
+
+**다음 단계**:
+- [ ] test_client.py 작성 (클라이언트 WebSocket 유닛 테스트)
+- [ ] CI/CD 설정 (GitHub Actions)
+- [ ] 커버리지 측정 (`pytest --cov`)
+
+---
+
 > **다음 Claude Code에게**:
-> - 서버 유닛 테스트는 완료되었습니다
-> - 클라이언트 테스트가 필요합니다 (test_client.py)
-> - 통합 테스트를 작성하여 실제 서버-클라이언트 통신을 검증하세요
-> - CI/CD 설정을 추가하면 PR마다 자동 테스트가 실행됩니다
+> - **통합 테스트 완료**: 서버-호스트-게스트 간 실시간 양방향 통신 검증됨
+> - 드로잉 메시지는 송신자를 제외하고 브로드캐스트됨 (중요!)
+> - 통합 테스트 실행: `uv run pytest tests/test_integration.py -v`
+> - 전체 테스트 실행: `uv run pytest && uv run pytest tests/test_integration.py`
+> - client-core는 구현되어 있지만 **유닛 테스트가 아직 없음** (test_client.py 필요)

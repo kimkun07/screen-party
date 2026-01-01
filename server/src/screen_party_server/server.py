@@ -198,8 +198,8 @@ class ScreenPartyServer:
         if session:
             session.last_activity = datetime.now()
 
-        # 세션 내 모든 클라이언트에게 브로드캐스트
-        await self.broadcast(session_id, data)
+        # 세션 내 모든 클라이언트에게 브로드캐스트 (송신자 제외)
+        await self.broadcast(session_id, data, exclude_user_id=user_id)
 
     async def broadcast(
         self,

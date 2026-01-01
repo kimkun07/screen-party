@@ -350,7 +350,7 @@ class TestScreenPartyServer:
 
     @pytest.mark.asyncio
     async def test_drawing_message_broadcast(self, server):
-        """드로잉 메시지 브로드캐스트 테스트"""
+        """드로잉 메시지 브로드캐스트 테스트 (송신자 제외)"""
         # 세션 생성
         session = server.session_manager.create_session("Host")
         host_id = session.host_id
@@ -375,13 +375,12 @@ class TestScreenPartyServer:
 
         await server.handle_drawing_message(guest_ws, guest.user_id, data)
 
-        # 호스트와 게스트 모두 메시지를 받았는지 확인
+        # 호스트는 메시지를 받지만, 송신자인 게스트는 받지 않음
         host_ws.send.assert_called_once()
-        guest_ws.send.assert_called_once()
+        guest_ws.send.assert_not_called()
 
-        # 메시지 내용 확인
-        for ws in [host_ws, guest_ws]:
-            response = json.loads(ws.send.call_args[0][0])
-            assert response["type"] == "line_start"
-            assert response["line_id"] == "line1"
-            assert response["color"] == "#FF0000"
+        # 호스트가 받은 메시지 내용 확인
+        response = json.loads(host_ws.send.call_args[0][0])
+        assert response["type"] == "line_start"
+        assert response["line_id"] == "line1"
+        assert response["color"] == "#FF0000"

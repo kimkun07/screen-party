@@ -85,10 +85,13 @@ screen-party/
 이 프로젝트는 다음과 같은 **하이브리드 환경**에서 개발하고 있습니다:
 
 - **WSL (Ubuntu)**: 프로젝트 저장소 위치, devcontainer 실행
-- **devcontainer (Linux)**: 서버 개발 및 테스트 환경
+- **devcontainer (Linux)**: YOLO 모드로 실행하기 위한 환경 (PyQt6 headless 실행 가능)
 - **Windows**: 클라이언트 GUI (PyQt6) 테스트 환경
 
-**이유**: PyQt6 GUI를 Windows에서 직접 테스트하면서, Linux 환경에서 서버를 개발할 수 있음.
+**devcontainer를 사용하는 이유**:
+- **YOLO 모드 실행**: PyQt6를 headless 환경에서 실행하여 GUI 없이도 테스트 가능
+- **일관된 개발 환경**: 팀원 간 동일한 Python 버전 및 패키지 환경 보장
+- **Linux 환경**: 서버 개발 및 Docker 이미지 빌드에 최적화된 환경
 
 ### 환경 구성 방법
 
@@ -113,6 +116,17 @@ cd screen-party
 - `.venv` 가상환경 생성
 - `uv sync --all-groups`로 모든 의존성 설치
 - bashrc에 가상환경 자동 활성화 추가
+
+**Git Credential 설정** (devcontainer에서 Git 인증이 안 될 경우):
+
+devcontainer 내부에서는 GitHub 로그인 credential이 없어야 합니다.
+VS Code 설정을 변경하여 credential helper를 사용하지 않도록 설정합니다:
+
+1. VS Code 설정 열기 (`Ctrl + ,`)
+2. "dev containers" 검색
+3. **Dev > Containers: Copy Git Config** → `false`로 설정
+4. **Dev > Containers: Git Credential Helper Config Location** → `none`으로 설정
+5. devcontainer 재시작
 
 #### 3단계: Windows에서 프로젝트 심볼릭 링크 생성
 
