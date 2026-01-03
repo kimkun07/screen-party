@@ -232,7 +232,31 @@ uv run ruff check server/ client/ common/
 
 **Docker 이미지 빌드 및 배포**
 
+프로젝트 루트에서 `uv run publish-server` 명령어를 사용하여 자동으로 빌드 및 배포:
+
 ```bash
+# 방법 1: publish-server 스크립트 사용 (권장)
+uv run publish-server v0.1.0          # v0.1.0 태그로 빌드 및 배포
+uv run publish-server v0.2.0          # v0.2.0 태그로 빌드 및 배포
+
+# 도움말 보기
+uv run publish-server --help
+
+# Dry-run 모드 (실제로 실행하지 않고 명령어만 확인)
+uv run publish-server v0.1.0 --dry-run
+
+# latest 태그 푸시 건너뛰기
+uv run publish-server v0.1.0 --skip-latest
+```
+
+`publish-server` 스크립트가 자동으로 다음 작업을 수행합니다:
+1. Docker 이미지 빌드
+2. 버전 태그 지정 (예: v0.1.0)
+3. latest 태그 추가
+4. Docker Hub에 푸시 (v0.1.0 + latest)
+
+```bash
+# 방법 2: 수동 빌드 및 배포
 # 1. 서버 이미지 빌드
 docker build -f server/Dockerfile -t kimkun07/screen-party-server:v0.1.0 .
 

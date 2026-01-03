@@ -420,7 +420,7 @@ wheels = [
 [[package]]
 name = "screen-party"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "screen-party-client" },
     { name = "screen-party-common" },
