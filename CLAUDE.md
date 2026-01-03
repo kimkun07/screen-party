@@ -45,7 +45,7 @@ README의 "클라이언트 실행 (Windows에서)" 섹션에는 다음과 같은
 
 1. **가상환경을 먼저 activate해야 함**
    ```powershell
-   D:\Data\Develop\screen-party-mirrored\venv-windows\Scripts\activate.ps1
+   D:\Data\Develop\screen-party-mirrored\.venv-windows\Scripts\activate.ps1
    ```
 
 2. **uv는 절대 경로로 실행해야 함**

@@ -33,7 +33,7 @@ venv/
 ENV/
 env/
 .venv
-venv-windows
+.venv-windows
 
 # PyInstaller
 *.manifest

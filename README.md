@@ -147,10 +147,10 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 cd D:\Data\Develop\screen-party-mirrored
 
 # 3. Windows용 가상환경 생성
-C:\Users\YourUsername\.local\bin\uv.exe venv venv-windows
+C:\Users\YourUsername\.local\bin\uv.exe venv .venv-windows
 
 # 4. 가상환경 활성화
-D:\Data\Develop\screen-party-mirrored\venv-windows\Scripts\activate.ps1
+D:\Data\Develop\screen-party-mirrored\.venv-windows\Scripts\activate.ps1
 
 # 5. 의존성 설치
 C:\Users\YourUsername\.local\bin\uv.exe sync --active --all-groups
@@ -189,7 +189,7 @@ uv run server --host localhost --port 9000
 cd D:\Data\Develop\screen-party-mirrored
 
 # 1. 가상환경 활성화
-D:\Data\Develop\screen-party-mirrored\venv-windows\Scripts\activate.ps1
+D:\Data\Develop\screen-party-mirrored\.venv-windows\Scripts\activate.ps1
 
 # 2. 절대 경로로 uv 실행 (--active 옵션 필수)
 # 기본 실행
@@ -286,7 +286,7 @@ cat .env.secret
 ```powershell
 # Windows PowerShell
 cd D:\Data\Develop\screen-party-mirrored
-D:\Data\Develop\screen-party-mirrored\venv-windows\Scripts\activate.ps1
+D:\Data\Develop\screen-party-mirrored\.venv-windows\Scripts\activate.ps1
 
 # 배포된 서버로 연결 (.env.secret의 URL 사용)
 C:\Users\YourUsername\.local\bin\uv.exe run --active client --server $(cat .env.secret | grep DEPLOYED_SERVER_URL | cut -d'=' -f2)
