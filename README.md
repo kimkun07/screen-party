@@ -167,13 +167,13 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 **서버 실행** (devcontainer에서):
 ```bash
 # 기본 실행
-uv run python server/main.py
+uv run server
 
 # 도움말 보기
-uv run python server/main.py --help
+uv run server --help
 
 # 커스텀 호스트/포트
-uv run python server/main.py --host localhost --port 9000
+uv run server --host localhost --port 9000
 ```
 
 **클라이언트 실행** (Windows에서):
@@ -193,13 +193,13 @@ D:\Data\Develop\screen-party-mirrored\venv-windows\Scripts\activate.ps1
 
 # 2. 절대 경로로 uv 실행 (--active 옵션 필수)
 # 기본 실행
-C:\Users\YourUsername\.local\bin\uv.exe run --active python client/main.py
+C:\Users\YourUsername\.local\bin\uv.exe run --active client
 
 # 도움말 보기
-C:\Users\YourUsername\.local\bin\uv.exe run --active python client/main.py --help
+C:\Users\YourUsername\.local\bin\uv.exe run --active client --help
 
 # 커스텀 서버 연결
-C:\Users\YourUsername\.local\bin\uv.exe run --active python client/main.py --server ws://192.168.1.100:8765
+C:\Users\YourUsername\.local\bin\uv.exe run --active client --server ws://192.168.1.100:8765
 ```
 
 **테스트 실행** (devcontainer에서):
@@ -289,14 +289,14 @@ cd D:\Data\Develop\screen-party-mirrored
 D:\Data\Develop\screen-party-mirrored\venv-windows\Scripts\activate.ps1
 
 # 배포된 서버로 연결 (.env.secret의 URL 사용)
-C:\Users\YourUsername\.local\bin\uv.exe run --active python client/main.py --server $(cat .env.secret | grep DEPLOYED_SERVER_URL | cut -d'=' -f2)
+C:\Users\YourUsername\.local\bin\uv.exe run --active client --server $(cat .env.secret | grep DEPLOYED_SERVER_URL | cut -d'=' -f2)
 ```
 
 ```bash
 # Linux/macOS (devcontainer에서)
 # .env.secret 파일에서 URL 읽기
 export DEPLOYED_SERVER_URL=$(grep DEPLOYED_SERVER_URL .env.secret | cut -d'=' -f2)
-uv run python client/main.py --server $DEPLOYED_SERVER_URL
+uv run client --server $DEPLOYED_SERVER_URL
 ```
 
 > **참고**:

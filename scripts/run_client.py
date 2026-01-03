@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
-"""Screen Party 클라이언트 실행 스크립트"""
+"""Screen Party 클라이언트 실행 스크립트
+
+Usage:
+    uv run client [options]
+
+Example:
+    uv run client
+    uv run client --server ws://localhost:8765
+    uv run client --server wss://your-server.com
+"""
 
 import sys
 import os
@@ -7,7 +16,7 @@ import asyncio
 import argparse
 
 # client/src를 Python path에 추가
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "client", "src"))
 
 from PyQt6.QtWidgets import QApplication
 from qasync import QEventLoop

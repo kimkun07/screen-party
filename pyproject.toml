@@ -11,6 +11,8 @@ dependencies = [
 
 [project.scripts]
 publish-server = "scripts.publish_server:main"
+server = "scripts.run_server:main"
+client = "scripts.run_client:main"
 
 [tool.setuptools]
 packages = ["scripts"]

@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
-"""Screen Party 서버 실행 스크립트"""
+"""Screen Party 서버 실행 스크립트
+
+Usage:
+    uv run server [options]
+
+Example:
+    uv run server
+    uv run server --host 0.0.0.0 --port 9000
+"""
 
 import sys
 import os
@@ -7,7 +15,7 @@ import asyncio
 import argparse
 
 # server/src를 Python path에 추가
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "server", "src"))
 
 from screen_party_server.server import main as server_main
 
