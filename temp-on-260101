@@ -1,6 +1,0 @@
-[내가 한 일]
-1) devcontainer에서 github 로그인 credential이 없도록 VSCode 설정하기: devcontainer extension의 Copy Git Config, Git Credential Helper Config Location 설정을 변경해야 했음.
-[앞으로 할 일]
-1) README에 위 credential 설정한 방법 추가하기. README에 devcontainer를 사용하는 이유가 단순히 코드 개발이라고 되어있는데, yolo 모드로 실행하기 위함이라는 점으로 변경하기.
-2) Ctrl + C 신호가 올 때까지 devlog에 따라 진행하기
-  + 우선 서버를 띄우고, 호스트가 방을 만들고, 게스트 두 명이 접속해서, 간단한 정보를 모든 방향으로 주고 받는 것 구현. 그리고 테스트를 성공해야 함.

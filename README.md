@@ -84,8 +84,8 @@ screen-party/
 
 이 프로젝트는 다음과 같은 **하이브리드 환경**에서 개발하고 있습니다:
 
-- **WSL (Ubuntu)**: 프로젝트 저장소 위치, devcontainer 실행
-- **devcontainer (Linux)**: 개발 진행: 클로드 코드를 yolo 모드로 실행하기 위한 환경
+- **WSL (Ubuntu)**: 프로젝트 저장소 위치, docker engine 설치, devcontainer 실행
+- **devcontainer (Linux)**: 개발 진행: 클로드 코드를 --dangerously-skip-permissions 모드로 실행하기 위한 환경
 - **Windows**: 클라이언트 GUI (PyQt6) 테스트 환경
 
 ### 환경 구성 방법
