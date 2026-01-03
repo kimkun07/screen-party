@@ -254,7 +254,7 @@ screen-party/
 
 ## 최근 업데이트
 
-### 2026-01-03 - 클라이언트 UI 개선
+### 2026-01-03 - 클라이언트 UI 개선 및 GUI 자동화 테스트
 
 **작업 내용**:
 - ✅ 클라이언트 시작 화면 UI 재설계
@@ -268,17 +268,23 @@ screen-party/
 - ✅ 플로우 개선
   - 호스트: 세션 생성 → 클립보드 복사 → 메인 화면
   - 게스트: 세션 입력 → 접속 → 메인 화면
+- ✅ pytest-qt를 사용한 GUI 자동화 테스트
+  - **17개 테스트 모두 통과** (offscreen 모드)
+  - 시작 화면, 메인 화면, UI 상태, 상태 메시지, 화면 전환 테스트
 - ✅ ui-redesign.md devlog 추가
 
 **주요 변경사항**:
 - `client/src/screen_party_client/gui/main_window.py` 전면 리팩토링
-  - 시작 화면과 메인 화면 분리
-  - QLineEdit, QHBoxLayout 사용
-  - QApplication.clipboard() 사용
+- `client/tests/test_main_window_gui.py` GUI 테스트 추가
+- `pytest-qt`, `pytest-xvfb` 의존성 추가
+- QLineEdit, QHBoxLayout, QApplication.clipboard() 사용
+
+**테스트 결과**:
+- ✅ **GUI 자동화 테스트 17개 통과** (시작 화면 6개, 메인 화면 3개, UI 상태 3개, 상태 메시지 3개, 화면 전환 2개)
+- ✅ 통합 테스트는 영향 없음 (WebSocketClient 직접 사용)
 
 **다음 단계**:
-1. 로컬 환경에서 GUI 수동 테스트
-2. 필요시 통합 테스트 업데이트
+1. 로컬 환경에서 GUI 수동 테스트 (선택사항)
 
 ---
 
