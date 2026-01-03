@@ -122,39 +122,55 @@ devcontainer 내부에서 Github 레포지토리를 변경하지 못하도록 �
 - `uv sync --all-groups`로 모든 의존성 설치
 - bashrc에 가상환경 자동 활성화 추가
 
-#### 3단계: Windows에서 프로젝트 심볼릭 링크 생성
+#### 3단계: WSL → Windows 실시간 동기화 설정
 
-Windows에서 클라이언트를 실행하려면 WSL 경로 대신 **로컬 경로**가 필요합니다.
+Windows에서 클라이언트를 테스트하려면 WSL 프로젝트를 Windows로 동기화해야 합니다.
 
-```powershell
-# PowerShell (관리자 권한)
-# D:\Data\Develop 디렉토리에 심볼릭 링크 생성
-mklink /D "D:\Data\Develop\screen-party-mirrored" "\\wsl$\Ubuntu\home\username\screen-party"
+**WSL 터미널에서 동기화 스크립트 실행**:
+
+```bash
+# WSL (devcontainer 또는 Ubuntu 터미널)
+./scripts/start_mirror.sh /mnt/d/Data/Develop/screen-party-mirrored
 ```
 
-> **중요**: `\\wsl$` 경로에서 직접 uv를 실행했을 때 **실패**했습니다.
-> Windows 드라이브(C:, D: 등)에 심볼릭 링크를 만든 뒤, 절대 경로로 실행했을 때 성공했습니다.
+> **팁**:
+> - 이 스크립트는 WSL의 파일 변경을 감지하여 자동으로 Windows로 복사합니다
+> - **백그라운드에서 계속 실행**되어야 하므로, 별도 터미널 탭에서 실행하세요
+> - Ctrl + C로 종료 가능
+> - 한 번 실행하면 모든 파일 변경이 자동으로 동기화됩니다
+
+**환경 변수로 경로 설정** (선택 사항):
+
+```bash
+# ~/.bashrc 또는 ~/.zshrc에 추가
+export WINDOWS_MIRROR_PATH=/mnt/d/Data/Develop/screen-party-mirrored
+
+# 이후 경로 인자 없이 실행 가능
+./scripts/start_mirror.sh
+```
 
 #### 4단계: Windows에 uv 및 가상환경 설치
 
 ```powershell
-# PowerShell (관리자 권한)
-
+# PowerShell
 # 1. uv 설치
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 
-# 2. 심볼릭 링크 경로로 이동
+# 2. 동기화된 디렉토리로 이동
 cd D:\Data\Develop\screen-party-mirrored
 
 # 3. Windows용 가상환경 생성
-C:\Users\YourUsername\.local\bin\uv.exe venv .venv-windows
+uv venv .venv-windows
 
 # 4. 가상환경 활성화
-D:\Data\Develop\screen-party-mirrored\.venv-windows\Scripts\activate.ps1
+.\.venv-windows\Scripts\activate.ps1
 
 # 5. 의존성 설치
-C:\Users\YourUsername\.local\bin\uv.exe sync --active --all-groups
+uv sync --all-groups
 ```
+
+> **참고**:
+> - WSL의 `.venv`와 Windows의 `.venv-windows`는 별도로 관리됩니다
 
 **가상환경 활성화 오류 시**:
 ```powershell
@@ -178,28 +194,24 @@ uv run server --host localhost --port 9000
 
 **클라이언트 실행** (Windows에서):
 
-> **중요**: Windows에서는 반드시 아래 순서대로 실행해야 합니다.
-> - \\wsl$ 경로에서 직접 uv 실행 시 실패
-> - 심볼릭 링크 경로(D:\Data\Develop\...)에서 실행해야 함
-> - 가상환경을 먼저 activate한 후 절대 경로로 uv 실행
-> - `--active` 옵션 필수 (activate된 환경 사용)
+> **참고**: 동기화 스크립트(`start_mirror.sh`)가 실행 중이어야 WSL의 최신 변경사항이 반영됩니다.
 
 ```powershell
 # PowerShell
 cd D:\Data\Develop\screen-party-mirrored
 
 # 1. 가상환경 활성화
-D:\Data\Develop\screen-party-mirrored\.venv-windows\Scripts\activate.ps1
+.\.venv-windows\Scripts\activate.ps1
 
-# 2. 절대 경로로 uv 실행 (--active 옵션 필수)
-# 기본 실행
-C:\Users\YourUsername\.local\bin\uv.exe run --active client
+# 2. 클라이언트 실행
+# 기본 실행 (localhost:8765)
+uv run client
 
 # 도움말 보기
-C:\Users\YourUsername\.local\bin\uv.exe run --active client --help
+uv run client --help
 
 # 커스텀 서버 연결
-C:\Users\YourUsername\.local\bin\uv.exe run --active client --server ws://192.168.1.100:8765
+uv run client --server ws://192.168.1.100:8765
 ```
 
 **테스트 실행** (devcontainer에서):
@@ -286,10 +298,11 @@ cat .env.secret
 ```powershell
 # Windows PowerShell
 cd D:\Data\Develop\screen-party-mirrored
-D:\Data\Develop\screen-party-mirrored\.venv-windows\Scripts\activate.ps1
+.\.venv-windows\Scripts\activate.ps1
 
 # 배포된 서버로 연결 (.env.secret의 URL 사용)
-C:\Users\YourUsername\.local\bin\uv.exe run --active client --server $(cat .env.secret | grep DEPLOYED_SERVER_URL | cut -d'=' -f2)
+$SERVER_URL = (Get-Content .env.secret | Select-String "DEPLOYED_SERVER_URL" | ForEach-Object { $_.ToString().Split('=')[1] })
+uv run client --server $SERVER_URL
 ```
 
 ```bash

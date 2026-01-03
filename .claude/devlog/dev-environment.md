@@ -15,25 +15,28 @@
 ```
 WSL2 (Ubuntu 24.04) - 원본 레포지토리
   ├── Docker Engine 설치됨
-  ├── /home/simelvia/Develop-WSL/screen-party (원본)
-  │   └── devcontainer (Claude Code yolo 모드)
-  └── /mnt/d/data/develop/screen-party (Windows 드라이브 마운트)
+  ├── /workspaces/screen-party (원본)
+  │   ├── devcontainer (Claude Code yolo 모드)
+  │   └── scripts/start_mirror.sh (동기화 스크립트)
+  └── /mnt/d/Data/Develop/screen-party-mirrored (동기화 대상)
 
 Windows 호스트 (윈도우 앱 테스트)
-  └── D:\Data\Develop\screen-party-mirrored (symlink → WSL 원본)
+  └── D:\Data\Develop\screen-party-mirrored (WSL에서 복제된 독립 디렉토리)
       └── .venv-windows (Python 가상환경)
 ```
 
 ### 파일 구조 설명
 
-1. **원본 레포지토리**: `/home/simelvia/Develop-WSL/screen-party` (WSL)
+1. **원본 레포지토리**: `/workspaces/screen-party` (WSL)
    - screen-party 레포지토리를 WSL에서 먼저 생성
    - devcontainer에서 Claude Code 개발 진행
 
-2. **Windows symlink**: `D:\Data\Develop\screen-party-mirrored`
-   - WSL 원본에 대한 심볼릭 링크 (디렉토리)
-   - 생성 명령어: `mklink /d D:\Data\Develop\screen-party-mirrored \\wsl.localhost\Ubuntu-24.04\home\simelvia\Develop-WSL\screen-party`
+2. **Windows 복제본**: `D:\Data\Develop\screen-party-mirrored`
+   - **이전 방식 (폐기)**: mklink를 사용한 심볼릭 링크 → 문제 발생
+   - **현재 방식**: watchexec + rsync로 일방향 동기화
+   - 동기화 명령어: `./scripts/start_mirror.sh /mnt/d/Data/Develop/screen-party-mirrored`
    - Windows에서 PyQt6 앱 테스트용
+   - WSL의 변경사항이 자동으로 복사됨 (일방향)
 
 ### 역할 분리
 
@@ -43,7 +46,7 @@ Windows 호스트 (윈도우 앱 테스트)
 
 ## TODO
 
-- [x] 파일 구조 결정 (WSL 원본 + Windows symlink)
+- [x] 파일 구조 결정 (WSL 원본 + Windows 복제본)
 - [x] devcontainer IS_SANDBOX 환경변수 자동 설정
 - [x] .venv 자동 생성 및 의존성 설치
 - [x] CLAUDE_CONFIG_DIR 설정 (인증 영속성)
@@ -51,8 +54,9 @@ Windows 호스트 (윈도우 앱 테스트)
 - [x] postCreate.sh pip 설치 에러 수정 (editable 패키지)
 - [x] 컨테이너 재빌드 및 테스트
 - [x] Windows 호스트에서 Python 가상환경 구성 완료
-- [x] Windows symlink에서 venv 정상 작동 확인
-- [x] 클라이언트 테스트 워크플로우 확립
+- [x] mklink symlink → watchexec + rsync 마이그레이션 (2026-01-03)
+- [x] start_mirror.sh 스크립트 작성 및 개선
+- [x] 클라이언트 테스트 워크플로우 확립 (상대 경로 사용)
 - [x] .venv-linux → .venv 마이그레이션
 
 ## 클로드 코드 일기
@@ -235,12 +239,87 @@ Windows 호스트 (윈도우 앱 테스트)
 
 ---
 
+### 2026-01-03 - mklink symlink → watchexec + rsync 마이그레이션
+
+**상태**: 🟢 진행중 → ✅ 완료
+
+**배경**:
+- 기존 mklink 심볼릭 링크 방식에서 문제가 자주 발생
+- 일방향 동기화 (WSL → Windows)로 변경 결정
+
+**작업 내용**:
+
+1. **start_mirror.sh 스크립트 작성 및 개선** ✅
+   - `./scripts/start_mirror.sh` 파일 생성
+   - watchexec + rsync 조합으로 실시간 동기화
+   - 프로젝트 루트 자동 감지
+   - Windows 대상 경로를 인자 또는 환경 변수로 받기
+   - 제외 패턴 명시적 지정 (`.venv`, `.venv-windows`, `__pycache__` 등)
+   - 에러 처리 및 사용자 안내 메시지 추가
+
+2. **README.md 업데이트** ✅
+   - "3단계: Windows에서 프로젝트 심볼릭 링크 생성" → "3단계: WSL → Windows 실시간 동기화 설정"
+   - mklink 설명 제거, start_mirror.sh 사용법 추가
+   - Windows 클라이언트 실행 방법 간소화:
+     - 절대 경로 → 상대 경로 (`.\.venv-windows\Scripts\activate.ps1`)
+     - `--active` 옵션 제거 (불필요)
+     - `uv` 명령어만으로 실행 가능
+   - 배포된 서버 연결 PowerShell 스크립트 개선
+
+3. **CLAUDE.md 업데이트** ✅
+   - "README.md 수정 시 주의사항" 섹션 전체 교체
+   - "Windows 개발 환경 구성 방법" 섹션으로 재작성
+   - mklink 방식의 제약사항 제거
+   - 새로운 동기화 방식 설명 추가
+
+4. **devlog 업데이트** ✅
+   - `dev-environment.md` 파일 업데이트
+   - 환경 구조 다이어그램 수정
+   - TODO 리스트 업데이트
+
+**주요 개선 사항**:
+- ✅ Windows에서 상대 경로 사용 가능 (절대 경로 불필요)
+- ✅ `--active` 옵션 불필요 (uv run client만으로 실행)
+- ✅ 동기화 스크립트로 자동 동기화 (수동 복사 불필요)
+- ✅ 일방향 동기화로 충돌 방지
+
+**변경된 워크플로우**:
+
+**WSL (개발)**:
+```bash
+# 1. 동기화 스크립트 실행 (별도 터미널)
+./scripts/start_mirror.sh /mnt/d/Data/Develop/screen-party-mirrored
+
+# 2. 개발 작업 (devcontainer)
+# 코드 수정, 서버 실행 등
+```
+
+**Windows (테스트)**:
+```powershell
+# 1. 가상환경 활성화 (상대 경로)
+.\.venv-windows\Scripts\activate.ps1
+
+# 2. 클라이언트 실행 (상대 경로)
+uv run client
+```
+
+**검증 완료**:
+- ✅ start_mirror.sh 스크립트 정상 작동
+- ✅ watchexec 설치 및 동작 확인
+- ✅ 파일 변경 시 자동 동기화 확인
+- ✅ Windows에서 상대 경로로 실행 가능
+
+**다음 단계**:
+- 환경 구성 완료, 기능 개발에 집중
+
+---
+
 > **다음 Claude Code에게**:
 >
 > **환경 구조**:
 > - WSL에서 devcontainer 개발, Windows에서 클라이언트 테스트하는 이중 환경
-> - **파일 구조**: WSL 원본 (`/home/simelvia/Develop-WSL/screen-party`) ← Windows symlink (`D:\Data\Develop\screen-party-mirrored`)
-> - symlink로 연결되어 있으므로 별도 동기화 불필요
+> - **파일 구조**: WSL 원본 (`/workspaces/screen-party`) → Windows 복제본 (`D:\Data\Develop\screen-party-mirrored`)
+> - **동기화 방식**: `./scripts/start_mirror.sh` (watchexec + rsync, 일방향)
 >
 > **devcontainer 설정 완료**:
 > - ✅ `IS_SANDBOX=1` 자동 설정됨 (매번 입력 불필요)
@@ -249,7 +328,12 @@ Windows 호스트 (윈도우 앱 테스트)
 > - Python 인터프리터: `.venv/bin/python` 사용
 > - **중요**: `.claude/claude-config/`는 git에 포함되지 않음 (인증 정보)
 >
+> **Windows 테스트 환경**:
+> - ✅ 동기화 스크립트 실행 필수: `./scripts/start_mirror.sh /mnt/d/Data/Develop/screen-party-mirrored`
+> - ✅ Windows에서 상대 경로 사용 가능 (`.\.venv-windows\Scripts\activate.ps1`)
+> - ✅ `--active` 옵션 불필요 (`uv run client`만으로 실행)
+>
 > **주의사항**:
 > - Docker는 WSL2 Docker Desktop 통합 사용
 > - /mnt 마운트 경로는 devcontainer 생성 시 문제 있음 → WSL 네이티브 경로 사용
-> - Windows 테스트 환경은 사용자가 직접 구성 중 → devcontainer 개발에 집중
+> - 동기화 스크립트는 백그라운드에서 계속 실행되어야 함

@@ -37,32 +37,41 @@ uv run python client/main.py --server $DEPLOYED_SERVER_URL
 
 **이유**: 배포된 서버 도메인은 보안상 민감한 정보이며, 공개 레포지토리에 노출되면 안 됩니다.
 
-### README.md 수정 시 주의사항
+### Windows 개발 환경 구성 방법
 
-**Windows 클라이언트 실행 방법을 절대 변경하지 마세요!**
+**프로젝트는 WSL → Windows 일방향 동기화 방식을 사용합니다**
 
-README의 "클라이언트 실행 (Windows에서)" 섹션에는 다음과 같은 **필수** 사항이 있습니다:
+이전에는 mklink (심볼릭 링크)를 사용했으나, 문제가 발생하여 **watchexec + rsync** 방식으로 변경했습니다.
 
-1. **가상환경을 먼저 activate해야 함**
-   ```powershell
-   D:\Data\Develop\screen-party-mirrored\.venv-windows\Scripts\activate.ps1
-   ```
+#### 동기화 방식
 
-2. **uv는 절대 경로로 실행해야 함**
-   ```powershell
-   C:\Users\YourUsername\.local\bin\uv.exe run --active python client/main.py
-   ```
+1. **원본**: WSL (`/workspaces/screen-party`)
+2. **복제본**: Windows (`D:\Data\Develop\screen-party-mirrored`)
+3. **동기화 도구**: `./scripts/start_mirror.sh` (watchexec + rsync)
 
-3. **`--active` 옵션이 필수**
-   - `uv run --active`를 사용해야 함
-   - activate된 환경을 사용하기 위해 필요
-   - 이 옵션 없이 상대 경로로 실행하면 에러 발생
+#### 동기화 스크립트 실행
 
-4. **심볼릭 링크 경로에서 실행해야 함**
-   - `\\wsl$` 경로에서 직접 실행 시 실패
-   - `D:\Data\Develop\screen-party-mirrored`에서 실행해야 함
+```bash
+# WSL 터미널에서 (devcontainer 또는 Ubuntu)
+./scripts/start_mirror.sh /mnt/d/Data/Develop/screen-party-mirrored
+```
 
-**이유**: Windows에서 WSL 프로젝트를 사용할 때의 환경 제약 사항입니다. 이를 무시하고 간단하게 변경하면 실행이 실패합니다.
+**중요**:
+- 스크립트는 백그라운드에서 계속 실행되어야 함
+- WSL에서 파일 변경 시 자동으로 Windows에 복사됨
+- 일방향 동기화 (WSL → Windows만)
+
+#### Windows에서 클라이언트 실행 방법
+
+```powershell
+# 1. 가상환경 활성화
+.\.venv-windows\Scripts\activate.ps1
+
+# 2. 클라이언트 실행
+uv run client
+```
+
+⚠️ 동기화 스크립트 실행 필수 (WSL 터미널에서)
 
 ### 기술 스택
 
