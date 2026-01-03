@@ -254,6 +254,46 @@ screen-party/
 
 ## 최근 업데이트
 
+### 2026-01-03 - 실제 서버 배포 및 보안 강화
+
+**작업 내용**:
+- ✅ Docker 이미지 빌드 및 Docker Hub 배포
+  - 이미지: `kimkun07/screen-party-server:v0.1.0`
+  - 태그: `latest` 추가
+- ✅ 실제 서버 배포 완료 (wss 프로토콜)
+- ✅ 서버 연결 테스트 스크립트 작성 (`test_server_connection.py`)
+  - 여러 URL 조합 자동 테스트
+  - Ping/Pong, 세션 생성/참여, 메시지 전달 검증
+- ✅ **보안 강화**: 배포된 서버 도메인 보호
+  - `.env.secret` 파일 생성하여 도메인 저장
+  - `.env.example` 파일 생성 (예시용)
+  - `.gitignore`에 `.env.secret` 추가
+  - README, devlog에서 실제 도메인 제거
+  - CLAUDE.md에 보안 규칙 추가
+- ✅ README에 배포 가이드 추가
+  - Docker 이미지 빌드/배포 명령어
+  - 환경 변수 사용 방법
+  - 연결 테스트 방법
+- ✅ feature/server-deployment 브랜치를 main에 머지
+
+**테스트 결과**:
+- ✅ 배포된 서버 연결 테스트 성공
+  - Ping/Pong 통과
+  - 세션 생성/참여 성공
+  - 호스트-게스트 간 메시지 전달 확인
+
+**보안 개선**:
+- 배포된 서버 URL을 `.env.secret` 파일로 분리
+- Git 레포지토리에 민감한 정보 노출 방지
+- 다른 Claude Code 세션을 위한 명확한 보안 규칙 문서화
+
+**완료 상태**:
+- ✅ **P1 server-deployment Task 완전히 완료**
+- ✅ Docker Hub 배포 완료
+- ✅ 보안 규칙 확립
+
+---
+
 ### 2026-01-01 - 서버 배포 완료 (Docker)
 
 **작업 내용**:

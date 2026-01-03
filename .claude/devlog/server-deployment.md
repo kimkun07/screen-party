@@ -212,7 +212,88 @@ docker push your-registry/screen-party-server:v1.0.0
 
 ---
 
+### 2026-01-03 - 실제 서버 배포 및 테스트 완료
+
+**상태**: 🟢 진행중 → ✅ 완료
+
+**진행 내용**:
+- ✅ Docker 이미지 빌드 및 Docker Hub 배포 완료
+  - 이미지: `kimkun07/screen-party-server:v0.1.0`
+  - 태그: `latest` 추가
+- ✅ 실제 서버 배포 완료
+  - 서버 URL은 `.env.secret` 파일에 저장 (보안)
+  - HTTPS(wss) 프로토콜 사용
+  - 기본 포트 443으로 접근
+- ✅ 서버 연결 테스트 스크립트 작성
+  - 파일: `test_server_connection.py`
+  - 여러 URL 조합 자동 테스트 (wss/ws, 포트 8765/기본)
+- ✅ 배포된 서버 연결 테스트 성공
+  - Ping/Pong 테스트 통과
+  - 세션 생성 (호스트) 성공
+  - 세션 참여 (게스트) 성공
+  - 호스트-게스트 간 메시지 전달 확인
+- ✅ README.md에 배포 가이드 추가
+  - Docker 이미지 빌드/배포 명령어
+  - 배포된 서버 접속 방법
+  - 연결 테스트 방법
+- ✅ feature/server-deployment 브랜치를 main에 머지
+
+**테스트 결과**:
+```bash
+# 배포된 서버 URL은 .env.secret 파일 참조
+✅ 서버 연결 성공
+✅ Pong 수신: {'type': 'pong'}
+✅ 세션 생성 성공 (세션 ID: NZHIMS)
+✅ 게스트 세션 참여 성공
+✅ 호스트가 게스트 참여 알림 수신
+```
+
+**배포 명령어 (실제 사용)**:
+```bash
+# 1. Docker 이미지 빌드
+docker build -f server/Dockerfile -t kimkun07/screen-party-server:v0.1.0 .
+
+# 2. latest 태그 추가
+docker tag kimkun07/screen-party-server:v0.1.0 kimkun07/screen-party-server:latest
+
+# 3. Docker Hub 푸시
+docker push kimkun07/screen-party-server:v0.1.0
+docker push kimkun07/screen-party-server:latest
+
+# 4. 서버에서 실행 (예시)
+docker pull kimkun07/screen-party-server:v0.1.0
+docker run -d -p 8765:8765 kimkun07/screen-party-server:v0.1.0
+```
+
+**클라이언트 접속 방법**:
+```bash
+# Linux/macOS
+# .env.secret 파일에서 URL 읽기
+export DEPLOYED_SERVER_URL=$(grep DEPLOYED_SERVER_URL .env.secret | cut -d'=' -f2)
+uv run python client/main.py --server $DEPLOYED_SERVER_URL
+
+# Windows (PowerShell)
+# .env.secret 파일의 URL 사용
+C:\Users\YourUsername\.local\bin\uv.exe run --active python client/main.py --server $(cat .env.secret | grep DEPLOYED_SERVER_URL | cut -d'=' -f2)
+```
+
+**완료 상태**:
+- ✅ **P1 server-deployment Task 완료**
+- ✅ Docker 이미지 Docker Hub 배포 완료
+- ✅ 실제 서버 배포 및 연결 테스트 완료
+- ✅ README 배포 가이드 작성 완료
+- ✅ main 브랜치 머지 완료
+
+**향후 작업 (선택)**:
+- [ ] GitHub Actions 워크플로우 작성 (자동 빌드/배포)
+- [ ] SSL 인증서 자동 갱신 설정
+- [ ] 모니터링 시스템 추가
+
+---
+
 > **다음 클로드 코드에게**:
-> - server-deployment Task는 완료되었습니다
-> - GitHub Actions 워크플로우가 필요하면 추가로 작업 가능
+> - **server-deployment Task 완료됨** ✅
+> - Docker 이미지: `kimkun07/screen-party-server:v0.1.0`
+> - **중요**: 배포된 서버 URL은 `.env.secret` 파일에만 저장됨 (보안)
+> - 절대 실제 도메인을 코드나 문서에 직접 적지 마세요!
 > - 다음 P1 Task: client-deployment (클라이언트 실행 파일 빌드)

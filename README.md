@@ -228,7 +228,72 @@ uv run ruff check server/ client/ common/
 
 #### 6단계: 배포 워크플로우
 
-**서버 Docker 이미지 (작성 예정)**
+**서버 Docker 배포**
+
+**Docker 이미지 빌드 및 배포**
+
+```bash
+# 1. 서버 이미지 빌드
+docker build -f server/Dockerfile -t kimkun07/screen-party-server:v0.1.0 .
+
+# 2. 이미지 태그 추가 (latest)
+docker tag kimkun07/screen-party-server:v0.1.0 kimkun07/screen-party-server:latest
+
+# 3. Docker Hub에 푸시
+docker push kimkun07/screen-party-server:v0.1.0
+docker push kimkun07/screen-party-server:latest
+
+# 4. 로컬 테스트
+docker run -p 8765:8765 kimkun07/screen-party-server:v0.1.0
+```
+
+**배포된 서버로 클라이언트 연결**
+
+배포된 서버 URL은 `.env.secret` 파일에 저장되어 있습니다:
+
+```bash
+# .env.secret 파일 내용 확인
+cat .env.secret
+# DEPLOYED_SERVER_URL=wss://your-server-domain.com
+```
+
+클라이언트 연결:
+
+```powershell
+# Windows PowerShell
+cd D:\Data\Develop\screen-party-mirrored
+D:\Data\Develop\screen-party-mirrored\venv-windows\Scripts\activate.ps1
+
+# 배포된 서버로 연결 (.env.secret의 URL 사용)
+C:\Users\YourUsername\.local\bin\uv.exe run --active python client/main.py --server $(cat .env.secret | grep DEPLOYED_SERVER_URL | cut -d'=' -f2)
+```
+
+```bash
+# Linux/macOS (devcontainer에서)
+# .env.secret 파일에서 URL 읽기
+export DEPLOYED_SERVER_URL=$(grep DEPLOYED_SERVER_URL .env.secret | cut -d'=' -f2)
+uv run python client/main.py --server $DEPLOYED_SERVER_URL
+```
+
+> **참고**:
+> - 배포된 서버 URL은 보안을 위해 `.env.secret` 파일에만 저장됩니다.
+> - `.env.secret` 파일은 Git에 커밋되지 않습니다.
+> - `.env.example` 파일을 참고하여 `.env.secret` 파일을 생성하세요.
+
+**서버 연결 테스트**
+
+배포된 서버가 정상적으로 동작하는지 확인하려면:
+
+```bash
+# devcontainer 또는 Linux/macOS에서
+uv run python test_server_connection.py
+```
+
+테스트 스크립트는 다음을 검증합니다:
+- 서버 연결 (Ping/Pong)
+- 세션 생성 (호스트 모드)
+- 세션 참여 (게스트 모드)
+- 호스트-게스트 간 메시지 전달
 
 **클라이언트 앱 (작성 예정)**
 

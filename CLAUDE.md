@@ -11,6 +11,32 @@
 
 ## ⚠️ 중요 주의사항
 
+### 보안: 배포된 서버 도메인 관리
+
+**배포된 서버 도메인을 절대 코드나 문서에 직접 적지 마세요!**
+
+- ✅ **올바른 방법**: `.env.secret` 파일에만 저장
+- ❌ **잘못된 방법**: README.md, devlog, 코드에 직접 작성
+
+**규칙**:
+1. 배포된 서버 URL은 **`.env.secret` 파일에만** 저장
+2. `.env.secret` 파일은 `.gitignore`에 포함되어 Git에 커밋되지 않음
+3. `.env.example` 파일에 예시 형식만 제공
+4. README나 devlog에서는 "`.env.secret` 파일 참조"라고만 명시
+5. 코드에서 환경 변수로 읽어서 사용
+
+**예시**:
+```bash
+# .env.secret 파일 내용 (로컬에만 존재)
+DEPLOYED_SERVER_URL=wss://your-actual-server-domain.com
+
+# 사용 방법
+export DEPLOYED_SERVER_URL=$(grep DEPLOYED_SERVER_URL .env.secret | cut -d'=' -f2)
+uv run python client/main.py --server $DEPLOYED_SERVER_URL
+```
+
+**이유**: 배포된 서버 도메인은 보안상 민감한 정보이며, 공개 레포지토리에 노출되면 안 됩니다.
+
 ### README.md 수정 시 주의사항
 
 **Windows 클라이언트 실행 방법을 절대 변경하지 마세요!**

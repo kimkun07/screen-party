@@ -71,6 +71,7 @@ desktop.ini
 # Environments
 .env
 .env.local
+.env.secret
 
 # Distribution / packaging
 *.tar.gz
