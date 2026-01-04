@@ -254,7 +254,7 @@ screen-party/
 
 ## 최근 업데이트
 
-### 2026-01-04 - Schneider 알고리즘 기반 큐빅 베지어 커브 피팅 시스템 구현
+### 2026-01-04 - 큐빅 베지어 커브 피팅 시스템 + Multi-user 통합 완료
 
 **작업 내용**:
 - ✅ feature/bezier-curve-fitting 브랜치 생성
@@ -270,25 +270,44 @@ screen-party/
   - 트리거 기반 피팅 (10개 이상 점 누적)
   - 세그먼트 freezing 전략
   - Delta Update 패킷 생성
-- ✅ **DrawingCanvas 클래스 구현** (250+ lines)
-  - PyQt6 마우스 이벤트 처리
-  - Dual 렌더링 (finalized: 베지어 곡선, current: 직선)
-  - 50ms throttling 네트워크 전송
-  - drawing_updated 시그널
-- ✅ **유닛 테스트 90개 이상 작성** (실행하지 않음)
+- ✅ **LineData 클래스 추가**
+  - line_id별 드로잉 데이터 관리
+  - finalized_segments + current_raw_points 저장
+- ✅ **DrawingCanvas Multi-user 지원** (완전 재작성, 380+ lines)
+  - my_fitter: 내 드로잉용 IncrementalFitter
+  - remote_lines: 다른 사용자 드로잉 (line_id → LineData)
+  - user_colors: 사용자별 색상 매핑
+  - 시그널: drawing_started, drawing_updated, drawing_ended
+  - 수신 메시지 처리: handle_drawing_start/update/end
+- ✅ **메인 윈도우 통합**
+  - DrawingCanvas 위젯 추가 (600x400)
+  - 시그널 연결 및 네트워크 전송
+  - 수신 메시지 라우팅 (drawing 메시지 처리)
+  - user_id 설정 (세션 생성/참여 시)
+- ✅ **유닛 테스트 90개 이상 작성 + GUI 테스트 수정**
   - test_bezier_fitter.py (30개)
   - test_incremental_fitter.py (30개)
-  - test_drawing_canvas.py (30개, pytest-qt)
+  - test_drawing_canvas.py (30개, QPoint 수정)
+
+**커밋**:
+- `5d9fe4e` - Schneider 알고리즘 구현
+- `27b09f3` - GUI 테스트 수정
+- `6db7ceb` - Multi-user 지원 및 메인 윈도우 통합
+
+**프로토콜**:
+- drawing_start: line_id, user_id, color, start_point
+- drawing_update: line_id, user_id, new_finalized_segments, current_raw_points
+- drawing_end: line_id, user_id
 
 **주요 기술 결정**:
 - scipy spline 대신 Schneider 알고리즘 선택
 - 이유: 표준 그래픽 형식, 간결한 데이터, 네트워크 전송 효율성
 - Delta Update로 렌더링 부하 최소화
+- Multi-user 지원: line_id별 드로잉 관리, 사용자별 색상 구분
 
 **다음 단계**:
-1. 테스트 실행 및 디버깅
-2. 서버 프로토콜 연동
-3. 메인 윈도우 통합
+1. 실제 테스트 (2개 클라이언트로 동시 드로잉)
+2. 추가 기능 (색상 선택, ESC 키 제거, 페이드아웃)
 
 ---
 

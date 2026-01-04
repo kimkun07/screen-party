@@ -275,23 +275,124 @@ client/tests/
 - `client/src/screen_party_client/drawing/incremental_fitter.py:1-200`
 - `client/src/screen_party_client/drawing/canvas.py:1-250`
 
-**커밋 예정**:
-```
-[drawing-engine] Schneider 알고리즘 기반 큐빅 베지어 커브 피팅 시스템 구현
+**커밋 완료**:
+- ✅ `5d9fe4e` - Schneider 알고리즘 기반 큐빅 베지어 커브 피팅 시스템 구현
+- ✅ `27b09f3` - GUI 테스트 수정: QPointF → QPoint로 변경
+- ✅ `6db7ceb` - Multi-user 지원 및 메인 윈도우 통합 완료
 
-- BezierFitter: GraphicsGems/FitCurves.c 로직 Python 변환
-- IncrementalFitter: raw_buffer → finalized_segments 관리
-- DrawingCanvas: Dual 렌더링 + 50ms throttling 네트워크 전송
-- 유닛 테스트 90개 이상 작성 (실행하지 않음)
+---
+
+### 2026-01-04 - Multi-user 지원 및 메인 윈도우 통합
+
+**상태**: 🟢 진행중 → 🟢 진행중 (통합 완료, 테스트 대기)
+
+**진행 내용**:
+
+1. **LineData 클래스 추가** (`line_data.py`)
+   - line_id별 드로잉 데이터 관리
+   - finalized_segments + current_raw_points 저장
+   - is_complete 플래그로 드로잉 완료 여부 추적
+
+2. **DrawingCanvas 완전히 재작성** (`canvas.py`)
+   - **Multi-user 지원**:
+     - `my_fitter`: 내 드로잉용 IncrementalFitter
+     - `my_line_id`: 현재 그리는 라인 ID (UUID)
+     - `remote_lines`: 다른 사용자 드로잉 (line_id -> LineData)
+     - `user_colors`: 사용자별 색상 (user_id -> QColor)
+   - **시그널 변경**:
+     - `drawing_started(line_id, user_id, data)`
+     - `drawing_updated(line_id, user_id, data)`
+     - `drawing_ended(line_id, user_id)`
+   - **수신 메시지 처리**:
+     - `handle_drawing_start()`: 다른 사용자 드로잉 시작
+     - `handle_drawing_update()`: 베지어 세그먼트 업데이트
+     - `handle_drawing_end()`: 드로잉 완료
+   - **렌더링 분리**:
+     - remote_lines 렌더링 (다른 사용자)
+     - my_fitter 렌더링 (내 드로잉)
+   - **라인 관리**:
+     - `clear_my_drawing()`: 내 드로잉만 제거
+     - `remove_user_lines(user_id)`: 특정 사용자 라인 제거
+     - `_save_my_drawing()`: 드로잉 완료 시 remote_lines에 저장
+
+3. **메인 윈도우 통합** (`main_window.py`)
+   - DrawingCanvas 위젯 추가 (600x400 최소 크기)
+   - 시그널 연결: `_connect_drawing_signals()`
+   - 네트워크 전송: `_send_drawing_message()`
+   - 수신 메시지 라우팅:
+     - `handle_message()`에서 `drawing_start`, `drawing_update`, `drawing_end` 처리
+     - 자신의 메시지는 무시 (`user_id != self.user_id`)
+   - user_id 설정:
+     - 세션 생성 시: `self.drawing_canvas.set_user_id(self.user_id)`
+     - 세션 참여 시: 동일
+
+**프로토콜 설계**:
+
+```json
+// drawing_start
+{
+  "type": "drawing_start",
+  "line_id": "uuid-1234",
+  "user_id": "user-5678",
+  "color": "#FF0000",
+  "start_point": [100, 200]
+}
+
+// drawing_update
+{
+  "type": "drawing_update",
+  "line_id": "uuid-1234",
+  "user_id": "user-5678",
+  "new_finalized_segments": [
+    {"p0": [0, 0], "p1": [10, 20], "p2": [30, 40], "p3": [50, 60]}
+  ],
+  "current_raw_points": [[70, 80], [90, 100]]
+}
+
+// drawing_end
+{
+  "type": "drawing_end",
+  "line_id": "uuid-1234",
+  "user_id": "user-5678"
+}
 ```
+
+**서버 브로드캐스트**:
+- 서버는 이미 `handle_drawing_message()`에서 드로잉 메시지를 브로드캐스트
+- 송신자를 제외하고 세션 내 모든 클라이언트에게 전송
+- 추가 서버 작업 불필요 (기존 로직 그대로 사용)
+
+**다음 단계**:
+
+1. **실제 테스트**
+   - 로컬에서 서버 실행
+   - 2개 클라이언트로 드로잉 동시 테스트
+   - 베지어 커브 품질 확인
+   - 네트워크 지연 확인
+
+2. **추가 기능 (선택사항)**
+   - 색상 선택 UI
+   - 펜 두께 조절 UI
+   - ESC 키로 내 드로잉 제거
+   - 페이드아웃 애니메이션 (fade-animation task)
+
+3. **버그 수정**
+   - 테스트 중 발견된 문제 수정
+
+**블로커**: 없음
+
+**주요 파일**:
+- `client/src/screen_party_client/drawing/line_data.py:1-55` (신규)
+- `client/src/screen_party_client/drawing/canvas.py:1-380` (완전 재작성)
+- `client/src/screen_party_client/gui/main_window.py` (DrawingCanvas 통합)
 
 ---
 
 > **다음 클로드 코드에게**:
 >
-> - 테스트를 실행하면 numpy 관련 오류가 발생할 수 있습니다. `import numpy as np`가 제대로 되어 있는지 확인하세요.
-> - `BezierFitter._generate_bezier()` 메서드의 행렬 계산 부분이 복잡합니다. 특히 특이 행렬 처리가 중요합니다.
-> - `IncrementalFitter._try_fit_and_freeze()` 로직은 현재 단순합니다. 더 정교한 전략이 필요할 수 있습니다 (예: 오차 기반 freeze 결정).
-> - GUI 테스트는 pytest-qt가 필요합니다. offscreen 모드로 실행하세요.
-> - 네트워크 전송 시 JSON 직렬화가 필요합니다. tuple을 list로 변환해야 할 수 있습니다.
-> - 베지어 커브의 품질을 시각적으로 검증하려면 실제로 렌더링해보는 것이 좋습니다.
+> - **테스트 필수**: 2개 클라이언트로 실제 드로잉 동시 테스트 필요
+> - **JSON 직렬화**: tuple을 list로 변환 필요할 수 있음 (start_point, current_raw_points)
+> - **색상 파싱**: QColor.name()으로 저장, QColor(color_str)로 복원
+> - **성능**: 많은 라인이 그려지면 렌더링 성능 저하 가능 (최적화 필요할 수 있음)
+> - **메모리**: 오래된 라인 제거 로직 필요할 수 있음
+> - **베지어 품질**: 실제 사용 시 max_error 조정 필요할 수 있음 (기본 4.0픽셀)
