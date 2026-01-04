@@ -18,6 +18,7 @@
 
 	// Environment variables
 	"containerEnv": {
+		"TZ": "Asia/Seoul",
 		"IS_SANDBOX": "1",
 		"CLAUDE_CONFIG_DIR": "/workspaces/screen-party/.claude/claude-config",
 		"HAPPY_HOME_DIR": "/workspaces/screen-party/.claude/happy-config"
