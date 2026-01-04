@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from PyQt6.QtGui import QFont, QColor
 
+from screen_party_common import MessageType, DrawingEndMessage
 from ..network.client import WebSocketClient
 from ..drawing import DrawingCanvas
 
@@ -353,12 +354,11 @@ class MainWindow(QMainWindow):
 
     def _on_drawing_ended(self, line_id: str, user_id: str):
         """드로잉 종료 시그널 처리"""
-        data = {
-            "type": "drawing_end",
-            "line_id": line_id,
-            "user_id": user_id,
-        }
-        asyncio.create_task(self._send_drawing_message(data))
+        msg = DrawingEndMessage(
+            line_id=line_id,
+            user_id=user_id,
+        )
+        asyncio.create_task(self._send_drawing_message(msg.to_dict()))
 
     async def _send_drawing_message(self, data: dict):
         """드로잉 메시지를 서버로 전송"""
@@ -397,19 +397,19 @@ class MainWindow(QMainWindow):
             logger.error(f"Server error: {error_msg}")
 
         # 드로잉 메시지 처리
-        elif msg_type == "drawing_start":
+        elif msg_type == MessageType.DRAWING_START:
             line_id = message.get("line_id")
             user_id = message.get("user_id")
             if line_id and user_id and user_id != self.user_id:
                 self.drawing_canvas.handle_drawing_start(line_id, user_id, message)
 
-        elif msg_type == "drawing_update":
+        elif msg_type == MessageType.DRAWING_UPDATE:
             line_id = message.get("line_id")
             user_id = message.get("user_id")
             if line_id and user_id and user_id != self.user_id:
                 self.drawing_canvas.handle_drawing_update(line_id, user_id, message)
 
-        elif msg_type == "drawing_end":
+        elif msg_type == MessageType.DRAWING_END:
             line_id = message.get("line_id")
             user_id = message.get("user_id")
             if line_id and user_id and user_id != self.user_id:

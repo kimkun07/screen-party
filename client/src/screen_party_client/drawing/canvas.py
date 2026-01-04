@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import QWidget
 from PyQt6.QtCore import Qt, QTimer, QPointF, pyqtSignal
 from PyQt6.QtGui import QPainter, QPen, QPainterPath, QMouseEvent, QPaintEvent, QColor
 
+from screen_party_common import MessageType, DrawingStartMessage, DrawingUpdateMessage, DrawingEndMessage
 from .incremental_fitter import IncrementalFitter
 from .bezier_fitter import BezierSegment
 from .line_data import LineData
@@ -106,14 +107,13 @@ class DrawingCanvas(QWidget):
             self.my_fitter.start_drawing(start_point)
 
             # 시작 이벤트 전송
-            start_data = {
-                "type": "drawing_start",
-                "line_id": self.my_line_id,
-                "user_id": self.user_id,
-                "color": self.pen_color.name(),
-                "start_point": start_point,
-            }
-            self.drawing_started.emit(self.my_line_id, self.user_id, start_data)
+            msg = DrawingStartMessage(
+                line_id=self.my_line_id,
+                user_id=self.user_id,
+                color=self.pen_color.name(),
+                start_point=start_point,
+            )
+            self.drawing_started.emit(self.my_line_id, self.user_id, msg.to_dict())
 
             # 네트워크 전송 타이머 시작
             self.network_timer.start(self.network_interval)
@@ -221,12 +221,17 @@ class DrawingCanvas(QWidget):
 
         # Delta 패킷 생성
         packet = self.my_fitter.get_delta_packet()
-        packet["type"] = "drawing_update"
-        packet["line_id"] = self.my_line_id
-        packet["user_id"] = self.user_id
+
+        # 메시지 생성
+        msg = DrawingUpdateMessage(
+            line_id=self.my_line_id,
+            user_id=self.user_id,
+            new_finalized_segments=packet["new_finalized_segments"],
+            current_raw_points=packet["current_raw_points"],
+        )
 
         # 시그널 emit
-        self.drawing_updated.emit(self.my_line_id, self.user_id, packet)
+        self.drawing_updated.emit(self.my_line_id, self.user_id, msg.to_dict())
 
     def _save_my_drawing(self):
         """내 드로잉을 remote_lines에 저장 (렌더링 유지용)"""
