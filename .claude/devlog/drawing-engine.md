@@ -543,6 +543,99 @@ await client.send_message(msg.to_dict())
 
 ---
 
+---
+
+### 2026-01-05 - 상대 좌표 시스템 구현으로 해상도 차이 문제 해결
+
+**상태**: 🟢 진행중 → ✅ 완료
+
+**문제**:
+- 호스트와 게스트의 화면 크기가 다를 때 그림이 잘리는 현상
+- 절대 좌표(픽셀 단위)를 사용하여 해상도에 의존적
+- 게스트가 화면 오른쪽 끝에 그렸어도 호스트의 작은 화면에서는 화면 밖으로 나감
+
+**해결 방법**:
+
+상대 좌표(0.0 ~ 1.0) 시스템 도입:
+- **전송 시**: 절대 좌표(픽셀) → 상대 좌표(비율)로 변환
+- **수신 시**: 상대 좌표 → 각 클라이언트의 화면 크기에 맞게 절대 좌표로 복원
+- 화면 크기와 무관하게 동일한 **상대 위치**에 드로잉 표시
+
+**구현**:
+
+1. **BezierSegment 클래스 확장** (`bezier_fitter.py`)
+   ```python
+   def to_relative(self, width: float, height: float) -> BezierSegment:
+       """절대 좌표 → 상대 좌표 (전송용)"""
+       return BezierSegment(
+           p0=(self.p0[0] / width, self.p0[1] / height),
+           p1=(self.p1[0] / width, self.p1[1] / height),
+           p2=(self.p2[0] / width, self.p2[1] / height),
+           p3=(self.p3[0] / width, self.p3[1] / height),
+       )
+
+   def to_absolute(self, width: float, height: float) -> BezierSegment:
+       """상대 좌표 → 절대 좌표 (렌더링용)"""
+       return BezierSegment(
+           p0=(self.p0[0] * width, self.p0[1] * height),
+           p1=(self.p1[0] * width, self.p1[1] * height),
+           p2=(self.p2[0] * width, self.p2[1] * height),
+           p3=(self.p3[0] * width, self.p3[1] * height),
+       )
+   ```
+
+2. **DrawingCanvas 좌표 변환 메서드** (`canvas.py`)
+   ```python
+   def _to_relative_point(self, x: float, y: float) -> Tuple[float, float]:
+       """절대 좌표 → 상대 좌표 (0.0 ~ 1.0)"""
+       width = self.width() or 1  # 0으로 나누기 방지
+       height = self.height() or 1
+       return (x / width, y / height)
+
+   def _to_absolute_point(self, rel_x: float, rel_y: float) -> Tuple[float, float]:
+       """상대 좌표 → 절대 좌표"""
+       width = self.width()
+       height = self.height()
+       return (rel_x * width, rel_y * height)
+   ```
+
+3. **전송 시 상대 좌표로 변환**
+   - `mousePressEvent`: start_point를 상대 좌표로 변환하여 전송
+   - `_send_network_update`:
+     - finalized_segments를 상대 좌표로 변환
+     - current_raw_points를 상대 좌표로 변환
+
+4. **수신 시 절대 좌표로 복원**
+   - `handle_drawing_update`:
+     - 수신한 상대 좌표 베지어 세그먼트를 절대 좌표로 변환
+     - 수신한 상대 좌표 raw points를 절대 좌표로 변환
+
+**좌표 변환 예시**:
+
+```python
+# 전송 시 (게스트 화면: 800x600)
+# 마우스 위치: (720, 540) → 화면 오른쪽 아래 (90%, 90%)
+rel_point = (720 / 800, 540 / 600) = (0.9, 0.9)  # 전송
+
+# 수신 시 (호스트 화면: 1920x1080)
+abs_point = (0.9 * 1920, 0.9 * 1080) = (1728, 972)  # 렌더링
+# → 호스트 화면에서도 오른쪽 아래 (90%, 90%) 위치에 표시됨
+```
+
+**테스트 결과**:
+- ✅ 71개 테스트 모두 통과
+- ✅ 실사용 테스트: 호스트와 게스트 화면 크기가 달라도 정확한 위치에 드로잉 표시
+- ✅ 기존 기능 정상 작동 (렌더링, 네트워크 전송, 베지어 피팅 등)
+
+**브랜치**: `feature/relative-coordinates`
+
+**커밋**:
+- `a1f015b` - [drawing-engine] 상대 좌표 시스템 구현으로 해상도 차이 문제 해결
+
+**블로커**: 없음
+
+---
+
 > **다음 클로드 코드에게**:
 >
 > **✅ 핵심 기능 완료**:
@@ -550,6 +643,7 @@ await client.send_message(msg.to_dict())
 > - Incremental fitting (연속성 보장) 완료
 > - Multi-user 실시간 동기화 완료
 > - 타입 안전한 메시지 시스템 완료
+> - **상대 좌표 시스템 완료** (해상도 차이 문제 해결) ✨
 >
 > **추가 고려사항**:
 > - **성능**: 많은 라인이 그려지면 렌더링 성능 저하 가능 (최적화 필요할 수 있음)
