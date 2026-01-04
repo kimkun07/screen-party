@@ -10,9 +10,11 @@ from PyQt6.QtWidgets import (
     QApplication
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QColor
 
+from screen_party_common import MessageType, DrawingEndMessage
 from ..network.client import WebSocketClient
+from ..drawing import DrawingCanvas
 
 logger = logging.getLogger(__name__)
 
@@ -170,6 +172,21 @@ class MainWindow(QMainWindow):
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         main_screen_layout.addWidget(self.status_label)
 
+        main_screen_layout.addSpacing(20)
+
+        # Drawing Canvas
+        self.drawing_canvas = DrawingCanvas(
+            parent=self.main_widget,
+            user_id=None,  # 세션 연결 시 설정
+            pen_color=QColor(255, 0, 0),
+            pen_width=3,
+        )
+        self.drawing_canvas.setMinimumSize(600, 400)
+        main_screen_layout.addWidget(self.drawing_canvas)
+
+        # Drawing Canvas 시그널 연결
+        self._connect_drawing_signals()
+
         main_screen_layout.addStretch()
 
         self.main_layout.addWidget(self.main_widget)
@@ -232,6 +249,9 @@ class MainWindow(QMainWindow):
                 self.is_host = True
                 self.is_connected = True
 
+                # DrawingCanvas에 user_id 설정
+                self.drawing_canvas.set_user_id(self.user_id)
+
                 # 클립보드에 (서버주소, 세션번호) 복사
                 clipboard = QApplication.clipboard()
                 clipboard_text = f"({server_url}, {self.session_id})"
@@ -292,6 +312,9 @@ class MainWindow(QMainWindow):
                 self.is_host = False
                 self.is_connected = True
 
+                # DrawingCanvas에 user_id 설정
+                self.drawing_canvas.set_user_id(self.user_id)
+
                 self.set_start_status(f"세션 참여 성공!")
 
                 self.session_joined.emit(self.session_id, self.user_id)
@@ -314,6 +337,36 @@ class MainWindow(QMainWindow):
             if self.client:
                 await self.client.disconnect()
                 self.client = None
+
+    def _connect_drawing_signals(self):
+        """DrawingCanvas 시그널 연결"""
+        self.drawing_canvas.drawing_started.connect(self._on_drawing_started)
+        self.drawing_canvas.drawing_updated.connect(self._on_drawing_updated)
+        self.drawing_canvas.drawing_ended.connect(self._on_drawing_ended)
+
+    def _on_drawing_started(self, line_id: str, user_id: str, data: dict):
+        """드로잉 시작 시그널 처리"""
+        asyncio.create_task(self._send_drawing_message(data))
+
+    def _on_drawing_updated(self, line_id: str, user_id: str, data: dict):
+        """드로잉 업데이트 시그널 처리"""
+        asyncio.create_task(self._send_drawing_message(data))
+
+    def _on_drawing_ended(self, line_id: str, user_id: str):
+        """드로잉 종료 시그널 처리"""
+        msg = DrawingEndMessage(
+            line_id=line_id,
+            user_id=user_id,
+        )
+        asyncio.create_task(self._send_drawing_message(msg.to_dict()))
+
+    async def _send_drawing_message(self, data: dict):
+        """드로잉 메시지를 서버로 전송"""
+        if self.client and self.is_connected:
+            try:
+                await self.client.send_message(data)
+            except Exception as e:
+                logger.error(f"Failed to send drawing message: {e}")
 
     async def handle_message(self, message: dict):
         """서버로부터 받은 메시지 처리
@@ -342,6 +395,25 @@ class MainWindow(QMainWindow):
             error_msg = message.get("message", "Unknown error")
             self.set_status(f"Error: {error_msg}")
             logger.error(f"Server error: {error_msg}")
+
+        # 드로잉 메시지 처리
+        elif msg_type == MessageType.DRAWING_START:
+            line_id = message.get("line_id")
+            user_id = message.get("user_id")
+            if line_id and user_id and user_id != self.user_id:
+                self.drawing_canvas.handle_drawing_start(line_id, user_id, message)
+
+        elif msg_type == MessageType.DRAWING_UPDATE:
+            line_id = message.get("line_id")
+            user_id = message.get("user_id")
+            if line_id and user_id and user_id != self.user_id:
+                self.drawing_canvas.handle_drawing_update(line_id, user_id, message)
+
+        elif msg_type == MessageType.DRAWING_END:
+            line_id = message.get("line_id")
+            user_id = message.get("user_id")
+            if line_id and user_id and user_id != self.user_id:
+                self.drawing_canvas.handle_drawing_end(line_id, user_id)
 
     def set_status(self, status: str):
         """메인 화면 상태 메시지 설정

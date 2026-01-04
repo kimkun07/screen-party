@@ -12,7 +12,7 @@ from websockets.asyncio.server import ServerConnection
 from websockets.exceptions import ConnectionClosed
 
 from .session import SessionManager
-from screen_party_common import Guest
+from screen_party_common import Guest, MessageType, DRAWING_MESSAGE_TYPES, PUBLIC_MESSAGE_TYPES
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -82,18 +82,22 @@ class ScreenPartyServer:
         # 현재 클라이언트의 user_id 조회
         user_id = self.websocket_to_user.get(websocket)
 
-        # 메시지 타입별 라우팅
-        if msg_type == "create_session":
+        # Public 메시지 타입 (인증 불필요)
+        if msg_type == MessageType.CREATE_SESSION:
             user_id = await self.handle_create_session(websocket, data)
-        elif msg_type == "join_session":
+        elif msg_type == MessageType.JOIN_SESSION:
             user_id = await self.handle_join_session(websocket, data)
-        elif msg_type == "ping":
+        elif msg_type == MessageType.PING:
             await self.handle_ping(websocket)
-        elif msg_type in ("line_start", "line_update", "line_end", "line_remove"):
+
+        # Drawing 메시지 타입 (인증 필요)
+        elif msg_type in DRAWING_MESSAGE_TYPES:
             if user_id:
                 await self.handle_drawing_message(websocket, user_id, data)
             else:
                 await self.send_error(websocket, "Not authenticated")
+
+        # Unknown 메시지 타입
         else:
             await self.send_error(websocket, f"Unknown message type: {msg_type}")
 
