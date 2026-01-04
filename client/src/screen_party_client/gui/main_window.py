@@ -397,19 +397,19 @@ class MainWindow(QMainWindow):
             logger.error(f"Server error: {error_msg}")
 
         # 드로잉 메시지 처리
-        elif msg_type == MessageType.DRAWING_START:
+        elif msg_type == MessageType.DRAWING_START.value:
             line_id = message.get("line_id")
             user_id = message.get("user_id")
             if line_id and user_id and user_id != self.user_id:
                 self.drawing_canvas.handle_drawing_start(line_id, user_id, message)
 
-        elif msg_type == MessageType.DRAWING_UPDATE:
+        elif msg_type == MessageType.DRAWING_UPDATE.value:
             line_id = message.get("line_id")
             user_id = message.get("user_id")
             if line_id and user_id and user_id != self.user_id:
                 self.drawing_canvas.handle_drawing_update(line_id, user_id, message)
 
-        elif msg_type == MessageType.DRAWING_END:
+        elif msg_type == MessageType.DRAWING_END.value:
             line_id = message.get("line_id")
             user_id = message.get("user_id")
             if line_id and user_id and user_id != self.user_id:

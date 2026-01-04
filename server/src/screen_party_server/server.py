@@ -83,11 +83,11 @@ class ScreenPartyServer:
         user_id = self.websocket_to_user.get(websocket)
 
         # Public 메시지 타입 (인증 불필요)
-        if msg_type == MessageType.CREATE_SESSION:
+        if msg_type == MessageType.CREATE_SESSION.value:
             user_id = await self.handle_create_session(websocket, data)
-        elif msg_type == MessageType.JOIN_SESSION:
+        elif msg_type == MessageType.JOIN_SESSION.value:
             user_id = await self.handle_join_session(websocket, data)
-        elif msg_type == MessageType.PING:
+        elif msg_type == MessageType.PING.value:
             await self.handle_ping(websocket)
 
         # Drawing 메시지 타입 (인증 필요)

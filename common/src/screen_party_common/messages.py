@@ -32,28 +32,33 @@ class MessageType(str, Enum):
     DRAWING_END = "drawing_end"
 
 
-# 카테고리별 메시지 타입 그룹
+# 카테고리별 메시지 타입 그룹 (문자열 값으로 비교)
 DRAWING_MESSAGE_TYPES = {
-    MessageType.DRAWING_START,
-    MessageType.DRAWING_UPDATE,
-    MessageType.DRAWING_END,
+    MessageType.DRAWING_START.value,
+    MessageType.DRAWING_UPDATE.value,
+    MessageType.DRAWING_END.value,
+    # Legacy support (기존 "line_*" 메시지 타입)
+    "line_start",
+    "line_update",
+    "line_end",
+    "line_remove",
 }
 
 SESSION_MESSAGE_TYPES = {
-    MessageType.CREATE_SESSION,
-    MessageType.JOIN_SESSION,
-    MessageType.SESSION_CREATED,
-    MessageType.SESSION_JOINED,
-    MessageType.GUEST_JOINED,
-    MessageType.GUEST_LEFT,
-    MessageType.SESSION_EXPIRED,
+    MessageType.CREATE_SESSION.value,
+    MessageType.JOIN_SESSION.value,
+    MessageType.SESSION_CREATED.value,
+    MessageType.SESSION_JOINED.value,
+    MessageType.GUEST_JOINED.value,
+    MessageType.GUEST_LEFT.value,
+    MessageType.SESSION_EXPIRED.value,
 }
 
 # 인증 불필요한 public 메시지
 PUBLIC_MESSAGE_TYPES = {
-    MessageType.CREATE_SESSION,
-    MessageType.JOIN_SESSION,
-    MessageType.PING,
+    MessageType.CREATE_SESSION.value,
+    MessageType.JOIN_SESSION.value,
+    MessageType.PING.value,
 }
 
 # 인증 필요한 authenticated 메시지
