@@ -51,7 +51,7 @@
 | P1 | client-deployment | 🟡 준비중 | 클라이언트 실행 파일 빌드 | client-core, testing |
 | P2 | host-overlay | 🟡 준비중 | 호스트 투명 오버레이 | client-core, testing |
 | P2 | guest-calibration | 🟡 준비중 | 게스트 영역 설정 (좌표 매핑) | client-core, testing |
-| P2 | drawing-engine | 🟡 준비중 | 실시간 드로잉 (Spline) | server-core, client-core, testing |
+| P2 | drawing-engine | 🟢 진행중 | 실시간 드로잉 (베지어 커브 피팅) | server-core, client-core, testing |
 | P2 | fade-animation | 🟡 준비중 | 페이드아웃 애니메이션 | drawing-engine |
 | P3 | persistence-mode | 🟡 준비중 | 장시간 그림 모드 | drawing-engine |
 | P3 | color-system | 🟡 준비중 | 색상 설정 시스템 | drawing-engine |
@@ -253,6 +253,44 @@ screen-party/
 - ❓ 색상 팔레트: 미리 정의된 색상? 커스텀 RGB?
 
 ## 최근 업데이트
+
+### 2026-01-04 - Schneider 알고리즘 기반 큐빅 베지어 커브 피팅 시스템 구현
+
+**작업 내용**:
+- ✅ feature/bezier-curve-fitting 브랜치 생성
+- ✅ **BezierFitter 클래스 구현** (500+ lines)
+  - GraphicsGems/FitCurves.c 로직을 Python으로 변환
+  - Bernstein basis functions + 1차/2차 미분
+  - Chord length parameterization
+  - 최소 제곱법으로 베지어 제어점 계산
+  - Newton-Raphson 파라미터 최적화
+  - 재귀적 분할 처리
+- ✅ **IncrementalFitter 클래스 구현** (200+ lines)
+  - raw_buffer → finalized_segments 관리
+  - 트리거 기반 피팅 (10개 이상 점 누적)
+  - 세그먼트 freezing 전략
+  - Delta Update 패킷 생성
+- ✅ **DrawingCanvas 클래스 구현** (250+ lines)
+  - PyQt6 마우스 이벤트 처리
+  - Dual 렌더링 (finalized: 베지어 곡선, current: 직선)
+  - 50ms throttling 네트워크 전송
+  - drawing_updated 시그널
+- ✅ **유닛 테스트 90개 이상 작성** (실행하지 않음)
+  - test_bezier_fitter.py (30개)
+  - test_incremental_fitter.py (30개)
+  - test_drawing_canvas.py (30개, pytest-qt)
+
+**주요 기술 결정**:
+- scipy spline 대신 Schneider 알고리즘 선택
+- 이유: 표준 그래픽 형식, 간결한 데이터, 네트워크 전송 효율성
+- Delta Update로 렌더링 부하 최소화
+
+**다음 단계**:
+1. 테스트 실행 및 디버깅
+2. 서버 프로토콜 연동
+3. 메인 윈도우 통합
+
+---
 
 ### 2026-01-03 - 클라이언트 UI 개선 및 GUI 자동화 테스트
 
