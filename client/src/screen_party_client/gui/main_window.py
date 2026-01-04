@@ -39,6 +39,11 @@ class MainWindow(QMainWindow):
         # UI 상태
         self.is_connected = False
 
+        # 오버레이 상태 (Phase 1: host-overlay)
+        self.is_sharing = False
+        self.overlay_window = None
+        self.floating_menu = None
+
         self.init_ui()
 
     def init_ui(self):
@@ -186,6 +191,25 @@ class MainWindow(QMainWindow):
 
         # Drawing Canvas 시그널 연결
         self._connect_drawing_signals()
+
+        main_screen_layout.addSpacing(30)
+
+        # 공유 모드 섹션 (호스트만 사용)
+        share_section_layout = QVBoxLayout()
+
+        share_label = QLabel("Host Mode")
+        share_label_font = QFont()
+        share_label_font.setPointSize(12)
+        share_label_font.setBold(True)
+        share_label.setFont(share_label_font)
+        share_section_layout.addWidget(share_label)
+
+        self.share_button = QPushButton("Start Share Mode")
+        self.share_button.setMinimumHeight(50)
+        self.share_button.clicked.connect(self.toggle_share_mode)
+        share_section_layout.addWidget(self.share_button)
+
+        main_screen_layout.addLayout(share_section_layout)
 
         main_screen_layout.addStretch()
 
@@ -402,18 +426,27 @@ class MainWindow(QMainWindow):
             user_id = message.get("user_id")
             if line_id and user_id and user_id != self.user_id:
                 self.drawing_canvas.handle_drawing_start(line_id, user_id, message)
+                # 오버레이가 있으면 오버레이에도 전달
+                if self.is_sharing and self.overlay_window:
+                    self.overlay_window.get_canvas().handle_drawing_start(line_id, user_id, message)
 
         elif msg_type == MessageType.DRAWING_UPDATE.value:
             line_id = message.get("line_id")
             user_id = message.get("user_id")
             if line_id and user_id and user_id != self.user_id:
                 self.drawing_canvas.handle_drawing_update(line_id, user_id, message)
+                # 오버레이가 있으면 오버레이에도 전달
+                if self.is_sharing and self.overlay_window:
+                    self.overlay_window.get_canvas().handle_drawing_update(line_id, user_id, message)
 
         elif msg_type == MessageType.DRAWING_END.value:
             line_id = message.get("line_id")
             user_id = message.get("user_id")
             if line_id and user_id and user_id != self.user_id:
                 self.drawing_canvas.handle_drawing_end(line_id, user_id)
+                # 오버레이가 있으면 오버레이에도 전달
+                if self.is_sharing and self.overlay_window:
+                    self.overlay_window.get_canvas().handle_drawing_end(line_id, user_id)
 
     def set_status(self, status: str):
         """메인 화면 상태 메시지 설정
@@ -448,8 +481,118 @@ class MainWindow(QMainWindow):
         self.server_input.setEnabled(True)
         self.session_input.setEnabled(True)
 
+    # ========== 공유 모드 메서드 (Phase 1: host-overlay) ==========
+
+    def toggle_share_mode(self):
+        """공유 모드 토글"""
+        if self.is_sharing:
+            self.stop_share_mode()
+        else:
+            self.start_share_mode()
+
+    def start_share_mode(self):
+        """공유 모드 시작 (창 선택 다이얼로그 표시)"""
+        from .window_selector import WindowSelectorDialog
+
+        dialog = WindowSelectorDialog(self)
+        if dialog.exec():
+            window_handle = dialog.get_selected_handle()
+            if window_handle:
+                self.create_overlay(window_handle)
+
+    def create_overlay(self, window_handle: int):
+        """오버레이 생성"""
+        from .overlay_window import OverlayWindow
+        from .floating_menu import FloatingActionMenu
+
+        try:
+            # 오버레이 윈도우 생성
+            self.overlay_window = OverlayWindow(
+                target_handle=window_handle,
+                user_id=self.user_id,
+                pen_color=QColor(255, 0, 0),
+            )
+
+            # 오버레이 시그널 연결
+            self.overlay_window.target_window_closed.connect(self.on_overlay_window_closed)
+
+            # Floating Action Menu 생성
+            self.floating_menu = FloatingActionMenu()
+            self.floating_menu.exit_clicked.connect(self.stop_share_mode)
+            self.floating_menu.clear_clicked.connect(self.clear_overlay_drawings)
+
+            # FAB 위치: 우하단
+            overlay_rect = self.overlay_window.geometry()
+            fab_x = overlay_rect.right() - 100
+            fab_y = overlay_rect.bottom() - 100
+            self.floating_menu.move(fab_x, fab_y)
+
+            # 창 표시
+            self.overlay_window.show()
+            self.floating_menu.show()
+
+            # 상태 업데이트
+            self.is_sharing = True
+            self.share_button.setText("Stop Share Mode")
+            self.set_status("Share mode started")
+
+            logger.info(f"Overlay created for window {window_handle}")
+
+        except Exception as e:
+            logger.error(f"Failed to create overlay: {e}", exc_info=True)
+            QMessageBox.critical(
+                self,
+                "Error",
+                f"Failed to create overlay:\n{e}",
+            )
+            self.stop_share_mode()
+
+    def stop_share_mode(self):
+        """공유 모드 종료"""
+        if self.overlay_window:
+            try:
+                self.overlay_window.close()
+            except Exception as e:
+                logger.error(f"Error closing overlay: {e}")
+            self.overlay_window = None
+
+        if self.floating_menu:
+            try:
+                self.floating_menu.close()
+            except Exception as e:
+                logger.error(f"Error closing floating menu: {e}")
+            self.floating_menu = None
+
+        self.is_sharing = False
+        self.share_button.setText("Start Share Mode")
+        self.set_status("Share mode stopped")
+
+        logger.info("Share mode stopped")
+
+    def on_overlay_window_closed(self):
+        """오버레이 창이 닫혔을 때 (타겟 창이 닫힘)"""
+        QMessageBox.information(
+            self,
+            "Window Closed",
+            "The target window was closed. Share mode will exit.",
+        )
+        self.stop_share_mode()
+
+    def clear_overlay_drawings(self):
+        """Clear all drawings on overlay"""
+        if self.overlay_window:
+            self.overlay_window.get_canvas().clear_all_drawings()
+            self.set_status("Overlay drawings cleared")
+            logger.info("Overlay drawings cleared")
+
+    # ================================================================
+
     async def disconnect(self):
         """서버 연결 종료"""
+        # 공유 모드가 활성화되어 있으면 종료
+        if self.is_sharing:
+            self.stop_share_mode()
+
         if self.listen_task:
             self.listen_task.cancel()
             try:

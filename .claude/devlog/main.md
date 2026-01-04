@@ -49,7 +49,7 @@
 | P1 | testing | 🟢 진행중 | 유닛 테스트 (서버 29개 + 클라이언트 120+개) + 통합 테스트 (3개) 완료 | server-core, client-core |
 | P1 | server-deployment | ✅ 완료 | Docker 이미지 및 배포 | server-core, testing |
 | P1 | client-deployment | ✅ 완료 | PyInstaller 기반 클라이언트 실행 파일 빌드 | client-core, testing |
-| P2 | host-overlay | 🟡 준비중 | 호스트 투명 오버레이 | client-core, testing |
+| P2 | host-overlay | ✅ 완료 | 호스트 투명 오버레이 + FAB (Phase 1+2) | client-core, testing |
 | P2 | guest-calibration | 🟡 준비중 | 게스트 영역 설정 (좌표 매핑) | client-core, testing |
 | P2 | drawing-engine | ✅ 완료 | 실시간 베지어 커브 피팅 + Multi-user 동기화 | server-core, client-core, testing |
 | P2 | fade-animation | 🟡 준비중 | 페이드아웃 애니메이션 | drawing-engine |
@@ -66,6 +66,58 @@
 - ⏸️ **보류** (On Hold): 임시로 중단
 
 ## 최근 업데이트
+
+### 2026-01-04 - Host Overlay 완료 (Phase 1+2: 투명 오버레이 + FAB)
+
+**완료된 Task**:
+- ✅ **host-overlay**: 호스트 투명 오버레이 + Floating Action Button (Windows 전용)
+
+**주요 성과**:
+
+1. **투명 오버레이 시스템 (OverlayWindow)**
+   - `Qt.WindowType.WindowTransparentForInput` 플래그로 click passthrough 구현
+   - 게임 창 위에 투명하게 표시되면서 클릭이 아래로 전달
+   - QTimer 100ms 주기로 창 위치/크기 동기화
+   - 창 최소화/닫힘 자동 감지
+
+2. **창 관리 시스템 (WindowManager)**
+   - pywin32 기반 Windows 창 목록 가져오기
+   - 창 정보 조회 (위치, 크기, 프로세스 이름)
+   - 최소화/존재 여부 체크
+
+3. **창 선택 UI (WindowSelectorDialog)**
+   - 실행 중인 창 목록 표시
+   - 검색 필터 기능
+   - 더블클릭 즉시 선택
+
+4. **Floating Action Button (FloatingActionMenu)**
+   - 독립 창 (parent=None)으로 구현 → 클릭 가능!
+   - 드래그 가능 (우하단 초기 배치)
+   - 확장/축소 기능 (Exit, Clear 버튼)
+   - 반투명 스타일
+
+5. **MainWindow 통합**
+   - '공유 모드' 버튼 추가
+   - toggle_share_mode, create_overlay, stop_share_mode 메서드
+   - 드로잉 메시지 자동 라우팅 (오버레이에도 전달)
+
+**기술 구현**:
+- ✅ Click passthrough: WindowTransparentForInput
+- ✅ FAB 독립 창: parent=None
+- ✅ 창 위치 동기화: QTimer 100ms
+- ✅ 드래그: mousePressEvent/mouseMoveEvent
+- ✅ DrawingCanvas 재사용
+
+**알려진 제약사항**:
+- Windows 전용 (Linux 미지원)
+- pywin32 필수
+- Windows 환경에서 수동 테스트 필요
+
+**다음 우선순위**:
+- P2: guest-calibration (게스트 영역 설정)
+- P2: fade-animation (페이드아웃 애니메이션)
+
+---
 
 ### 2026-01-04 - Drawing Engine 완료 및 타입 안전한 메시지 시스템 구축
 

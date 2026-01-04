@@ -14,6 +14,8 @@ dependencies = [
     "numpy>=2.2.0",
     "qasync>=0.27.0",
     "screen-party-common",
+    "pywin32>=306; platform_system=='Windows'",
+    "psutil>=5.9.0",
 ]
 
 [project.optional-dependencies]
