@@ -6,14 +6,14 @@ Usage:
 
 Example:
     uv run client
-    uv run client --server ws://localhost:8765
-    uv run client --server wss://your-server.com
+    uv run client --fullscreen
 """
 
 import sys
 import os
 import asyncio
 import argparse
+import logging
 
 # client/src를 Python path에 추가
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "client", "src"))
@@ -21,6 +21,17 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "client", "src"
 from PyQt6.QtWidgets import QApplication
 from qasync import QEventLoop
 from screen_party_client.gui.main_window import MainWindow
+
+# 로깅 설정
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+
+logger = logging.getLogger(__name__)
 
 
 def parse_args():
@@ -30,20 +41,12 @@ def parse_args():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 예제:
-  %(prog)s                              # 기본 서버에 연결 (ws://localhost:8765)
-  %(prog)s --server ws://192.168.1.10   # 특정 서버에 연결
-  %(prog)s --server ws://example.com:9000  # 외부 서버에 연결
+  %(prog)s                    # 클라이언트 시작 (저장된 서버 주소 사용)
+  %(prog)s --fullscreen       # 전체 화면 모드로 시작
 
-환경 변수:
-  SCREEN_PARTY_SERVER    서버 WebSocket URL (기본값: ws://localhost:8765)
+참고:
+  서버 주소는 GUI에서 직접 입력하고, 자동으로 저장됩니다.
         """
-    )
-
-    parser.add_argument(
-        "--server",
-        type=str,
-        default=os.getenv("SCREEN_PARTY_SERVER", "ws://localhost:8765"),
-        help="서버 WebSocket URL (기본값: ws://localhost:8765)"
     )
 
     parser.add_argument(
@@ -65,16 +68,18 @@ def main():
     """클라이언트 진입점"""
     args = parse_args()
 
-    # 환경 변수 설정
-    os.environ["SCREEN_PARTY_SERVER"] = args.server
+    # verbose 모드 처리
+    if args.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+        logger.debug("Verbose mode enabled")
 
     # 클라이언트 시작 메시지
     print("=" * 60)
     print("Screen Party 클라이언트 시작".center(60))
     print("=" * 60)
-    print(f"  서버 URL: {args.server}")
-    print("=" * 60)
     print()
+
+    logger.info("Starting Screen Party Client...")
 
     # PyQt6 애플리케이션 생성
     app = QApplication(sys.argv)
@@ -84,7 +89,7 @@ def main():
     asyncio.set_event_loop(loop)
 
     # 메인 윈도우 생성
-    window = MainWindow(server_url=args.server)
+    window = MainWindow()
 
     if args.fullscreen:
         window.showFullScreen()
@@ -96,8 +101,10 @@ def main():
         try:
             loop.run_forever()
         except KeyboardInterrupt:
+            logger.info("Client interrupted by user")
             print("\n클라이언트 종료")
         except Exception as e:
+            logger.error(f"Fatal error: {e}", exc_info=True)
             print(f"\n오류 발생: {e}")
             sys.exit(1)
 

@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (
     QLabel, QInputDialog, QMessageBox, QHBoxLayout, QLineEdit,
     QApplication
 )
-from PyQt6.QtCore import Qt, pyqtSignal, QTimer
+from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QSettings
 from PyQt6.QtGui import QFont, QColor
 
 from screen_party_common import MessageType, DrawingEndMessage
@@ -27,9 +27,12 @@ class MainWindow(QMainWindow):
     session_joined = pyqtSignal(str, str)  # session_id, user_id
     error_occurred = pyqtSignal(str)  # error_message
 
-    def __init__(self, server_url: str = "ws://localhost:8765"):
+    def __init__(self):
         super().__init__()
-        self.default_server_url = server_url
+
+        # QSettings 초기화 (로컬 저장소)
+        self.settings = QSettings("ScreenParty", "Client")
+
         self.client: Optional[WebSocketClient] = None
         self.session_id: Optional[str] = None
         self.user_id: Optional[str] = None
@@ -89,7 +92,9 @@ class MainWindow(QMainWindow):
         server_label = QLabel("서버 주소:")
         start_layout.addWidget(server_label)
         self.server_input = QLineEdit()
-        self.server_input.setText(self.default_server_url)
+        # QSettings에서 저장된 서버 주소 불러오기
+        saved_server = self.settings.value("server_url", "")
+        self.server_input.setText(saved_server)
         self.server_input.setPlaceholderText("ws://localhost:8765")
         start_layout.addWidget(self.server_input)
 
@@ -255,23 +260,38 @@ class MainWindow(QMainWindow):
                 QMessageBox.warning(self, "입력 오류", "서버 주소를 입력해주세요")
                 return
 
+            logger.info("=" * 60)
+            logger.info("SESSION CREATION STARTED")
+            logger.info(f"Server URL: {server_url}")
+            logger.info("=" * 60)
+
             self.set_start_status("서버에 연결 중...")
             self.disable_start_buttons()
 
             # WebSocket 클라이언트 생성 및 연결
+            logger.info("Step 1: Creating WebSocket client...")
             self.client = WebSocketClient(server_url)
             self.client.set_message_handler(self.handle_message)
+
+            logger.info("Step 2: Connecting to server...")
             await self.client.connect()
+            logger.info("Step 2: ✓ Connection established")
 
             # 세션 생성 요청
             self.set_start_status("세션 생성 중...")
+            logger.info("Step 3: Requesting session creation...")
             response = await self.client.create_session("Host")
+            logger.info(f"Step 3: ✓ Received response: {response}")
 
             if response.get("type") == "session_created":
                 self.session_id = response["session_id"]
                 self.user_id = response["host_id"]
                 self.is_host = True
                 self.is_connected = True
+
+                logger.info(f"✓ Session created successfully!")
+                logger.info(f"  Session ID: {self.session_id}")
+                logger.info(f"  Host ID: {self.user_id}")
 
                 # DrawingCanvas에 user_id 설정
                 self.drawing_canvas.set_user_id(self.user_id)
@@ -281,7 +301,16 @@ class MainWindow(QMainWindow):
                 clipboard_text = f"({server_url}, {self.session_id})"
                 clipboard.setText(clipboard_text)
 
-                self.set_start_status(f"세션 생성 완료! 클립보드에 복사됨")
+                # 서버 주소 저장
+                self.settings.setValue("server_url", server_url)
+                logger.info(f"Server URL saved to settings: {server_url}")
+
+                # 성공 팝업 표시
+                QMessageBox.information(
+                    self,
+                    "세션 생성 성공",
+                    f"세션이 생성되었습니다.\n\n서버 주소: {server_url}\n세션 번호: {self.session_id}\n\n클립보드에 복사되었습니다."
+                )
 
                 self.session_created.emit(self.session_id, self.user_id)
 
@@ -289,10 +318,13 @@ class MainWindow(QMainWindow):
                 QTimer.singleShot(100, self._start_listen_task)
 
                 # 메인 화면으로 전환
-                QTimer.singleShot(500, self.show_main_screen)
+                self.show_main_screen()
+                logger.info("=" * 60)
 
             elif response.get("type") == "error":
-                raise RuntimeError(response.get("message", "Unknown error"))
+                error_msg = response.get("message", "Unknown error")
+                logger.error(f"✗ Server returned error: {error_msg}")
+                raise RuntimeError(error_msg)
 
         except Exception as e:
             logger.error(f"Session creation failed: {e}", exc_info=True)
@@ -318,17 +350,29 @@ class MainWindow(QMainWindow):
                 QMessageBox.warning(self, "입력 오류", "세션 번호를 입력해주세요")
                 return
 
+            logger.info("=" * 60)
+            logger.info("SESSION JOIN STARTED")
+            logger.info(f"Server URL: {server_url}")
+            logger.info(f"Session ID: {session_id}")
+            logger.info("=" * 60)
+
             self.set_start_status("서버에 연결 중...")
             self.disable_start_buttons()
 
             # WebSocket 클라이언트 생성 및 연결
+            logger.info("Step 1: Creating WebSocket client...")
             self.client = WebSocketClient(server_url)
             self.client.set_message_handler(self.handle_message)
+
+            logger.info("Step 2: Connecting to server...")
             await self.client.connect()
+            logger.info("Step 2: ✓ Connection established")
 
             # 세션 참여 요청
             self.set_start_status(f"세션 {session_id}에 참여 중...")
+            logger.info(f"Step 3: Requesting to join session {session_id}...")
             response = await self.client.join_session(session_id, "Guest")
+            logger.info(f"Step 3: ✓ Received response: {response}")
 
             if response.get("type") == "session_joined":
                 self.session_id = response["session_id"]
@@ -336,10 +380,16 @@ class MainWindow(QMainWindow):
                 self.is_host = False
                 self.is_connected = True
 
+                logger.info(f"✓ Successfully joined session!")
+                logger.info(f"  Session ID: {self.session_id}")
+                logger.info(f"  User ID: {self.user_id}")
+
                 # DrawingCanvas에 user_id 설정
                 self.drawing_canvas.set_user_id(self.user_id)
 
-                self.set_start_status(f"세션 참여 성공!")
+                # 서버 주소 저장
+                self.settings.setValue("server_url", server_url)
+                logger.info(f"Server URL saved to settings: {server_url}")
 
                 self.session_joined.emit(self.session_id, self.user_id)
 
@@ -347,10 +397,13 @@ class MainWindow(QMainWindow):
                 QTimer.singleShot(100, self._start_listen_task)
 
                 # 메인 화면으로 전환
-                QTimer.singleShot(500, self.show_main_screen)
+                self.show_main_screen()
+                logger.info("=" * 60)
 
             elif response.get("type") == "error":
-                raise RuntimeError(response.get("message", "Unknown error"))
+                error_msg = response.get("message", "Unknown error")
+                logger.error(f"✗ Server returned error: {error_msg}")
+                raise RuntimeError(error_msg)
 
         except Exception as e:
             logger.error(f"Session join failed: {e}", exc_info=True)

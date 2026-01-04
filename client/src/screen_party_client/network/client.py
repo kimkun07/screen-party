@@ -23,12 +23,18 @@ class WebSocketClient:
 
     async def connect(self):
         """서버 연결"""
+        logger.info(f"Attempting to connect to WebSocket server: {self.url}")
         try:
+            logger.debug(f"Opening WebSocket connection to {self.url}...")
             self.websocket = await websockets.connect(self.url)
             self.running = True
-            logger.info(f"Connected to {self.url}")
+            logger.info(f"✓ Successfully connected to {self.url}")
+        except ConnectionRefusedError as e:
+            logger.error(f"✗ Connection refused by server at {self.url}: {e}")
+            logger.error("  → Make sure the server is running and accessible")
+            raise
         except Exception as e:
-            logger.error(f"Connection failed: {e}")
+            logger.error(f"✗ Connection failed to {self.url}: {type(e).__name__}: {e}")
             raise
 
     async def disconnect(self):
@@ -104,8 +110,11 @@ class WebSocketClient:
         Returns:
             서버 응답 메시지
         """
+        logger.info(f"Requesting session creation for host: {host_name}")
         await self.send_message({"type": "create_session", "host_name": host_name})
-        return await self.receive_message()
+        response = await self.receive_message()
+        logger.info(f"Session creation response: {response.get('type')}")
+        return response
 
     async def join_session(self, session_id: str, guest_name: str) -> dict:
         """세션 참여 요청
@@ -117,10 +126,13 @@ class WebSocketClient:
         Returns:
             서버 응답 메시지
         """
+        logger.info(f"Requesting to join session {session_id} as {guest_name}")
         await self.send_message(
             {"type": "join_session", "session_id": session_id, "guest_name": guest_name}
         )
-        return await self.receive_message()
+        response = await self.receive_message()
+        logger.info(f"Join session response: {response.get('type')}")
+        return response
 
     async def ping(self) -> dict:
         """핑 요청
