@@ -3,7 +3,7 @@ DrawingCanvas GUI 테스트 (pytest-qt 사용)
 """
 
 import pytest
-from PyQt6.QtCore import Qt, QPointF, QTimer
+from PyQt6.QtCore import Qt, QPoint, QPointF, QTimer
 from PyQt6.QtGui import QColor
 from pytestqt.qtbot import QtBot
 
@@ -34,7 +34,7 @@ class TestDrawingCanvas:
         qtbot.addWidget(canvas)
 
         # 마우스 클릭 시뮬레이션
-        qtbot.mousePress(canvas, Qt.MouseButton.LeftButton, pos=QPointF(10, 20))
+        qtbot.mousePress(canvas, Qt.MouseButton.LeftButton, pos=QPoint(10, 20))
 
         assert canvas.fitter.is_drawing is True
         assert len(canvas.fitter.raw_buffer) == 1
@@ -45,11 +45,11 @@ class TestDrawingCanvas:
         qtbot.addWidget(canvas)
 
         # 드로잉 시작
-        qtbot.mousePress(canvas, Qt.MouseButton.LeftButton, pos=QPointF(10, 10))
+        qtbot.mousePress(canvas, Qt.MouseButton.LeftButton, pos=QPoint(10, 10))
 
         # 마우스 이동
-        qtbot.mouseMove(canvas, QPointF(20, 20))
-        qtbot.mouseMove(canvas, QPointF(30, 30))
+        qtbot.mouseMove(canvas, pos=QPoint(20, 20))
+        qtbot.mouseMove(canvas, pos=QPoint(30, 30))
 
         # 점이 추가되어야 함
         assert len(canvas.fitter.raw_buffer) >= 1
@@ -60,14 +60,14 @@ class TestDrawingCanvas:
         qtbot.addWidget(canvas)
 
         # 드로잉 시작
-        qtbot.mousePress(canvas, Qt.MouseButton.LeftButton, pos=QPointF(10, 10))
+        qtbot.mousePress(canvas, Qt.MouseButton.LeftButton, pos=QPoint(10, 10))
 
         # 몇 개 점 추가
-        qtbot.mouseMove(canvas, QPointF(20, 20))
-        qtbot.mouseMove(canvas, QPointF(30, 30))
+        qtbot.mouseMove(canvas, pos=QPoint(20, 20))
+        qtbot.mouseMove(canvas, pos=QPoint(30, 30))
 
         # 마우스 떼기
-        qtbot.mouseRelease(canvas, Qt.MouseButton.LeftButton, pos=QPointF(40, 40))
+        qtbot.mouseRelease(canvas, Qt.MouseButton.LeftButton, pos=QPoint(40, 40))
 
         assert canvas.fitter.is_drawing is False
 
@@ -77,9 +77,9 @@ class TestDrawingCanvas:
         qtbot.addWidget(canvas)
 
         # 드로잉
-        qtbot.mousePress(canvas, Qt.MouseButton.LeftButton, pos=QPointF(10, 10))
-        qtbot.mouseMove(canvas, QPointF(20, 20))
-        qtbot.mouseRelease(canvas, Qt.MouseButton.LeftButton, pos=QPointF(30, 30))
+        qtbot.mousePress(canvas, Qt.MouseButton.LeftButton, pos=QPoint(10, 10))
+        qtbot.mouseMove(canvas, pos=QPoint(20, 20))
+        qtbot.mouseRelease(canvas, Qt.MouseButton.LeftButton, pos=QPoint(30, 30))
 
         # 초기화
         canvas.clear_drawing()
@@ -118,9 +118,9 @@ class TestDrawingCanvasNetworking:
         # 시그널 감지
         with qtbot.waitSignal(canvas.drawing_updated, timeout=1000):
             # 드로잉
-            qtbot.mousePress(canvas, Qt.MouseButton.LeftButton, pos=QPointF(10, 10))
-            qtbot.mouseMove(canvas, QPointF(20, 20))
-            qtbot.mouseMove(canvas, QPointF(30, 30))
+            qtbot.mousePress(canvas, Qt.MouseButton.LeftButton, pos=QPoint(10, 10))
+            qtbot.mouseMove(canvas, pos=QPoint(20, 20))
+            qtbot.mouseMove(canvas, pos=QPoint(30, 30))
 
             # 타이머 대기 (50ms 이상)
             qtbot.wait(100)
@@ -132,7 +132,7 @@ class TestDrawingCanvasNetworking:
 
         assert not canvas.network_timer.isActive()
 
-        qtbot.mousePress(canvas, Qt.MouseButton.LeftButton, pos=QPointF(10, 10))
+        qtbot.mousePress(canvas, Qt.MouseButton.LeftButton, pos=QPoint(10, 10))
 
         assert canvas.network_timer.isActive()
 
@@ -141,8 +141,8 @@ class TestDrawingCanvasNetworking:
         canvas = DrawingCanvas()
         qtbot.addWidget(canvas)
 
-        qtbot.mousePress(canvas, Qt.MouseButton.LeftButton, pos=QPointF(10, 10))
-        qtbot.mouseRelease(canvas, Qt.MouseButton.LeftButton, pos=QPointF(20, 20))
+        qtbot.mousePress(canvas, Qt.MouseButton.LeftButton, pos=QPoint(10, 10))
+        qtbot.mouseRelease(canvas, Qt.MouseButton.LeftButton, pos=QPoint(20, 20))
 
         assert not canvas.network_timer.isActive()
 
@@ -209,8 +209,8 @@ class TestDrawingCanvasRendering:
         canvas.show()
 
         # 드로잉
-        qtbot.mousePress(canvas, Qt.MouseButton.LeftButton, pos=QPointF(10, 10))
-        qtbot.mouseMove(canvas, QPointF(20, 20))
+        qtbot.mousePress(canvas, Qt.MouseButton.LeftButton, pos=QPoint(10, 10))
+        qtbot.mouseMove(canvas, pos=QPoint(20, 20))
 
         # update() 호출 후 paintEvent가 호출되어야 함
         canvas.update()
@@ -272,14 +272,14 @@ class TestDrawingCanvasIntegration:
         canvas.show()
 
         # 1. 드로잉 시작
-        qtbot.mousePress(canvas, Qt.MouseButton.LeftButton, pos=QPointF(10, 10))
+        qtbot.mousePress(canvas, Qt.MouseButton.LeftButton, pos=QPoint(10, 10))
 
         # 2. 여러 점 추가
         for i in range(1, 10):
-            qtbot.mouseMove(canvas, QPointF(10 + i * 10, 10 + i * 10))
+            qtbot.mouseMove(canvas, pos=QPoint(10 + i * 10, 10 + i * 10))
 
         # 3. 드로잉 종료
-        qtbot.mouseRelease(canvas, Qt.MouseButton.LeftButton, pos=QPointF(100, 100))
+        qtbot.mouseRelease(canvas, Qt.MouseButton.LeftButton, pos=QPoint(100, 100))
 
         # 4. finalized segments가 생성되어야 함
         assert len(canvas.fitter.finalized_segments) > 0
@@ -297,15 +297,15 @@ class TestDrawingCanvasIntegration:
         canvas.drawing_updated.connect(on_drawing_updated)
 
         # 드로잉
-        qtbot.mousePress(canvas, Qt.MouseButton.LeftButton, pos=QPointF(10, 10))
+        qtbot.mousePress(canvas, Qt.MouseButton.LeftButton, pos=QPoint(10, 10))
 
         for i in range(1, 5):
-            qtbot.mouseMove(canvas, QPointF(10 + i * 10, 10 + i * 10))
+            qtbot.mouseMove(canvas, pos=QPoint(10 + i * 10, 10 + i * 10))
 
         # 타이머 대기 (50ms 이상)
         qtbot.wait(100)
 
-        qtbot.mouseRelease(canvas, Qt.MouseButton.LeftButton, pos=QPointF(50, 50))
+        qtbot.mouseRelease(canvas, Qt.MouseButton.LeftButton, pos=QPoint(50, 50))
 
         # 패킷이 전송되었어야 함
         assert len(received_packets) > 0
