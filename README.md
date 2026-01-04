@@ -86,7 +86,7 @@ screen-party/
 
 - **WSL (Ubuntu)**: 프로젝트 저장소 위치, docker engine 설치, devcontainer 실행
 - **devcontainer (Linux)**: 개발 진행: 클로드 코드를 --dangerously-skip-permissions 모드로 실행하기 위한 환경
-- **Windows**: 클라이언트 GUI (PyQt6) 테스트 환경
+- **Windows**: 클라이언트 GUI (PyQt6) 테스트
 
 ### 환경 구성 방법
 
@@ -139,16 +139,6 @@ Windows에서 클라이언트를 테스트하려면 WSL 프로젝트를 Windows�
 > - Ctrl + C로 종료 가능
 > - 한 번 실행하면 모든 파일 변경이 자동으로 동기화됩니다
 
-**환경 변수로 경로 설정** (선택 사항):
-
-```bash
-# ~/.bashrc 또는 ~/.zshrc에 추가
-export WINDOWS_MIRROR_PATH=/mnt/d/Data/Develop/screen-party-mirrored
-
-# 이후 경로 인자 없이 실행 가능
-./scripts/start_mirror.sh
-```
-
 #### 4단계: Windows에 uv 및 가상환경 설치
 
 ```powershell
@@ -160,23 +150,17 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 cd D:\Data\Develop\screen-party-mirrored
 
 # 3. Windows용 가상환경 생성
-uv venv .venv-windows
+uv venv
 
 # 4. 가상환경 활성화
-.\.venv-windows\Scripts\activate.ps1
+.venv\Scripts\activate.ps1
 
 # 5. 의존성 설치
 uv sync --all-groups
 ```
 
 > **참고**:
-> - WSL의 `.venv`와 Windows의 `.venv-windows`는 별도로 관리됩니다
-
-**가상환경 활성화 오류 시**:
-```powershell
-# PowerShell 실행 정책 변경
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
+> - WSL의 `.venv`와 Windows의 `.venv`는 별도로 관리됩니다
 
 #### 5단계: 개발 워크플로우
 
@@ -201,17 +185,10 @@ uv run server --host localhost --port 9000
 cd D:\Data\Develop\screen-party-mirrored
 
 # 1. 가상환경 활성화
-.\.venv-windows\Scripts\activate.ps1
+.venv\Scripts\activate.ps1
 
 # 2. 클라이언트 실행
-# 기본 실행 (localhost:8765)
 uv run client
-
-# 도움말 보기
-uv run client --help
-
-# 커스텀 서버 연결
-uv run client --server ws://192.168.1.100:8765
 ```
 
 **테스트 실행** (devcontainer에서):
@@ -242,12 +219,9 @@ uv run ruff check server/ client/ common/
 
 **서버 Docker 배포**
 
-**Docker 이미지 빌드 및 배포**
-
 프로젝트 루트에서 `uv run publish-server` 명령어를 사용하여 자동으로 빌드 및 배포:
 
 ```bash
-# 방법 1: publish-server 스크립트 사용 (권장)
 uv run publish-server v0.1.0          # v0.1.0 태그로 빌드 및 배포
 uv run publish-server v0.2.0          # v0.2.0 태그로 빌드 및 배포
 
@@ -267,71 +241,6 @@ uv run publish-server v0.1.0 --skip-latest
 3. latest 태그 추가
 4. Docker Hub에 푸시 (v0.1.0 + latest)
 
-```bash
-# 방법 2: 수동 빌드 및 배포
-# 1. 서버 이미지 빌드
-docker build -f server/Dockerfile -t kimkun07/screen-party-server:v0.1.0 .
-
-# 2. 이미지 태그 추가 (latest)
-docker tag kimkun07/screen-party-server:v0.1.0 kimkun07/screen-party-server:latest
-
-# 3. Docker Hub에 푸시
-docker push kimkun07/screen-party-server:v0.1.0
-docker push kimkun07/screen-party-server:latest
-
-# 4. 로컬 테스트
-docker run -p 8765:8765 kimkun07/screen-party-server:v0.1.0
-```
-
-**배포된 서버로 클라이언트 연결**
-
-배포된 서버 URL은 `.env.secret` 파일에 저장되어 있습니다:
-
-```bash
-# .env.secret 파일 내용 확인
-cat .env.secret
-# DEPLOYED_SERVER_URL=wss://your-server-domain.com
-```
-
-클라이언트 연결:
-
-```powershell
-# Windows PowerShell
-cd D:\Data\Develop\screen-party-mirrored
-.\.venv-windows\Scripts\activate.ps1
-
-# 배포된 서버로 연결 (.env.secret의 URL 사용)
-$SERVER_URL = (Get-Content .env.secret | Select-String "DEPLOYED_SERVER_URL" | ForEach-Object { $_.ToString().Split('=')[1] })
-uv run client --server $SERVER_URL
-```
-
-```bash
-# Linux/macOS (devcontainer에서)
-# .env.secret 파일에서 URL 읽기
-export DEPLOYED_SERVER_URL=$(grep DEPLOYED_SERVER_URL .env.secret | cut -d'=' -f2)
-uv run client --server $DEPLOYED_SERVER_URL
-```
-
-> **참고**:
-> - 배포된 서버 URL은 보안을 위해 `.env.secret` 파일에만 저장됩니다.
-> - `.env.secret` 파일은 Git에 커밋되지 않습니다.
-> - `.env.example` 파일을 참고하여 `.env.secret` 파일을 생성하세요.
-
-**서버 연결 테스트**
-
-배포된 서버가 정상적으로 동작하는지 확인하려면:
-
-```bash
-# devcontainer 또는 Linux/macOS에서
-uv run python test_server_connection.py
-```
-
-테스트 스크립트는 다음을 검증합니다:
-- 서버 연결 (Ping/Pong)
-- 세션 생성 (호스트 모드)
-- 세션 참여 (게스트 모드)
-- 호스트-게스트 간 메시지 전달
-
 **클라이언트 앱 패키징 (Windows)**
 
 PyInstaller를 사용하여 Windows 실행 파일(.exe)을 생성합니다.
@@ -341,7 +250,7 @@ PyInstaller를 사용하여 Windows 실행 파일(.exe)을 생성합니다.
 ```powershell
 # Windows PowerShell
 cd D:\Data\Develop\screen-party-mirrored
-.\.venv-windows\Scripts\activate.ps1
+.\.venv\Scripts\activate.ps1
 
 # 클라이언트 패키징
 uv run package-client v0.1.0
