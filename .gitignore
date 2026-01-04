@@ -38,6 +38,7 @@ env/
 # PyInstaller
 *.manifest
 *.spec
+!client.spec
 
 # Unit test / coverage
 htmlcov/
@@ -76,6 +77,7 @@ desktop.ini
 # Distribution / packaging
 *.tar.gz
 *.whl
+*.zip
 
 # Build artifacts
 client/dist/

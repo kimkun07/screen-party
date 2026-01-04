@@ -332,7 +332,54 @@ uv run python test_server_connection.py
 - 세션 참여 (게스트 모드)
 - 호스트-게스트 간 메시지 전달
 
-**클라이언트 앱 (작성 예정)**
+**클라이언트 앱 패키징 (Windows)**
+
+PyInstaller를 사용하여 Windows 실행 파일(.exe)을 생성합니다.
+
+> **중요**: Windows 환경에서만 실행 가능합니다.
+
+```powershell
+# Windows PowerShell
+cd D:\Data\Develop\screen-party-mirrored
+.\.venv-windows\Scripts\activate.ps1
+
+# 클라이언트 패키징
+uv run package-client v0.1.0
+
+# 도움말 보기
+uv run package-client --help
+
+# Dry-run 모드 (실제로 실행하지 않고 명령어만 확인)
+uv run package-client v0.1.0 --dry-run
+```
+
+`package-client` 스크립트가 자동으로 다음 작업을 수행합니다:
+1. 기존 빌드 정리 (build/, dist/)
+2. PyInstaller 실행 (client.spec 기반)
+3. README.txt 생성
+4. ZIP 압축 (ScreenParty-v0.1.0-windows.zip)
+
+결과물:
+- `dist/ScreenParty.exe` - 실행 파일 (단일 파일, ~100-200MB)
+- `ScreenParty-v0.1.0-windows.zip` - 배포용 ZIP 파일
+
+**GitHub Release 배포**:
+
+```bash
+# GitHub CLI 사용
+gh release create v0.1.0 ScreenParty-v0.1.0-windows.zip --title "Screen Party v0.1.0"
+
+# 또는 수동으로:
+# 1. GitHub 레포지토리 → Releases → Create a new release
+# 2. Tag: v0.1.0
+# 3. Title: Screen Party v0.1.0
+# 4. ZIP 파일 업로드
+```
+
+**주의사항**:
+- 바이러스 백신 프로그램에서 오탐할 수 있습니다 (PyInstaller 특성)
+- 사용자에게 예외 처리 안내 필요
+- 실행 파일 크기가 큼 (PyQt6, numpy, scipy 포함)
 
 
 ---
