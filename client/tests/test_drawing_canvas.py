@@ -25,8 +25,8 @@ class TestDrawingCanvas:
 
         assert canvas.pen_color == QColor(255, 0, 0)
         assert canvas.pen_width == 3
-        assert canvas.fitter.trigger_count == 10
-        assert canvas.fitter.fitter.max_error == 4.0
+        assert canvas.my_fitter.trigger_count == 10
+        assert canvas.my_fitter.fitter.max_error == 4.0
 
     def test_mouse_press_starts_drawing(self, qtbot: QtBot):
         """마우스 눌림 시 드로잉 시작"""
@@ -36,8 +36,8 @@ class TestDrawingCanvas:
         # 마우스 클릭 시뮬레이션
         qtbot.mousePress(canvas, Qt.MouseButton.LeftButton, pos=QPoint(10, 20))
 
-        assert canvas.fitter.is_drawing is True
-        assert len(canvas.fitter.raw_buffer) == 1
+        assert canvas.my_fitter.is_drawing is True
+        assert len(canvas.my_fitter.raw_buffer) == 1
 
     def test_mouse_move_adds_points(self, qtbot: QtBot):
         """마우스 이동 시 점 추가"""
@@ -52,7 +52,7 @@ class TestDrawingCanvas:
         qtbot.mouseMove(canvas, pos=QPoint(30, 30))
 
         # 점이 추가되어야 함
-        assert len(canvas.fitter.raw_buffer) >= 1
+        assert len(canvas.my_fitter.raw_buffer) >= 1
 
     def test_mouse_release_ends_drawing(self, qtbot: QtBot):
         """마우스 떼기 시 드로잉 종료"""
@@ -69,10 +69,10 @@ class TestDrawingCanvas:
         # 마우스 떼기
         qtbot.mouseRelease(canvas, Qt.MouseButton.LeftButton, pos=QPoint(40, 40))
 
-        assert canvas.fitter.is_drawing is False
+        assert canvas.my_fitter.is_drawing is False
 
     def test_clear_drawing(self, qtbot: QtBot):
-        """clear_drawing 메서드 테스트"""
+        """clear_my_drawing 메서드 테스트"""
         canvas = DrawingCanvas()
         qtbot.addWidget(canvas)
 
@@ -82,10 +82,13 @@ class TestDrawingCanvas:
         qtbot.mouseRelease(canvas, Qt.MouseButton.LeftButton, pos=QPoint(30, 30))
 
         # 초기화
-        canvas.clear_drawing()
+        canvas.clear_my_drawing()
 
-        assert len(canvas.fitter.raw_buffer) == 0
-        assert len(canvas.fitter.finalized_segments) == 0
+        assert len(canvas.my_fitter.raw_buffer) == 0
+        assert len(canvas.my_fitter.finalized_segments) == 0
+        # 내 라인만 제거됨
+        my_lines = [lid for lid, ldata in canvas.remote_lines.items() if ldata.user_id == canvas.user_id]
+        assert len(my_lines) == 0
 
     def test_set_pen_color(self, qtbot: QtBot):
         """펜 색상 변경 테스트"""
@@ -146,12 +149,14 @@ class TestDrawingCanvasNetworking:
 
         assert not canvas.network_timer.isActive()
 
-    def test_apply_network_packet(self, qtbot: QtBot):
-        """네트워크 패킷 적용 테스트"""
+    def test_handle_drawing_update(self, qtbot: QtBot):
+        """다른 사용자의 드로잉 업데이트 처리 테스트"""
         canvas = DrawingCanvas()
         qtbot.addWidget(canvas)
 
         # 패킷 데이터
+        line_id = "test-line-123"
+        user_id = "other-user"
         packet = {
             "new_finalized_segments": [
                 {
@@ -164,39 +169,50 @@ class TestDrawingCanvasNetworking:
             "current_raw_points": [],
         }
 
-        canvas.apply_network_packet(packet)
+        # 시작 처리
+        canvas.handle_drawing_start(line_id, user_id, {"color": "#FF0000"})
 
-        # 세그먼트가 추가되어야 함
-        assert len(canvas.fitter.finalized_segments) == 1
+        # 업데이트 처리
+        canvas.handle_drawing_update(line_id, user_id, packet)
 
-    def test_apply_full_packet(self, qtbot: QtBot):
-        """전체 패킷 적용 테스트"""
+        # remote_lines에 라인이 추가되어야 함
+        assert line_id in canvas.remote_lines
+        assert len(canvas.remote_lines[line_id].finalized_segments) == 1
+
+    def test_handle_drawing_end(self, qtbot: QtBot):
+        """다른 사용자의 드로잉 종료 처리 테스트"""
         canvas = DrawingCanvas()
         qtbot.addWidget(canvas)
 
-        # 기존 데이터 추가
-        canvas.fitter.finalized_segments.append(
-            canvas.fitter.fitter.fit([(0, 0), (10, 10)])[0]
+        line_id = "test-line-456"
+        user_id = "other-user-2"
+
+        # 시작 처리
+        canvas.handle_drawing_start(line_id, user_id, {"color": "#00FF00"})
+
+        # 업데이트 처리
+        canvas.handle_drawing_update(
+            line_id,
+            user_id,
+            {
+                "new_finalized_segments": [
+                    {
+                        "p0": (100.0, 100.0),
+                        "p1": (110.0, 120.0),
+                        "p2": (130.0, 140.0),
+                        "p3": (150.0, 160.0),
+                    }
+                ],
+                "current_raw_points": [(200.0, 200.0), (210.0, 210.0)],
+            },
         )
 
-        # 전체 패킷으로 덮어쓰기
-        packet = {
-            "finalized_segments": [
-                {
-                    "p0": (100.0, 100.0),
-                    "p1": (110.0, 120.0),
-                    "p2": (130.0, 140.0),
-                    "p3": (150.0, 160.0),
-                }
-            ],
-            "current_raw_points": [],
-        }
+        # 종료 처리
+        canvas.handle_drawing_end(line_id, user_id)
 
-        canvas.apply_full_packet(packet)
-
-        # 기존 데이터가 초기화되고 새 데이터만 있어야 함
-        assert len(canvas.fitter.finalized_segments) == 1
-        assert canvas.fitter.finalized_segments[0].p0 == (100.0, 100.0)
+        # 라인이 완료 상태가 되어야 함
+        assert line_id in canvas.remote_lines
+        assert canvas.remote_lines[line_id].is_complete is True
 
 
 class TestDrawingCanvasRendering:
@@ -234,7 +250,7 @@ class TestDrawingCanvasRendering:
             p2=(40.0, 50.0),
             p3=(60.0, 70.0),
         )
-        canvas.fitter.finalized_segments.append(segment)
+        canvas.my_fitter.finalized_segments.append(segment)
 
         # 렌더링
         canvas.update()
@@ -249,7 +265,7 @@ class TestDrawingCanvasRendering:
         canvas.show()
 
         # raw_buffer에 점 추가
-        canvas.fitter.raw_buffer = [
+        canvas.my_fitter.raw_buffer = [
             (10.0, 10.0),
             (20.0, 20.0),
             (30.0, 30.0),
@@ -281,8 +297,12 @@ class TestDrawingCanvasIntegration:
         # 3. 드로잉 종료
         qtbot.mouseRelease(canvas, Qt.MouseButton.LeftButton, pos=QPoint(100, 100))
 
-        # 4. finalized segments가 생성되어야 함
-        assert len(canvas.fitter.finalized_segments) > 0
+        # 4. finalized segments가 생성되어야 함 (remote_lines에 저장됨)
+        # 내 드로잉이 remote_lines에 저장되었는지 확인
+        my_lines = [lid for lid, ldata in canvas.remote_lines.items() if ldata.user_id == canvas.user_id]
+        assert len(my_lines) > 0
+        # 해당 라인에 finalized segments가 있어야 함
+        assert len(canvas.remote_lines[my_lines[0]].finalized_segments) > 0
 
     def test_network_transmission_flow(self, qtbot: QtBot):
         """네트워크 전송 플로우 테스트"""
@@ -291,7 +311,8 @@ class TestDrawingCanvasIntegration:
 
         received_packets = []
 
-        def on_drawing_updated(packet):
+        def on_drawing_updated(line_id, user_id, packet):
+            # 시그널이 (line_id, user_id, packet) 형식으로 전달됨
             received_packets.append(packet)
 
         canvas.drawing_updated.connect(on_drawing_updated)
