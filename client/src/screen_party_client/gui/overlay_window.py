@@ -17,6 +17,7 @@ class OverlayWindow(QWidget):
     target_window_closed = pyqtSignal()  # Emitted when target window is closed
     target_window_minimized = pyqtSignal()  # Emitted when target window is minimized
     target_window_restored = pyqtSignal()  # Emitted when target window is restored
+    geometry_changed = pyqtSignal(QRect)  # Emitted when overlay geometry changes
 
     def __init__(
         self,
@@ -115,6 +116,7 @@ class OverlayWindow(QWidget):
         )
         if self.geometry() != new_rect:
             self.setGeometry(new_rect)
+            self.geometry_changed.emit(new_rect)
 
     def stop_tracking(self):
         """Stop tracking target window"""

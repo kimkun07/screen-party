@@ -104,13 +104,16 @@ class FloatingActionMenu(QWidget):
         if event.button() == Qt.MouseButton.LeftButton:
             # Only start drag if not clicking on a button
             widget = self.childAt(event.pos())
-            if widget is None or widget == self:
+            # 버튼이 아닌 경우에만 드래그 시작
+            if not isinstance(widget, QPushButton):
                 self.drag_position = (
                     event.globalPosition().toPoint() - self.frameGeometry().topLeft()
                 )
                 event.accept()
-            else:
-                super().mousePressEvent(event)
+                return
+
+        # 버튼인 경우 이벤트 전파
+        super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event: QMouseEvent):
         """Handle dragging"""

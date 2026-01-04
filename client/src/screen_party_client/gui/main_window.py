@@ -515,6 +515,9 @@ class MainWindow(QMainWindow):
 
             # 오버레이 시그널 연결
             self.overlay_window.target_window_closed.connect(self.on_overlay_window_closed)
+            self.overlay_window.geometry_changed.connect(self.on_overlay_geometry_changed)
+            self.overlay_window.target_window_minimized.connect(self.on_overlay_minimized)
+            self.overlay_window.target_window_restored.connect(self.on_overlay_restored)
 
             # Floating Action Menu 생성
             self.floating_menu = FloatingActionMenu()
@@ -584,6 +587,24 @@ class MainWindow(QMainWindow):
             self.overlay_window.get_canvas().clear_all_drawings()
             self.set_status("Overlay drawings cleared")
             logger.info("Overlay drawings cleared")
+
+    def on_overlay_geometry_changed(self, new_rect):
+        """Handle overlay geometry change - update FAB position"""
+        if self.floating_menu:
+            # FAB 위치: 우하단 (오버레이 기준)
+            fab_x = new_rect.right() - 100
+            fab_y = new_rect.bottom() - 100
+            self.floating_menu.move(fab_x, fab_y)
+
+    def on_overlay_minimized(self):
+        """Handle overlay minimized - hide FAB"""
+        if self.floating_menu:
+            self.floating_menu.hide()
+
+    def on_overlay_restored(self):
+        """Handle overlay restored - show FAB"""
+        if self.floating_menu:
+            self.floating_menu.show()
 
     # ================================================================
 
