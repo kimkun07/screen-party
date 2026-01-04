@@ -468,12 +468,91 @@ else:
 
 ---
 
+### 2026-01-04 - 타입 안전한 메시지 시스템 구축 및 실사용 테스트 성공
+
+**상태**: 🟢 개발 중 → ✅ 완료
+
+**문제**:
+- 서버가 drawing_* 메시지 타입을 인식하지 못함 (Unknown message type 에러)
+- 하드코딩된 메시지 타입 체크 (확장성 낮음)
+- dict 기반 메시지 생성 (타입 안정성 없음)
+
+**해결**:
+
+1. **common 패키지에 메시지 프로토콜 정의** (`common/src/screen_party_common/messages.py`)
+   - `MessageType` enum으로 모든 메시지 타입 정의
+   - dataclass 기반 메시지 클래스 (BaseMessage, DrawingStartMessage, DrawingUpdateMessage, DrawingEndMessage)
+   - `to_dict()` 메서드로 JSON 직렬화 (tuple → list 자동 변환)
+
+2. **서버 메시지 라우팅 개선**
+   - MessageType enum 사용
+   - `DRAWING_MESSAGE_TYPES`로 카테고리별 그룹화
+   - 확장 가능한 구조
+
+3. **클라이언트 메시지 생성 개선**
+   - 메시지 클래스로 타입 안전한 객체 생성
+   - 필수 필드 강제, IDE 자동완성 지원
+
+**사용 예시**:
+
+```python
+# Before (수동 dict 생성)
+data = {
+    "type": "drawing_end",
+    "line_id": line_id,
+    "user_id": user_id,
+}
+
+# After (타입 안전한 객체)
+msg = DrawingEndMessage(
+    line_id=line_id,
+    user_id=user_id,
+)
+await client.send_message(msg.to_dict())
+```
+
+**실사용 테스트 결과**:
+
+✅ **로컬 베지어 커브 피팅**: 정상 작동, 연속성 문제 해결
+✅ **서버 전송**: 메시지 타입 인식, 정상 브로드캐스트
+✅ **멀티 유저**: 2개 클라이언트에서 동시 드로잉, 실시간 동기화 확인
+✅ **렌더링**: finalized segments (곡선) + current raw points (직선) 정상 표시
+
+**성능 특성**:
+- trigger_count: 10 (10개 점마다 피팅 시도)
+- max_error: 4.0 픽셀 (기본값)
+- 네트워크 전송: 50ms throttling (Delta Update)
+- 렌더링: 매끄러운 곡선, 끊김 없음
+
+**다음 단계**:
+
+선택사항 (추가 기능):
+1. 색상 선택 UI
+2. 펜 두께 조절 UI
+3. ESC 키로 내 드로잉 제거
+4. 페이드아웃 애니메이션 (fade-animation task)
+5. 성능 최적화 (많은 라인 시)
+
+**블로커**: 없음
+
+**커밋**:
+- `[drawing-engine] Incremental fitter 연속성 버그 수정` (060d285)
+- `[drawing-engine] DrawingCanvas 테스트를 multi-user API에 맞게 수정` (4266d90)
+- `[server-core] drawing_start/update/end 메시지 타입 지원 추가` (555ca61)
+- `[common] [client] [server] 타입 안전한 메시지 시스템 구축` (e1f5e65)
+
+---
+
 > **다음 클로드 코드에게**:
 >
-> - **연속성 보장**: 수정된 로직은 segments[-1].p3를 raw_buffer에 남겨 연속성 보장
-> - **테스트 필수**: 2개 클라이언트로 실제 드로잉 동시 테스트 필요
-> - **JSON 직렬화**: tuple을 list로 변환 필요할 수 있음 (start_point, current_raw_points)
-> - **색상 파싱**: QColor.name()으로 저장, QColor(color_str)로 복원
+> **✅ 핵심 기능 완료**:
+> - Schneider 알고리즘 기반 베지어 커브 피팅 완료
+> - Incremental fitting (연속성 보장) 완료
+> - Multi-user 실시간 동기화 완료
+> - 타입 안전한 메시지 시스템 완료
+>
+> **추가 고려사항**:
 > - **성능**: 많은 라인이 그려지면 렌더링 성능 저하 가능 (최적화 필요할 수 있음)
 > - **메모리**: 오래된 라인 제거 로직 필요할 수 있음
-> - **베지어 품질**: 실제 사용 시 max_error 조정 필요할 수 있음 (기본 4.0픽셀)
+> - **베지어 품질**: max_error 조정으로 품질/성능 트레이드오프 가능 (기본 4.0픽셀)
+> - **UI 개선**: 색상/두께 선택, 드로잉 초기화 단축키 등
