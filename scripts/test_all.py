@@ -47,13 +47,6 @@ def main():
         print(f"Running tests in {workspace}...")
         print(f"{'='*60}\n")
 
-        # Ensure dev dependencies are installed
-        subprocess.run(
-            ["uv", "sync", "--directory", str(workspace_path), "--all-extras"],
-            cwd=root,
-            stdout=subprocess.DEVNULL,
-        )
-
         result = subprocess.run(
             ["uv", "run", "--directory", str(workspace_path), "pytest"],
             cwd=root,
