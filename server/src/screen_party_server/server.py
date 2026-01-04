@@ -89,7 +89,8 @@ class ScreenPartyServer:
             user_id = await self.handle_join_session(websocket, data)
         elif msg_type == "ping":
             await self.handle_ping(websocket)
-        elif msg_type in ("line_start", "line_update", "line_end", "line_remove"):
+        elif msg_type in ("line_start", "line_update", "line_end", "line_remove",
+                          "drawing_start", "drawing_update", "drawing_end"):
             if user_id:
                 await self.handle_drawing_message(websocket, user_id, data)
             else:
