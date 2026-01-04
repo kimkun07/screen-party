@@ -59,6 +59,7 @@ watchexec \
   --ignore 'node_modules' \
   -- \
   rsync -av --delete \
+    --exclude='.claude' \
     --exclude='.venv' \
     --exclude='.venv-windows' \
     --exclude='__pycache__' \

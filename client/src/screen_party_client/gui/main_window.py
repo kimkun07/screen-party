@@ -5,8 +5,14 @@ import logging
 from typing import Optional
 
 from PyQt6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QPushButton,
-    QLabel, QInputDialog, QMessageBox, QHBoxLayout
+    QMainWindow,
+    QWidget,
+    QVBoxLayout,
+    QPushButton,
+    QLabel,
+    QInputDialog,
+    QMessageBox,
+    QHBoxLayout,
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from PyQt6.QtGui import QFont
@@ -21,8 +27,8 @@ class MainWindow(QMainWindow):
 
     # Signals
     session_created = pyqtSignal(str, str)  # session_id, host_id
-    session_joined = pyqtSignal(str, str)   # session_id, user_id
-    error_occurred = pyqtSignal(str)        # error_message
+    session_joined = pyqtSignal(str, str)  # session_id, user_id
+    error_occurred = pyqtSignal(str)  # error_message
 
     def __init__(self, server_url: str = "ws://localhost:8765"):
         super().__init__()
@@ -114,8 +120,7 @@ class MainWindow(QMainWindow):
 
                 self.set_status(f"Session created! ID: {self.session_id}")
                 self.session_info_label.setText(
-                    f"Session ID: {self.session_id}\n"
-                    f"Share this ID with guests!"
+                    f"Session ID: {self.session_id}\n" f"Share this ID with guests!"
                 )
 
                 self.session_created.emit(self.session_id, self.user_id)
@@ -140,11 +145,7 @@ class MainWindow(QMainWindow):
         """게스트 모드 시작"""
         try:
             # 세션 ID 입력
-            session_id, ok = QInputDialog.getText(
-                self,
-                "Join Session",
-                "Enter Session ID:"
-            )
+            session_id, ok = QInputDialog.getText(self, "Join Session", "Enter Session ID:")
 
             if not ok or not session_id:
                 return
@@ -170,8 +171,7 @@ class MainWindow(QMainWindow):
 
                 self.set_status(f"Joined session: {self.session_id}")
                 self.session_info_label.setText(
-                    f"Session ID: {self.session_id}\n"
-                    f"Successfully joined!"
+                    f"Session ID: {self.session_id}\n" f"Successfully joined!"
                 )
 
                 self.session_joined.emit(self.session_id, self.user_id)

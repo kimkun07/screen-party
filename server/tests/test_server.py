@@ -37,10 +37,7 @@ class TestScreenPartyServer:
     @pytest.mark.asyncio
     async def test_create_session(self, server, mock_websocket):
         """세션 생성 메시지 처리 테스트"""
-        data = {
-            "type": "create_session",
-            "host_name": "TestHost"
-        }
+        data = {"type": "create_session", "host_name": "TestHost"}
 
         user_id = await server.handle_create_session(mock_websocket, data)
 
@@ -78,11 +75,7 @@ class TestScreenPartyServer:
 
         # 게스트 참여
         guest_ws = AsyncMock()
-        data = {
-            "type": "join_session",
-            "session_id": session.session_id,
-            "guest_name": "TestGuest"
-        }
+        data = {"type": "join_session", "session_id": session.session_id, "guest_name": "TestGuest"}
 
         user_id = await server.handle_join_session(guest_ws, data)
 
@@ -116,11 +109,7 @@ class TestScreenPartyServer:
     @pytest.mark.asyncio
     async def test_join_nonexistent_session(self, server, mock_websocket):
         """존재하지 않는 세션 참여 시도 테스트"""
-        data = {
-            "type": "join_session",
-            "session_id": "INVALID",
-            "guest_name": "TestGuest"
-        }
+        data = {"type": "join_session", "session_id": "INVALID", "guest_name": "TestGuest"}
 
         user_id = await server.handle_join_session(mock_websocket, data)
 
@@ -334,11 +323,7 @@ class TestScreenPartyServer:
     @pytest.mark.asyncio
     async def test_drawing_message_not_authenticated(self, server, mock_websocket):
         """인증되지 않은 상태에서 드로잉 메시지 전송 테스트"""
-        data = {
-            "type": "line_start",
-            "line_id": "line1",
-            "color": "#FF0000"
-        }
+        data = {"type": "line_start", "line_id": "line1", "color": "#FF0000"}
 
         await server.handle_message(mock_websocket, data)
 
@@ -367,11 +352,7 @@ class TestScreenPartyServer:
         server.websocket_to_user[guest_ws] = guest.user_id
 
         # 게스트가 드로잉 메시지 전송
-        data = {
-            "type": "line_start",
-            "line_id": "line1",
-            "color": "#FF0000"
-        }
+        data = {"type": "line_start", "line_id": "line1", "color": "#FF0000"}
 
         await server.handle_drawing_message(guest_ws, guest.user_id, data)
 

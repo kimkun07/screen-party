@@ -10,21 +10,19 @@ dependencies = [
 ]
 
 [project.scripts]
-publish-server = "scripts.publish_server:main"
 server = "scripts.run_server:main"
 client = "scripts.run_client:main"
 
+test = "scripts.test_all:main"
+format = "scripts.format_all:main"
+lint = "scripts.lint_all:main"
+
+docker-server = "scripts.docker_server:main"
+publish-server = "scripts.publish_server:main"
+package-client = "scripts.package_client:main"
+
 [tool.setuptools]
 packages = ["scripts"]
-
-[dependency-groups]
-dev = [
-    "pytest>=8.3.0",
-    "pytest-asyncio>=0.24.0",
-    "pytest-cov>=6.0.0",
-    "black>=24.0.0",
-    "ruff>=0.8.0",
-]
 
 [tool.uv]
 package = true
@@ -36,18 +34,3 @@ members = ["common", "server", "client"]
 screen-party-common = { workspace = true }
 screen-party-server = { workspace = true }
 screen-party-client = { workspace = true }
-
-[tool.black]
-line-length = 100
-target-version = ['py313']
-
-[tool.ruff]
-line-length = 100
-target-version = "py313"
-
-[tool.pytest.ini_options]
-asyncio_mode = "auto"
-testpaths = ["server/tests", "client/tests", "common/tests"]
-
-[tool.pyright]
-pythonVersion = "3.13"

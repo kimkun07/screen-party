@@ -104,10 +104,7 @@ class WebSocketClient:
         Returns:
             서버 응답 메시지
         """
-        await self.send_message({
-            "type": "create_session",
-            "host_name": host_name
-        })
+        await self.send_message({"type": "create_session", "host_name": host_name})
         return await self.receive_message()
 
     async def join_session(self, session_id: str, guest_name: str) -> dict:
@@ -120,11 +117,9 @@ class WebSocketClient:
         Returns:
             서버 응답 메시지
         """
-        await self.send_message({
-            "type": "join_session",
-            "session_id": session_id,
-            "guest_name": guest_name
-        })
+        await self.send_message(
+            {"type": "join_session", "session_id": session_id, "guest_name": guest_name}
+        )
         return await self.receive_message()
 
     async def ping(self) -> dict:

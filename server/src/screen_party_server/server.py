@@ -15,8 +15,7 @@ from .session import SessionManager
 from screen_party_common import Guest
 
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -115,12 +114,16 @@ class ScreenPartyServer:
         logger.info(f"Session created: {session.session_id} by {host_name} ({host_id})")
 
         # 응답 전송
-        await websocket.send(json.dumps({
-            "type": "session_created",
-            "session_id": session.session_id,
-            "host_id": host_id,
-            "host_name": host_name
-        }))
+        await websocket.send(
+            json.dumps(
+                {
+                    "type": "session_created",
+                    "session_id": session.session_id,
+                    "host_id": host_id,
+                    "host_name": host_name,
+                }
+            )
+        )
 
         return host_id
 
@@ -158,20 +161,24 @@ class ScreenPartyServer:
         logger.info(f"Guest {guest_name} ({guest_id}) joined session {session_id}")
 
         # 게스트에게 응답 전송
-        await websocket.send(json.dumps({
-            "type": "session_joined",
-            "session_id": session_id,
-            "user_id": guest_id,
-            "guest_name": guest_name,
-            "host_name": session.host_name
-        }))
+        await websocket.send(
+            json.dumps(
+                {
+                    "type": "session_joined",
+                    "session_id": session_id,
+                    "user_id": guest_id,
+                    "guest_name": guest_name,
+                    "host_name": session.host_name,
+                }
+            )
+        )
 
         # 세션 내 다른 클라이언트들에게 알림
-        await self.broadcast(session_id, {
-            "type": "guest_joined",
-            "user_id": guest_id,
-            "guest_name": guest_name
-        }, exclude_user_id=guest_id)
+        await self.broadcast(
+            session_id,
+            {"type": "guest_joined", "user_id": guest_id, "guest_name": guest_name},
+            exclude_user_id=guest_id,
+        )
 
         return guest_id
 
@@ -179,12 +186,7 @@ class ScreenPartyServer:
         """핑 처리"""
         await websocket.send(json.dumps({"type": "pong"}))
 
-    async def handle_drawing_message(
-        self,
-        websocket: ServerConnection,
-        user_id: str,
-        data: dict
-    ):
+    async def handle_drawing_message(self, websocket: ServerConnection, user_id: str, data: dict):
         """드로잉 메시지 처리 (line_start, line_update, line_end, line_remove)"""
         # 사용자가 속한 세션 찾기
         session_id = self.find_user_session(user_id)
@@ -202,10 +204,7 @@ class ScreenPartyServer:
         await self.broadcast(session_id, data, exclude_user_id=user_id)
 
     async def broadcast(
-        self,
-        session_id: str,
-        message: dict,
-        exclude_user_id: Optional[str] = None
+        self, session_id: str, message: dict, exclude_user_id: Optional[str] = None
     ):
         """세션 내 모든 클라이언트에게 메시지 브로드캐스트
 
@@ -241,10 +240,7 @@ class ScreenPartyServer:
         """에러 메시지 전송"""
         logger.warning(f"Sending error: {message}")
         try:
-            await websocket.send(json.dumps({
-                "type": "error",
-                "message": message
-            }))
+            await websocket.send(json.dumps({"type": "error", "message": message}))
         except ConnectionClosed:
             logger.warning("Failed to send error: connection closed")
 
@@ -274,10 +270,9 @@ class ScreenPartyServer:
                 logger.info(f"Host left, expiring session: {session_id}")
 
                 # 먼저 게스트들에게 알림 (세션 만료 전에)
-                await self.broadcast(session_id, {
-                    "type": "session_expired",
-                    "message": "Host disconnected"
-                })
+                await self.broadcast(
+                    session_id, {"type": "session_expired", "message": "Host disconnected"}
+                )
 
                 # 그 다음 세션 만료
                 self.session_manager.expire_session(session_id)
@@ -289,11 +284,10 @@ class ScreenPartyServer:
                     logger.info(f"Guest {guest.name} left session {session_id}")
 
                     # 세션 내 다른 클라이언트들에게 알림
-                    await self.broadcast(session_id, {
-                        "type": "guest_left",
-                        "user_id": user_id,
-                        "guest_name": guest.name
-                    })
+                    await self.broadcast(
+                        session_id,
+                        {"type": "guest_left", "user_id": user_id, "guest_name": guest.name},
+                    )
 
         # 클라이언트 제거
         websocket = self.clients.pop(user_id, None)
