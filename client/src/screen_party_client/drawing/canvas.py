@@ -5,7 +5,7 @@
 여러 사용자의 드로잉을 line_id별로 관리합니다.
 """
 
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Tuple
 import uuid
 from PyQt6.QtWidgets import QWidget
 from PyQt6.QtCore import Qt, QTimer, QPointF, pyqtSignal
@@ -94,24 +94,65 @@ class DrawingCanvas(QWidget):
         """사용자별 색상 설정"""
         self.user_colors[user_id] = color
 
+    # === 좌표 변환 메서드 ===
+
+    def _to_relative_point(self, x: float, y: float) -> Tuple[float, float]:
+        """절대 좌표를 상대 좌표로 변환 (0.0 ~ 1.0)
+
+        Args:
+            x: 절대 X 좌표 (픽셀)
+            y: 절대 Y 좌표 (픽셀)
+
+        Returns:
+            (rel_x, rel_y): 상대 좌표 (0.0 ~ 1.0)
+        """
+        width = self.width() or 1  # 0으로 나누기 방지
+        height = self.height() or 1
+
+        rel_x = x / width
+        rel_y = y / height
+
+        return (rel_x, rel_y)
+
+    def _to_absolute_point(self, rel_x: float, rel_y: float) -> Tuple[float, float]:
+        """상대 좌표를 절대 좌표로 변환
+
+        Args:
+            rel_x: 상대 X 좌표 (0.0 ~ 1.0)
+            rel_y: 상대 Y 좌표 (0.0 ~ 1.0)
+
+        Returns:
+            (x, y): 절대 좌표 (픽셀)
+        """
+        width = self.width()
+        height = self.height()
+
+        x = rel_x * width
+        y = rel_y * height
+
+        return (x, y)
+
     def mousePressEvent(self, event: QMouseEvent):
         """마우스 눌림: 드로잉 시작"""
         if event.button() == Qt.MouseButton.LeftButton:
             pos = event.position()
-            start_point = (pos.x(), pos.y())
+            abs_point = (pos.x(), pos.y())
 
             # 새로운 line_id 생성
             self.my_line_id = str(uuid.uuid4())
 
-            # 드로잉 시작
-            self.my_fitter.start_drawing(start_point)
+            # 드로잉 시작 (내부적으로는 절대 좌표 사용)
+            self.my_fitter.start_drawing(abs_point)
 
-            # 시작 이벤트 전송
+            # 네트워크 전송용 상대 좌표로 변환
+            rel_start_point = self._to_relative_point(abs_point[0], abs_point[1])
+
+            # 시작 이벤트 전송 (상대 좌표)
             msg = DrawingStartMessage(
                 line_id=self.my_line_id,
                 user_id=self.user_id,
                 color=self.pen_color.name(),
-                start_point=start_point,
+                start_point=rel_start_point,
             )
             self.drawing_started.emit(self.my_line_id, self.user_id, msg.to_dict())
 
@@ -124,9 +165,10 @@ class DrawingCanvas(QWidget):
         """마우스 이동: 점 추가"""
         if self.my_fitter.is_drawing and self.my_line_id:
             pos = event.position()
-            point = (pos.x(), pos.y())
+            abs_point = (pos.x(), pos.y())
 
-            self.my_fitter.add_point(point)
+            # 내부적으로는 절대 좌표로 드로잉 (렌더링용)
+            self.my_fitter.add_point(abs_point)
             self.update()  # 화면 갱신
 
     def mouseReleaseEvent(self, event: QMouseEvent):
@@ -215,19 +257,35 @@ class DrawingCanvas(QWidget):
         painter.drawPath(path)
 
     def _send_network_update(self):
-        """네트워크 업데이트 전송 (Delta Update)"""
+        """네트워크 업데이트 전송 (Delta Update) - 상대 좌표로 변환"""
         if not self.my_fitter.has_changes() or not self.my_line_id:
             return
 
-        # Delta 패킷 생성
+        # Delta 패킷 생성 (절대 좌표)
         packet = self.my_fitter.get_delta_packet()
 
-        # 메시지 생성
+        # 상대 좌표로 변환
+        width = self.width() or 1
+        height = self.height() or 1
+
+        # new_finalized_segments를 상대 좌표로 변환
+        rel_segments = []
+        for seg_dict in packet["new_finalized_segments"]:
+            seg = BezierSegment.from_dict(seg_dict)
+            rel_seg = seg.to_relative(width, height)
+            rel_segments.append(rel_seg.to_dict())
+
+        # current_raw_points를 상대 좌표로 변환
+        rel_raw_points = [
+            self._to_relative_point(x, y) for x, y in packet["current_raw_points"]
+        ]
+
+        # 메시지 생성 (상대 좌표)
         msg = DrawingUpdateMessage(
             line_id=self.my_line_id,
             user_id=self.user_id,
-            new_finalized_segments=packet["new_finalized_segments"],
-            current_raw_points=packet["current_raw_points"],
+            new_finalized_segments=rel_segments,
+            current_raw_points=rel_raw_points,
         )
 
         # 시그널 emit
@@ -287,16 +345,19 @@ class DrawingCanvas(QWidget):
 
     def handle_drawing_start(self, line_id: str, user_id: str, data: Dict[str, Any]):
         """
-        다른 사용자의 드로잉 시작 처리
+        다른 사용자의 드로잉 시작 처리 (상대 좌표 수신)
 
         Args:
             line_id: 라인 ID
             user_id: 사용자 ID
-            data: 시작 데이터 (color, start_point 등)
+            data: 시작 데이터 (color, start_point 등) - start_point는 상대 좌표
         """
         # 색상 파싱
         color_str = data.get("color", "#FF0000")
         color = QColor(color_str)
+
+        # 상대 좌표 start_point (참고용, LineData 생성에는 사용하지 않음)
+        # start_point = data.get("start_point")  # 필요 시 사용
 
         # LineData 생성
         line_data = LineData(
@@ -312,12 +373,12 @@ class DrawingCanvas(QWidget):
 
     def handle_drawing_update(self, line_id: str, user_id: str, data: Dict[str, Any]):
         """
-        다른 사용자의 드로잉 업데이트 처리
+        다른 사용자의 드로잉 업데이트 처리 (상대 좌표 수신)
 
         Args:
             line_id: 라인 ID
             user_id: 사용자 ID
-            data: 업데이트 데이터 (new_finalized_segments, current_raw_points)
+            data: 업데이트 데이터 (new_finalized_segments, current_raw_points) - 상대 좌표
         """
         # LineData 가져오기 (없으면 생성)
         if line_id not in self.remote_lines:
@@ -330,17 +391,26 @@ class DrawingCanvas(QWidget):
 
         line_data = self.remote_lines[line_id]
 
-        # 새로운 finalized segments 추가
+        # 상대 좌표를 절대 좌표로 변환
+        width = self.width()
+        height = self.height()
+
+        # 새로운 finalized segments 추가 (상대 좌표 → 절대 좌표)
         if "new_finalized_segments" in data:
             new_segments = []
             for seg_dict in data["new_finalized_segments"]:
-                segment = BezierSegment.from_dict(seg_dict)
-                new_segments.append(segment)
+                rel_segment = BezierSegment.from_dict(seg_dict)
+                abs_segment = rel_segment.to_absolute(width, height)
+                new_segments.append(abs_segment)
             line_data.add_finalized_segments(new_segments)
 
-        # current raw points 업데이트
+        # current raw points 업데이트 (상대 좌표 → 절대 좌표)
         if "current_raw_points" in data:
-            line_data.update_raw_points(data["current_raw_points"])
+            abs_raw_points = [
+                self._to_absolute_point(rel_x, rel_y)
+                for rel_x, rel_y in data["current_raw_points"]
+            ]
+            line_data.update_raw_points(abs_raw_points)
 
         self.update()
 

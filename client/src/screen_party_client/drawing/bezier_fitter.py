@@ -39,6 +39,40 @@ class BezierSegment:
             p3=tuple(data["p3"]),
         )
 
+    def to_relative(self, width: float, height: float) -> "BezierSegment":
+        """절대 좌표를 상대 좌표로 변환
+
+        Args:
+            width: 캔버스 너비
+            height: 캔버스 높이
+
+        Returns:
+            상대 좌표 BezierSegment
+        """
+        return BezierSegment(
+            p0=(self.p0[0] / width, self.p0[1] / height),
+            p1=(self.p1[0] / width, self.p1[1] / height),
+            p2=(self.p2[0] / width, self.p2[1] / height),
+            p3=(self.p3[0] / width, self.p3[1] / height),
+        )
+
+    def to_absolute(self, width: float, height: float) -> "BezierSegment":
+        """상대 좌표를 절대 좌표로 변환
+
+        Args:
+            width: 캔버스 너비
+            height: 캔버스 높이
+
+        Returns:
+            절대 좌표 BezierSegment
+        """
+        return BezierSegment(
+            p0=(self.p0[0] * width, self.p0[1] * height),
+            p1=(self.p1[0] * width, self.p1[1] * height),
+            p2=(self.p2[0] * width, self.p2[1] * height),
+            p3=(self.p3[0] * width, self.p3[1] * height),
+        )
+
 
 class BezierFitter:
     """
