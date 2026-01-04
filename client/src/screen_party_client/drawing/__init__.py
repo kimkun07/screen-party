@@ -2,6 +2,7 @@
 
 from .bezier_fitter import BezierFitter, BezierSegment
 from .incremental_fitter import IncrementalFitter
+from .line_data import LineData
 from .canvas import DrawingCanvas
 
-__all__ = ["BezierFitter", "BezierSegment", "IncrementalFitter", "DrawingCanvas"]
+__all__ = ["BezierFitter", "BezierSegment", "IncrementalFitter", "LineData", "DrawingCanvas"]
