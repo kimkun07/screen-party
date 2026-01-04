@@ -112,19 +112,18 @@ class IncrementalFitter:
         # 여기서는 단순히 세그먼트가 생성되면 성공으로 간주
 
         # 세그먼트가 1개이고 오차가 작으면 "임시" 상태 유지
-        # 세그먼트가 여러 개이면 일부를 freeze
+        # 세그먼트가 여러 개이면 모두 freeze
         if len(segments) == 1:
             # 단일 세그먼트: 아직 확정하지 않고 임시 상태 유지
             # (다음 점이 추가되면 다시 피팅)
             return False
         else:
-            # 여러 세그먼트: 마지막 세그먼트를 제외하고 freeze
-            self._freeze_segments(segments[:-1])
+            # 여러 세그먼트: 모두 freeze
+            self._freeze_segments(segments)
 
-            # 마지막 세그먼트에 해당하는 점들을 raw_buffer에 남김
-            # (간단히 마지막 N개 점만 남김)
-            keep_count = max(3, self.trigger_count // 2)
-            self.raw_buffer = self.raw_buffer[-keep_count:]
+            # 마지막 세그먼트의 끝점만 raw_buffer에 남김 (연속성 보장)
+            # 다음 점이 추가되면 이 끝점부터 시작하므로 세그먼트가 연속적으로 이어짐
+            self.raw_buffer = [segments[-1].p3]
 
             return True
 

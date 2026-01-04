@@ -388,8 +388,89 @@ client/tests/
 
 ---
 
+### 2026-01-04 - Incremental Fitter 연속성 버그 수정
+
+**상태**: 🔴 버그 발견 → ✅ 수정 완료
+
+**문제**:
+- 실사용 테스트 결과, 중간중간 곡선이 끊겨서 보이는 문제 발견
+- 로컬 렌더링에서도 일부 점들이 사라지는 것처럼 보임
+- 네트워크 문제가 아닌 incremental_fitter 로직 문제
+
+**원인 분석**:
+
+`_try_fit_and_freeze()` 메서드 (line 98-129)에서:
+
+```python
+# 문제가 있던 코드
+if len(segments) == 1:
+    return False
+else:
+    # 여러 세그먼트: 마지막 세그먼트를 제외하고 freeze
+    self._freeze_segments(segments[:-1])
+
+    # 마지막 세그먼트에 해당하는 점들을 raw_buffer에 남김
+    keep_count = max(3, self.trigger_count // 2)
+    self.raw_buffer = self.raw_buffer[-keep_count:]  # ❌ 문제!
+```
+
+**문제점**:
+1. `segments[:-1]`만 freeze하고 마지막 세그먼트는 제외
+2. `raw_buffer`를 임의로 `[-keep_count:]`만큼 자름
+3. 이미 freeze된 세그먼트와 raw_buffer 사이에 **연속성이 깨짐**
+   - 예: 10개 점 → 2개 세그먼트 생성 시
+   - 세그먼트 1만 freeze (점 0-5 커버)
+   - raw_buffer는 마지막 5개만 남김 (점 5-9)
+   - 세그먼트 2는 사라짐 → **곡선 끊김**
+
+**해결책**:
+
+```python
+# 수정된 코드
+if len(segments) == 1:
+    return False
+else:
+    # 여러 세그먼트: 모두 freeze
+    self._freeze_segments(segments)  # ✅ 모두 freeze
+
+    # 마지막 세그먼트의 끝점만 raw_buffer에 남김 (연속성 보장)
+    self.raw_buffer = [segments[-1].p3]  # ✅ 끝점만 남김
+```
+
+**수정 효과**:
+1. 모든 피팅된 세그먼트가 finalize됨
+2. raw_buffer는 마지막 세그먼트의 끝점(p3)으로 초기화
+3. 다음 점이 추가되면 이 끝점부터 시작 → **세그먼트가 연속적으로 이어짐**
+
+**테스트**:
+
+새로운 연속성 테스트 작성 (`test_incremental_continuity.py`):
+
+1. `test_segments_are_continuous`: 각 세그먼트의 끝점(p3)이 다음 세그먼트의 시작점(p0)과 일치하는지 검증
+2. `test_segments_cover_all_points`: 모든 입력 점이 세그먼트로 충분히 표현되는지 검증
+3. `test_multiple_triggers`: 여러 번 트리거 발생 시 세그먼트가 올바르게 누적되는지 검증
+4. `test_complex_path`: 복잡한 경로에서도 연속성 유지 검증
+
+**기존 테스트 영향**:
+- 모든 기존 테스트 통과 확인 (테스트 로직 변경 필요 없음)
+- `end_drawing()`에서 `_finalize_remaining()`이 raw_buffer를 비우므로 기존 assertion 유지
+
+**다음 단계**:
+1. 윈도우에서 실제 테스트 수행
+2. 곡선 연속성 및 품질 확인
+3. 추가 버그 있으면 수정
+
+**블로커**: 없음
+
+**커밋**:
+- `[drawing-engine] Incremental fitter 연속성 버그 수정` (incremental_fitter.py)
+- `[drawing-engine] 연속성 테스트 추가` (test_incremental_continuity.py)
+
+---
+
 > **다음 클로드 코드에게**:
 >
+> - **연속성 보장**: 수정된 로직은 segments[-1].p3를 raw_buffer에 남겨 연속성 보장
 > - **테스트 필수**: 2개 클라이언트로 실제 드로잉 동시 테스트 필요
 > - **JSON 직렬화**: tuple을 list로 변환 필요할 수 있음 (start_point, current_raw_points)
 > - **색상 파싱**: QColor.name()으로 저장, QColor(color_str)로 복원
