@@ -46,12 +46,12 @@
 | P0 | session-management | ✅ 완료 | 세션 생성/관리 (6자리 코드) | project-structure |
 | P0 | server-core | ✅ 완료 | WebSocket 서버 기본 구조 | project-structure, session-management |
 | P0 | client-core | ✅ 완료 | 클라이언트 기본 GUI 및 연결 (통합 테스트 완료) | project-structure |
-| P1 | testing | 🟢 진행중 | 유닛 테스트 (서버 29개) + 통합 테스트 (3개) 완료 | server-core, client-core |
+| P1 | testing | 🟢 진행중 | 유닛 테스트 (서버 29개 + 클라이언트 120+개) + 통합 테스트 (3개) 완료 | server-core, client-core |
 | P1 | server-deployment | ✅ 완료 | Docker 이미지 및 배포 | server-core, testing |
-| P1 | client-deployment | 🟡 준비중 | 클라이언트 실행 파일 빌드 | client-core, testing |
+| P1 | client-deployment | ✅ 완료 | PyInstaller 기반 클라이언트 실행 파일 빌드 | client-core, testing |
 | P2 | host-overlay | 🟡 준비중 | 호스트 투명 오버레이 | client-core, testing |
 | P2 | guest-calibration | 🟡 준비중 | 게스트 영역 설정 (좌표 매핑) | client-core, testing |
-| P2 | drawing-engine | 🟢 진행중 | 실시간 드로잉 (베지어 커브 피팅) | server-core, client-core, testing |
+| P2 | drawing-engine | ✅ 완료 | 실시간 베지어 커브 피팅 + Multi-user 동기화 | server-core, client-core, testing |
 | P2 | fade-animation | 🟡 준비중 | 페이드아웃 애니메이션 | drawing-engine |
 | P3 | persistence-mode | 🟡 준비중 | 장시간 그림 모드 | drawing-engine |
 | P3 | color-system | 🟡 준비중 | 색상 설정 시스템 | drawing-engine |
@@ -64,6 +64,45 @@
 - 🟢 **진행중** (In Progress): 현재 작업 중
 - ✅ **완료** (Completed): 작업 완료
 - ⏸️ **보류** (On Hold): 임시로 중단
+
+## 최근 업데이트
+
+### 2026-01-04 - Drawing Engine 완료 및 타입 안전한 메시지 시스템 구축
+
+**완료된 Task**:
+- ✅ **drawing-engine**: 실시간 베지어 커브 피팅 + Multi-user 동기화
+- ✅ **client-deployment**: PyInstaller 기반 클라이언트 실행 파일 빌드
+
+**주요 성과**:
+
+1. **베지어 커브 피팅 시스템**
+   - Schneider 알고리즘 (GraphicsGems 기반) 구현
+   - Incremental fitting (trigger_count=10, max_error=4.0px)
+   - 연속성 보장: segments[-1].p3를 raw_buffer에 남김
+   - 120+ 유닛 테스트 작성 (연속성 테스트 포함)
+
+2. **Multi-user 실시간 동기화**
+   - LineData 클래스로 line_id별 드로잉 관리
+   - Delta Update (50ms throttling)
+   - 사용자별 색상 구분
+   - 실사용 테스트 성공 (2개 클라이언트 동시 드로잉)
+
+3. **타입 안전한 메시지 시스템**
+   - common 패키지에 MessageType enum + dataclass 메시지 정의
+   - DrawingStartMessage, DrawingUpdateMessage, DrawingEndMessage
+   - BaseMessage.to_dict()로 JSON 직렬화 (tuple → list 자동 변환)
+   - 서버 메시지 라우팅 개선 (DRAWING_MESSAGE_TYPES)
+
+**실사용 테스트 결과**:
+- ✅ 로컬 베지어 커브 피팅: 정상 작동, 연속성 문제 해결
+- ✅ 서버 전송: 메시지 타입 인식, 정상 브로드캐스트
+- ✅ 멀티 유저: 2개 클라이언트에서 동시 드로잉, 실시간 동기화 확인
+- ✅ 렌더링: finalized segments (곡선) + current raw points (직선) 정상 표시
+
+**다음 우선순위**:
+- P2: fade-animation (페이드아웃 애니메이션)
+- P2: host-overlay (호스트 투명 오버레이)
+- P2: guest-calibration (게스트 영역 설정)
 
 ## Task 의존성 다이어그램
 
