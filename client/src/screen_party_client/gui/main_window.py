@@ -216,6 +216,31 @@ class MainWindow(QMainWindow):
 
         main_screen_layout.addLayout(share_section_layout)
 
+        main_screen_layout.addSpacing(20)
+
+        # 게스트 모드 섹션
+        guest_section_layout = QVBoxLayout()
+
+        guest_label = QLabel("Guest Mode")
+        guest_label_font = QFont()
+        guest_label_font.setPointSize(12)
+        guest_label_font.setBold(True)
+        guest_label.setFont(guest_label_font)
+        guest_section_layout.addWidget(guest_label)
+
+        self.setup_overlay_button = QPushButton("화면 영역 설정")
+        self.setup_overlay_button.setMinimumHeight(50)
+        self.setup_overlay_button.clicked.connect(self.start_guest_overlay)
+        guest_section_layout.addWidget(self.setup_overlay_button)
+
+        self.toggle_drawing_button = QPushButton("그리기 활성화")
+        self.toggle_drawing_button.setMinimumHeight(40)
+        self.toggle_drawing_button.setEnabled(False)
+        self.toggle_drawing_button.clicked.connect(self.toggle_drawing_mode)
+        guest_section_layout.addWidget(self.toggle_drawing_button)
+
+        main_screen_layout.addLayout(guest_section_layout)
+
         main_screen_layout.addStretch()
 
         self.main_layout.addWidget(self.main_widget)
@@ -544,17 +569,32 @@ class MainWindow(QMainWindow):
             self.start_share_mode()
 
     def start_share_mode(self):
-        """공유 모드 시작 (창 선택 다이얼로그 표시)"""
+        """공유 모드 시작 (호스트 - 창 선택 다이얼로그 표시)"""
         from .window_selector import WindowSelectorDialog
 
         dialog = WindowSelectorDialog(self)
         if dialog.exec():
             window_handle = dialog.get_selected_handle()
             if window_handle:
-                self.create_overlay(window_handle)
+                self.create_overlay(window_handle, is_guest=False)
 
-    def create_overlay(self, window_handle: int):
-        """오버레이 생성"""
+    def start_guest_overlay(self):
+        """게스트 오버레이 시작 (게스트 - 화면 영역 설정)"""
+        from .window_selector import WindowSelectorDialog
+
+        dialog = WindowSelectorDialog(self)
+        if dialog.exec():
+            window_handle = dialog.get_selected_handle()
+            if window_handle:
+                self.create_overlay(window_handle, is_guest=True)
+
+    def create_overlay(self, window_handle: int, is_guest: bool = False):
+        """오버레이 생성
+
+        Args:
+            window_handle: 타겟 윈도우 핸들
+            is_guest: True면 게스트 모드, False면 호스트 모드
+        """
         from .overlay_window import OverlayWindow
         from .floating_menu import FloatingActionMenu
 
@@ -572,27 +612,46 @@ class MainWindow(QMainWindow):
             self.overlay_window.target_window_minimized.connect(self.on_overlay_minimized)
             self.overlay_window.target_window_restored.connect(self.on_overlay_restored)
 
-            # Floating Action Menu 생성
-            self.floating_menu = FloatingActionMenu()
-            self.floating_menu.exit_clicked.connect(self.stop_share_mode)
-            self.floating_menu.clear_clicked.connect(self.clear_overlay_drawings)
+            if is_guest:
+                # 게스트 모드: 그리기 모드 토글 버튼 활성화
+                self.toggle_drawing_button.setEnabled(True)
+                self.overlay_window.drawing_mode_changed.connect(self.on_drawing_mode_changed)
 
-            # FAB 위치: 우하단
-            overlay_rect = self.overlay_window.geometry()
-            fab_x = overlay_rect.right() - 100
-            fab_y = overlay_rect.bottom() - 100
-            self.floating_menu.move(fab_x, fab_y)
+                # DrawingCanvas 시그널 연결 (오버레이에서 그리기)
+                canvas = self.overlay_window.get_canvas()
+                canvas.drawing_started.connect(self._on_drawing_started)
+                canvas.drawing_updated.connect(self._on_drawing_updated)
+                canvas.drawing_ended.connect(self._on_drawing_ended)
+
+                # 버튼 텍스트 업데이트
+                self.setup_overlay_button.setText("Stop Guest Overlay")
+                self.set_status("Guest overlay started (drawing disabled)")
+            else:
+                # 호스트 모드: Floating Action Menu 생성
+                self.floating_menu = FloatingActionMenu()
+                self.floating_menu.exit_clicked.connect(self.stop_share_mode)
+                self.floating_menu.clear_clicked.connect(self.clear_overlay_drawings)
+
+                # FAB 위치: 우하단
+                overlay_rect = self.overlay_window.geometry()
+                fab_x = overlay_rect.right() - 100
+                fab_y = overlay_rect.bottom() - 100
+                self.floating_menu.move(fab_x, fab_y)
+
+                # FAB 표시
+                self.floating_menu.show()
+
+                # 버튼 텍스트 업데이트
+                self.share_button.setText("Stop Share Mode")
+                self.set_status("Share mode started")
 
             # 창 표시
             self.overlay_window.show()
-            self.floating_menu.show()
 
             # 상태 업데이트
             self.is_sharing = True
-            self.share_button.setText("Stop Share Mode")
-            self.set_status("Share mode started")
 
-            logger.info(f"Overlay created for window {window_handle}")
+            logger.info(f"Overlay created for window {window_handle} (guest={is_guest})")
 
         except Exception as e:
             logger.error(f"Failed to create overlay: {e}", exc_info=True)
@@ -604,7 +663,7 @@ class MainWindow(QMainWindow):
             self.stop_share_mode()
 
     def stop_share_mode(self):
-        """공유 모드 종료"""
+        """공유 모드 종료 (호스트 & 게스트 공통)"""
         if self.overlay_window:
             try:
                 self.overlay_window.close()
@@ -619,11 +678,16 @@ class MainWindow(QMainWindow):
                 logger.error(f"Error closing floating menu: {e}")
             self.floating_menu = None
 
+        # 버튼 상태 리셋
         self.is_sharing = False
         self.share_button.setText("Start Share Mode")
-        self.set_status("Share mode stopped")
+        self.setup_overlay_button.setText("화면 영역 설정")
+        self.toggle_drawing_button.setEnabled(False)
+        self.toggle_drawing_button.setText("그리기 활성화")
 
-        logger.info("Share mode stopped")
+        self.set_status("Overlay stopped")
+
+        logger.info("Overlay stopped")
 
     def on_overlay_window_closed(self):
         """오버레이 창이 닫혔을 때 (타겟 창이 닫힘)"""
@@ -658,6 +722,23 @@ class MainWindow(QMainWindow):
         """Handle overlay restored - show FAB"""
         if self.floating_menu:
             self.floating_menu.show()
+
+    def toggle_drawing_mode(self):
+        """Toggle drawing mode (게스트용)"""
+        if self.overlay_window:
+            current = self.overlay_window.is_drawing_enabled()
+            self.overlay_window.set_drawing_enabled(not current)
+
+    def on_drawing_mode_changed(self, enabled: bool):
+        """Drawing mode changed handler (게스트용)"""
+        if enabled:
+            self.toggle_drawing_button.setText("그리기 비활성화")
+            self.set_status("Drawing enabled (press ESC to disable)")
+            logger.info("Drawing mode enabled")
+        else:
+            self.toggle_drawing_button.setText("그리기 활성화")
+            self.set_status("Drawing disabled (click passthrough)")
+            logger.info("Drawing mode disabled")
 
     # ================================================================
 

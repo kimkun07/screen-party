@@ -50,7 +50,7 @@
 | P1 | server-deployment | ✅ 완료 | Docker 이미지 및 배포 | server-core, testing |
 | P1 | client-deployment | ✅ 완료 | PyInstaller 기반 클라이언트 실행 파일 빌드 | client-core, testing |
 | P2 | host-overlay | ✅ 완료 | 호스트 투명 오버레이 + FAB (Phase 1+2) | client-core, testing |
-| P2 | guest-calibration | 🟡 준비중 | 게스트 영역 설정 (좌표 매핑) | client-core, testing |
+| P2 | guest-calibration | ✅ 완료 | 게스트 오버레이 + 그리기 모드 토글 (Phase 1) | client-core, host-overlay, testing |
 | P2 | drawing-engine | ✅ 완료 | 실시간 베지어 커브 피팅 + Multi-user 동기화 | server-core, client-core, testing |
 | P2 | fade-animation | 🟡 준비중 | 페이드아웃 애니메이션 | drawing-engine |
 | P3 | persistence-mode | 🟡 준비중 | 장시간 그림 모드 | drawing-engine |
@@ -66,6 +66,47 @@
 - ⏸️ **보류** (On Hold): 임시로 중단
 
 ## 최근 업데이트
+
+### 2026-01-05 - Guest Overlay 완료 (Phase 1: 게스트 오버레이 + 그리기 모드 토글)
+
+**완료된 Task**:
+- ✅ **guest-calibration**: 게스트 오버레이 + 그리기 모드 토글 기능
+
+**주요 성과**:
+
+1. **OverlayWindow 개선 - 그리기 모드 토글**
+   - WindowTransparentForInput 동적 변경 (setWindowFlags + show)
+   - set_drawing_enabled(bool) 메서드로 클릭 passthrough 토글
+   - ESC 키 핸들러 (그리기 모드 → 클릭 passthrough)
+   - drawing_mode_changed 시그널 추가
+
+2. **MainWindow 게스트 UI 추가**
+   - "Guest Mode" 섹션 (메인 화면)
+   - "화면 영역 설정" 버튼 (창 선택)
+   - "그리기 활성화/비활성화" 토글 버튼
+   - 호스트/게스트 공통 create_overlay() 메서드 (is_guest 플래그)
+
+3. **사용자 시나리오**
+   - 게스트: 화면 영역 설정 → 오버레이 생성 (클릭 passthrough)
+   - 그리기 활성화 → 오버레이에서 그림 그리기
+   - 그리기 비활성화 또는 ESC 키 → 클릭 passthrough로 전환
+   - 다시 화면 공유 프로그램 조작 가능
+
+**기술 구현**:
+- ✅ WindowTransparentForInput 동적 토글
+- ✅ ESC 키 핸들러
+- ✅ 호스트/게스트 공통 OverlayWindow 사용
+- ✅ 그리기 모드 시그널 연결
+
+**알려진 제약사항**:
+- Windows 전용 (pywin32 필요)
+- Windows 환경에서 수동 테스트 필요
+
+**다음 우선순위**:
+- P2: fade-animation (페이드아웃 애니메이션)
+- P3: persistence-mode (장시간 그림 모드)
+
+---
 
 ### 2026-01-04 - Host Overlay 완료 (Phase 1+2: 투명 오버레이 + FAB)
 

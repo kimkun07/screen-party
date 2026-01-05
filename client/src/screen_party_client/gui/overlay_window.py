@@ -18,6 +18,7 @@ class OverlayWindow(QWidget):
     target_window_minimized = pyqtSignal()  # Emitted when target window is minimized
     target_window_restored = pyqtSignal()  # Emitted when target window is restored
     geometry_changed = pyqtSignal(QRect)  # Emitted when overlay geometry changes
+    drawing_mode_changed = pyqtSignal(bool)  # Emitted when drawing mode changes (True=enabled, False=disabled)
 
     def __init__(
         self,
@@ -33,6 +34,7 @@ class OverlayWindow(QWidget):
         self.window_manager = WindowManager()
         self.is_tracking = True
         self._was_minimized = False
+        self._drawing_enabled = False  # Start with drawing disabled (click passthrough)
 
         if pen_color is None:
             pen_color = QColor(255, 0, 0)  # Default: red
@@ -131,6 +133,58 @@ class OverlayWindow(QWidget):
     def get_canvas(self) -> DrawingCanvas:
         """Get the drawing canvas"""
         return self.drawing_canvas
+
+    def is_drawing_enabled(self) -> bool:
+        """Check if drawing mode is enabled"""
+        return self._drawing_enabled
+
+    def set_drawing_enabled(self, enabled: bool):
+        """Enable or disable drawing mode
+
+        Args:
+            enabled: True to enable drawing (disable click passthrough),
+                    False to disable drawing (enable click passthrough)
+        """
+        if self._drawing_enabled == enabled:
+            return
+
+        self._drawing_enabled = enabled
+
+        # Update window flags
+        if enabled:
+            # Drawing enabled: Remove WindowTransparentForInput (allow mouse input)
+            self.setWindowFlags(
+                Qt.WindowType.FramelessWindowHint
+                | Qt.WindowType.WindowStaysOnTopHint
+                | Qt.WindowType.Tool
+                # No WindowTransparentForInput - mouse input allowed!
+            )
+        else:
+            # Drawing disabled: Add WindowTransparentForInput (click passthrough)
+            self.setWindowFlags(
+                Qt.WindowType.FramelessWindowHint
+                | Qt.WindowType.WindowStaysOnTopHint
+                | Qt.WindowType.Tool
+                | Qt.WindowType.WindowTransparentForInput  # Click passthrough
+            )
+
+        # Re-show window to apply new flags
+        self.show()
+
+        # Emit signal
+        self.drawing_mode_changed.emit(enabled)
+
+    def keyPressEvent(self, event):
+        """Handle key press events"""
+        from PyQt6.QtCore import Qt as QtKey
+
+        if event.key() == QtKey.Key.Key_Escape:
+            # ESC key: Disable drawing mode
+            if self._drawing_enabled:
+                self.set_drawing_enabled(False)
+            event.accept()
+        else:
+            super().keyPressEvent(event)
 
     def closeEvent(self, event):
         """Handle close event"""
