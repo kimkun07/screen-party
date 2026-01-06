@@ -59,6 +59,9 @@ class OverlayWindow(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
 
+        # Enable focus to receive keyboard events (ESC key)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+
         # Layout
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -150,6 +153,9 @@ class OverlayWindow(QWidget):
 
         self._drawing_enabled = enabled
 
+        # Store current geometry
+        current_geometry = self.geometry()
+
         # Update window flags
         if enabled:
             # Drawing enabled: Remove WindowTransparentForInput (allow mouse input)
@@ -168,8 +174,13 @@ class OverlayWindow(QWidget):
                 | Qt.WindowType.WindowTransparentForInput  # Click passthrough
             )
 
-        # Re-show window to apply new flags
+        # CRITICAL: Must hide and show to apply flag changes
+        self.setGeometry(current_geometry)  # Restore geometry
         self.show()
+
+        # Set focus when drawing is enabled (to receive keyboard events)
+        if enabled:
+            self.setFocus()
 
         # Emit signal
         self.drawing_mode_changed.emit(enabled)
