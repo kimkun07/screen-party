@@ -11,6 +11,7 @@ from .messages import (
     DrawingStartMessage,
     DrawingUpdateMessage,
     DrawingEndMessage,
+    ColorChangeMessage,
 )
 
 __all__ = [
@@ -26,4 +27,5 @@ __all__ = [
     "DrawingStartMessage",
     "DrawingUpdateMessage",
     "DrawingEndMessage",
+    "ColorChangeMessage",
 ]

@@ -11,6 +11,7 @@ class Guest:
 
     user_id: str
     name: str
+    color: str = "#FF0000"  # 펜 색상 (hex 형식)
     joined_at: datetime = field(default_factory=datetime.now)
 
 
@@ -21,6 +22,7 @@ class Session:
     session_id: str
     host_id: str
     host_name: str
+    host_color: str = "#FF0000"  # 호스트 펜 색상 (hex 형식)
     guests: Dict[str, Guest] = field(default_factory=dict)
     created_at: datetime = field(default_factory=datetime.now)
     last_activity: datetime = field(default_factory=datetime.now)

@@ -1,7 +1,7 @@
 """MainWindow GUI 테스트 (pytest-qt 사용)"""
 
 import pytest
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QPoint
 from PyQt6.QtWidgets import QApplication
 
 from screen_party_client.gui.main_window import MainWindow
@@ -302,3 +302,205 @@ class TestScreenTransition:
         # 레이블 업데이트 확인
         assert server_url in window.server_info_label.text()
         assert session_id in window.session_info_label.text()
+
+
+class TestColorSystem:
+    """색상 설정 시스템 테스트"""
+
+    def test_color_buttons_exist(self, qtbot):
+        """색상 버튼이 생성되었는지 테스트"""
+        window = MainWindow()
+        qtbot.addWidget(window)
+        window.show_main_screen()
+
+        # 6개의 색상 버튼이 있어야 함
+        assert len(window.color_buttons) == 6
+
+    def test_alpha_slider_initial_value(self, qtbot):
+        """투명도 슬라이더 초기값 테스트"""
+        window = MainWindow()
+        qtbot.addWidget(window)
+        window.show_main_screen()
+
+        # 초기값은 100 (100% 불투명)
+        assert window.alpha_slider.value() == 100
+
+    def test_set_pen_color_red(self, qtbot):
+        """핑크 색상 버튼 클릭 테스트 (파스텔 핑크)"""
+        from PyQt6.QtGui import QColor
+
+        window = MainWindow()
+        qtbot.addWidget(window)
+        window.session_id = "TEST01"
+        window.user_id = "user-001"
+        window.is_connected = True
+        window.show_main_screen()
+
+        # DrawingCanvas user_id 설정
+        window.drawing_canvas.set_user_id("user-001")
+
+        # 핑크 버튼 클릭 (첫 번째 버튼)
+        qtbot.mouseClick(window.color_buttons[0], Qt.MouseButton.LeftButton)
+
+        # DrawingCanvas의 pen_color가 파스텔 핑크로 변경되었는지 확인
+        canvas_color = window.drawing_canvas.pen_color
+        assert canvas_color.red() == 255
+        assert canvas_color.green() == 182
+        assert canvas_color.blue() == 193
+
+    def test_set_pen_color_blue(self, qtbot):
+        """블루 색상 버튼 클릭 테스트 (파스텔 블루)"""
+        from PyQt6.QtGui import QColor
+
+        window = MainWindow()
+        qtbot.addWidget(window)
+        window.session_id = "TEST01"
+        window.user_id = "user-001"
+        window.is_connected = True
+        window.show_main_screen()
+
+        window.drawing_canvas.set_user_id("user-001")
+
+        # 블루 버튼 클릭 (두 번째 버튼)
+        qtbot.mouseClick(window.color_buttons[1], Qt.MouseButton.LeftButton)
+
+        canvas_color = window.drawing_canvas.pen_color
+        assert canvas_color.red() == 173
+        assert canvas_color.green() == 216
+        assert canvas_color.blue() == 230
+
+    def test_alpha_slider_change(self, qtbot):
+        """투명도 슬라이더 변경 테스트"""
+        window = MainWindow()
+        qtbot.addWidget(window)
+        window.session_id = "TEST01"
+        window.user_id = "user-001"
+        window.is_connected = True
+        window.show_main_screen()
+
+        window.drawing_canvas.set_user_id("user-001")
+
+        # 슬라이더를 50%로 변경
+        window.alpha_slider.setValue(50)
+
+        # DrawingCanvas의 pen_alpha가 0.5로 변경되었는지 확인
+        assert window.drawing_canvas.pen_alpha == pytest.approx(0.5, rel=0.01)
+
+    def test_alpha_slider_zero(self, qtbot):
+        """투명도 슬라이더를 0으로 변경 테스트"""
+        window = MainWindow()
+        qtbot.addWidget(window)
+        window.session_id = "TEST01"
+        window.user_id = "user-001"
+        window.is_connected = True
+        window.show_main_screen()
+
+        window.drawing_canvas.set_user_id("user-001")
+
+        # 슬라이더를 0%로 변경
+        window.alpha_slider.setValue(0)
+
+        # DrawingCanvas의 pen_alpha가 0.0으로 변경되었는지 확인
+        assert window.drawing_canvas.pen_alpha == pytest.approx(0.0, rel=0.01)
+
+    def test_alpha_slider_full(self, qtbot):
+        """투명도 슬라이더를 100으로 변경 테스트"""
+        window = MainWindow()
+        qtbot.addWidget(window)
+        window.session_id = "TEST01"
+        window.user_id = "user-001"
+        window.is_connected = True
+        window.show_main_screen()
+
+        window.drawing_canvas.set_user_id("user-001")
+
+        # 슬라이더를 100%로 변경
+        window.alpha_slider.setValue(100)
+
+        # DrawingCanvas의 pen_alpha가 1.0으로 변경되었는지 확인
+        assert window.drawing_canvas.pen_alpha == pytest.approx(1.0, rel=0.01)
+
+    def test_multiple_color_changes(self, qtbot):
+        """여러 번 색상 변경 테스트 (파스텔 톤)"""
+        from PyQt6.QtGui import QColor
+
+        window = MainWindow()
+        qtbot.addWidget(window)
+        window.session_id = "TEST01"
+        window.user_id = "user-001"
+        window.is_connected = True
+        window.show_main_screen()
+
+        window.drawing_canvas.set_user_id("user-001")
+
+        # 초기 색상: 파스텔 핑크 (첫 번째 프리셋)
+        initial_color = window.drawing_canvas.pen_color
+        assert initial_color.red() == 255
+        assert initial_color.green() == 182
+        assert initial_color.blue() == 193
+
+        # 파스텔 블루로 변경
+        qtbot.mouseClick(window.color_buttons[1], Qt.MouseButton.LeftButton)
+        assert window.drawing_canvas.pen_color.red() == 173
+        assert window.drawing_canvas.pen_color.green() == 216
+        assert window.drawing_canvas.pen_color.blue() == 230
+
+        # 파스텔 그린으로 변경
+        qtbot.mouseClick(window.color_buttons[2], Qt.MouseButton.LeftButton)
+        assert window.drawing_canvas.pen_color.red() == 152
+        assert window.drawing_canvas.pen_color.green() == 251
+        assert window.drawing_canvas.pen_color.blue() == 152
+
+        # 파스텔 오렌지로 변경
+        qtbot.mouseClick(window.color_buttons[4], Qt.MouseButton.LeftButton)
+        assert window.drawing_canvas.pen_color.red() == 255
+        assert window.drawing_canvas.pen_color.green() == 218
+        assert window.drawing_canvas.pen_color.blue() == 185
+
+    def test_user_color_change_no_duplication(self, qtbot):
+        """사용자 색상 변경 시 참여자 중복 버그 테스트
+
+        시나리오:
+        1. User A가 접속 (초기 색상: 파스텔 핑크)
+        2. User A가 색상 변경 (파스텔 블루로)
+        3. User B 입장에서 A는 1명이어야 함 (중복되지 않음)
+        """
+        from PyQt6.QtGui import QColor
+
+        window = MainWindow()
+        qtbot.addWidget(window)
+        window.session_id = "TEST01"
+        window.user_id = "user-bob"
+        window.is_connected = True
+        window.show_main_screen()
+
+        window.drawing_canvas.set_user_id("user-bob")
+
+        # User A가 접속 (초기 색상: 파스텔 핑크)
+        user_a_id = "user-alice"
+        initial_color = QColor(255, 182, 193)  # 파스텔 핑크
+        window.drawing_canvas.user_colors[user_a_id] = initial_color
+        window.drawing_canvas.user_alphas[user_a_id] = 1.0
+        window.update_users_colors_display()
+
+        # 초기 상태: user_colors에 2명 (나 + User A)
+        assert len(window.drawing_canvas.user_colors) == 2
+        assert user_a_id in window.drawing_canvas.user_colors
+        assert window.user_id in window.drawing_canvas.user_colors
+
+        # User A가 색상 변경 (파스텔 블루로)
+        new_color = QColor(173, 216, 230)  # 파스텔 블루
+        window.drawing_canvas.user_colors[user_a_id] = new_color
+        window.drawing_canvas.user_alphas[user_a_id] = 0.8
+        window.update_users_colors_display()
+
+        # 색상 변경 후: user_colors에 여전히 2명 (중복 없음)
+        assert len(window.drawing_canvas.user_colors) == 2
+        assert user_a_id in window.drawing_canvas.user_colors
+        assert window.drawing_canvas.user_colors[user_a_id] == new_color
+        assert window.drawing_canvas.user_alphas[user_a_id] == 0.8
+
+        # 참여자 라벨 텍스트 확인
+        label_text = window.users_colors_label.text()
+        # User A의 user_id는 한 번만 나타나야 함
+        assert label_text.count(user_a_id[:8]) == 1

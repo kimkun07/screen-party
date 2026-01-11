@@ -7,14 +7,15 @@ from typing import Optional
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QPushButton,
     QLabel, QInputDialog, QMessageBox, QHBoxLayout, QLineEdit,
-    QApplication
+    QApplication, QGroupBox, QSlider
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QSettings
 from PyQt6.QtGui import QFont, QColor
 
-from screen_party_common import MessageType, DrawingEndMessage
+from screen_party_common import MessageType, DrawingEndMessage, ColorChangeMessage
 from ..network.client import WebSocketClient
 from ..drawing import DrawingCanvas
+from .constants import PRESET_COLORS, get_default_pen_color
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +46,9 @@ class MainWindow(QMainWindow):
         # 오버레이 상태
         self.is_sharing = False
         self.overlay_window = None
+
+        # 현재 알파값 추적 (0.0 ~ 1.0)
+        self.current_alpha = 1.0
 
         self.init_ui()
 
@@ -176,7 +180,14 @@ class MainWindow(QMainWindow):
         session_info_layout.addWidget(self.copy_session_button)
         main_screen_layout.addLayout(session_info_layout)
 
-        main_screen_layout.addSpacing(30)
+        main_screen_layout.addSpacing(10)
+
+        # 참여자 색상 정보 (user_id -> color indicator label)
+        self.users_colors_label = QLabel("")
+        self.users_colors_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        main_screen_layout.addWidget(self.users_colors_label)
+
+        main_screen_layout.addSpacing(20)
 
         # Status label
         self.status_label = QLabel("")
@@ -189,7 +200,7 @@ class MainWindow(QMainWindow):
         self.drawing_canvas = DrawingCanvas(
             parent=self.main_widget,
             user_id=None,  # 세션 연결 시 설정
-            pen_color=QColor(255, 0, 0),
+            pen_color=get_default_pen_color(),  # 첫 번째 프리셋 색상 (파스텔 핑크)
             pen_width=3,
         )
         self.drawing_canvas.setMinimumSize(600, 400)
@@ -197,6 +208,50 @@ class MainWindow(QMainWindow):
 
         # Drawing Canvas 시그널 연결
         self._connect_drawing_signals()
+
+        main_screen_layout.addSpacing(30)
+
+        # 색상 설정 섹션
+        color_group = QGroupBox("색상 설정")
+        color_layout = QVBoxLayout()
+        color_group.setLayout(color_layout)
+
+        # 색상 팔레트 (프리셋 색상 버튼들)
+        palette_label = QLabel("색상:")
+        color_layout.addWidget(palette_label)
+
+        palette_layout = QHBoxLayout()
+        self.color_buttons = []
+
+        for color in PRESET_COLORS:
+            btn = QPushButton()
+            btn.setFixedSize(40, 40)  # 정사각형 버튼
+            btn.setStyleSheet(
+                f"background-color: rgb({color.red()}, {color.green()}, {color.blue()}); "
+                f"border: 2px solid #888; border-radius: 4px;"
+            )
+            btn.clicked.connect(lambda checked, c=color: self.set_pen_color(c))
+            palette_layout.addWidget(btn)
+            self.color_buttons.append(btn)
+
+        color_layout.addLayout(palette_layout)
+
+        # Alpha 슬라이더
+        alpha_label = QLabel("투명도: 100%")
+        color_layout.addWidget(alpha_label)
+
+        self.alpha_slider = QSlider(Qt.Orientation.Horizontal)
+        self.alpha_slider.setMinimum(0)
+        self.alpha_slider.setMaximum(100)
+        self.alpha_slider.setValue(100)
+        self.alpha_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.alpha_slider.setTickInterval(10)
+        self.alpha_slider.valueChanged.connect(
+            lambda value: self.on_alpha_changed(value, alpha_label)
+        )
+        color_layout.addWidget(self.alpha_slider)
+
+        main_screen_layout.addWidget(color_group)
 
         main_screen_layout.addSpacing(30)
 
@@ -247,6 +302,9 @@ class MainWindow(QMainWindow):
         server_url = self.server_input.text()
         self.server_info_label.setText(f"서버 주소: {server_url}")
         self.session_info_label.setText(f"세션 번호: {self.session_id}")
+
+        # 참여자 색상 정보 표시
+        self.update_users_colors_display()
 
     def on_session_input_changed(self, text: str):
         """세션 번호 입력 변경 시 호출"""
@@ -458,6 +516,14 @@ class MainWindow(QMainWindow):
             except Exception as e:
                 logger.error(f"Failed to send drawing message: {e}")
 
+    async def _send_color_change(self, data: dict):
+        """색상 변경 메시지를 서버로 전송"""
+        if self.client and self.is_connected:
+            try:
+                await self.client.send_message(data)
+            except Exception as e:
+                logger.error(f"Failed to send color change message: {e}")
+
     async def handle_message(self, message: dict):
         """서버로부터 받은 메시지 처리
 
@@ -516,6 +582,23 @@ class MainWindow(QMainWindow):
                 if self.is_sharing and self.overlay_window:
                     self.overlay_window.get_canvas().handle_drawing_end(line_id, user_id)
 
+        elif msg_type == MessageType.COLOR_CHANGE.value:
+            user_id = message.get("user_id")
+            color_str = message.get("color", "#FF0000")
+            alpha = message.get("alpha", 1.0)
+            if user_id:
+                # DrawingCanvas의 user_colors 및 user_alphas 업데이트
+                color = QColor(color_str)
+                self.drawing_canvas.user_colors[user_id] = color
+                self.drawing_canvas.user_alphas[user_id] = alpha
+                # 오버레이가 있으면 오버레이에도 업데이트
+                if self.is_sharing and self.overlay_window:
+                    self.overlay_window.get_canvas().user_colors[user_id] = color
+                    self.overlay_window.get_canvas().user_alphas[user_id] = alpha
+                # UI 업데이트
+                self.update_users_colors_display()
+                logger.info(f"User {user_id} changed color to {color_str}, alpha to {alpha:.2f}")
+
     def set_status(self, status: str):
         """메인 화면 상태 메시지 설정
 
@@ -549,6 +632,79 @@ class MainWindow(QMainWindow):
         self.server_input.setEnabled(True)
         self.session_input.setEnabled(True)
 
+    # ========== 색상 설정 메서드 ==========
+
+    def set_pen_color(self, color: QColor):
+        """펜 색상 변경 (신규 곡선에만 적용)
+
+        Args:
+            color: 새로운 펜 색상
+        """
+        self.drawing_canvas.set_pen_color(color)
+        self.set_status(f"색상 변경: RGB({color.red()}, {color.green()}, {color.blue()})")
+        logger.info(f"Pen color changed to RGB({color.red()}, {color.green()}, {color.blue()})")
+
+        # UI 업데이트
+        self.update_users_colors_display()
+
+        # 서버에 색상 변경 알림 (알파값 포함)
+        if self.client and self.is_connected and self.user_id:
+            msg = ColorChangeMessage(
+                user_id=self.user_id,
+                color=color.name(),
+                alpha=self.current_alpha,
+            )
+            asyncio.create_task(self._send_color_change(msg.to_dict()))
+
+    def on_alpha_changed(self, value: int, label: QLabel):
+        """투명도 슬라이더 변경 시 호출
+
+        Args:
+            value: 슬라이더 값 (0~100)
+            label: 업데이트할 라벨
+        """
+        alpha = value / 100.0
+        self.current_alpha = alpha
+        self.drawing_canvas.set_pen_alpha(alpha)
+        label.setText(f"투명도: {value}%")
+        logger.info(f"Pen alpha changed to {alpha:.2f}")
+
+        # 서버에 알파값 변경 알림 (현재 색상과 함께 전송)
+        if self.client and self.is_connected and self.user_id:
+            current_color = self.drawing_canvas.pen_color
+            msg = ColorChangeMessage(
+                user_id=self.user_id,
+                color=current_color.name(),
+                alpha=alpha,
+            )
+            asyncio.create_task(self._send_color_change(msg.to_dict()))
+
+    def update_users_colors_display(self):
+        """참여자별 색상 정보 UI 업데이트"""
+        if not self.is_connected or not self.drawing_canvas:
+            self.users_colors_label.setText("")
+            return
+
+        # DrawingCanvas의 user_colors에서 정보 가져오기
+        user_colors = self.drawing_canvas.user_colors
+
+        if not user_colors:
+            self.users_colors_label.setText("")
+            return
+
+        # HTML로 색상 인디케이터 생성
+        color_indicators = []
+        for user_id, color in user_colors.items():
+            # 자신인 경우 "나"로 표시
+            user_label = "나" if user_id == self.user_id else user_id[:8]
+            # 색상 원 표시
+            color_html = f'<span style="color: {color.name()};">●</span> {user_label}'
+            color_indicators.append(color_html)
+
+        # HTML 문자열로 조합
+        display_text = "참여자: " + " | ".join(color_indicators)
+        self.users_colors_label.setText(display_text)
+
     # ========== 오버레이 모드 메서드 ==========
 
     def toggle_overlay(self):
@@ -581,7 +737,7 @@ class MainWindow(QMainWindow):
             self.overlay_window = OverlayWindow(
                 target_handle=window_handle,
                 user_id=self.user_id,
-                pen_color=QColor(255, 0, 0),
+                pen_color=get_default_pen_color(),  # 첫 번째 프리셋 색상 (파스텔 핑크)
             )
 
             # 오버레이 시그널 연결

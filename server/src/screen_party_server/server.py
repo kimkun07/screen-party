@@ -90,6 +90,13 @@ class ScreenPartyServer:
         elif msg_type == MessageType.PING.value:
             await self.handle_ping(websocket)
 
+        # Color change 메시지 (인증 필요, 특별 처리)
+        elif msg_type == MessageType.COLOR_CHANGE.value:
+            if user_id:
+                await self.handle_color_change(websocket, user_id, data)
+            else:
+                await self.send_error(websocket, "Not authenticated")
+
         # Drawing 메시지 타입 (인증 필요)
         elif msg_type in DRAWING_MESSAGE_TYPES:
             if user_id:
@@ -189,6 +196,43 @@ class ScreenPartyServer:
     async def handle_ping(self, websocket: ServerConnection):
         """핑 처리"""
         await websocket.send(json.dumps({"type": "pong"}))
+
+    async def handle_color_change(self, websocket: ServerConnection, user_id: str, data: dict):
+        """색상 변경 메시지 처리"""
+        # 사용자가 속한 세션 찾기
+        session_id = self.find_user_session(user_id)
+
+        if not session_id:
+            await self.send_error(websocket, "Not in any session")
+            return
+
+        # 세션 가져오기
+        session = self.session_manager.get_session(session_id)
+        if not session:
+            await self.send_error(websocket, "Session not found")
+            return
+
+        # 색상 가져오기
+        color = data.get("color", "#FF0000")
+
+        # 세션에 색상 업데이트
+        if user_id == session.host_id:
+            # 호스트인 경우
+            session.host_color = color
+            logger.info(f"Host {user_id} changed color to {color} in session {session_id}")
+        elif user_id in session.guests:
+            # 게스트인 경우
+            session.guests[user_id].color = color
+            logger.info(f"Guest {user_id} changed color to {color} in session {session_id}")
+        else:
+            await self.send_error(websocket, "User not in session")
+            return
+
+        # 세션 활동 업데이트
+        session.last_activity = datetime.now()
+
+        # 세션 내 모든 클라이언트에게 브로드캐스트 (송신자 포함!)
+        await self.broadcast(session_id, data, exclude_user_id=None)
 
     async def handle_drawing_message(self, websocket: ServerConnection, user_id: str, data: dict):
         """드로잉 메시지 처리 (line_start, line_update, line_end, line_remove)"""
