@@ -5,8 +5,9 @@
 여러 사용자의 드로잉을 line_id별로 관리합니다.
 """
 
-from typing import Optional, Dict, Any, Tuple
+from typing import Optional, Dict, Any, Tuple, Set
 import uuid
+import time
 from PyQt6.QtWidgets import QWidget
 from PyQt6.QtCore import Qt, QTimer, QPointF, pyqtSignal
 from PyQt6.QtGui import QPainter, QPen, QPainterPath, QMouseEvent, QPaintEvent, QColor
@@ -42,6 +43,9 @@ class DrawingCanvas(QWidget):
         pen_width: int = 3,
         trigger_count: int = 10,
         max_error: float = 4.0,
+        fade_hold_duration: float = 2.0,
+        fade_duration: float = 1.0,
+        timeout_duration: float = 10.0,
     ):
         """
         Args:
@@ -51,6 +55,9 @@ class DrawingCanvas(QWidget):
             pen_width: 펜 두께
             trigger_count: 피팅 트리거 점 개수
             max_error: 베지어 피팅 최대 오차
+            fade_hold_duration: 페이드아웃 전 유지 시간 (초)
+            fade_duration: 페이드아웃 시간 (초)
+            timeout_duration: 강제 삭제 타임아웃 (초)
         """
         super().__init__(parent)
 
@@ -73,10 +80,23 @@ class DrawingCanvas(QWidget):
         self.user_colors: Dict[str, QColor] = {}
         self.user_colors[self.user_id] = pen_color
 
+        # 페이드아웃 설정
+        self.fade_hold_duration = fade_hold_duration
+        self.fade_duration = fade_duration
+        self.timeout_duration = timeout_duration
+
+        # 삭제된 라인 추적 (타임아웃으로 삭제된 라인은 이후 이벤트 무시)
+        self.deleted_line_ids: Set[str] = set()
+
         # 네트워크 전송 타이머 (50ms)
         self.network_timer = QTimer(self)
         self.network_timer.timeout.connect(self._send_network_update)
         self.network_interval = 50  # ms
+
+        # 페이드아웃 애니메이션 타이머 (60fps, 16ms)
+        self.animation_timer = QTimer(self)
+        self.animation_timer.timeout.connect(self._update_animations)
+        self.animation_timer.start(16)  # ~60 FPS
 
         # 마우스 추적 활성화
         self.setMouseTracking(True)
@@ -201,7 +221,11 @@ class DrawingCanvas(QWidget):
 
         # 1. 다른 사용자의 드로잉 렌더링
         for line_id, line_data in self.remote_lines.items():
-            pen = QPen(line_data.color, self.pen_width)
+            # 알파값 적용
+            color = QColor(line_data.color)
+            color.setAlphaF(line_data.alpha)
+
+            pen = QPen(color, self.pen_width)
             pen.setCapStyle(Qt.PenCapStyle.RoundCap)
             pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
             painter.setPen(pen)
@@ -291,6 +315,47 @@ class DrawingCanvas(QWidget):
         # 시그널 emit
         self.drawing_updated.emit(self.my_line_id, self.user_id, msg.to_dict())
 
+    def _update_animations(self):
+        """페이드아웃 애니메이션 업데이트 (60fps)"""
+        current_time = time.time()
+        lines_to_delete = []
+
+        for line_id, line_data in self.remote_lines.items():
+            # 1. 타임아웃 체크 (마지막 업데이트로부터 10초)
+            time_since_last_update = current_time - line_data.last_update_time
+            if time_since_last_update >= self.timeout_duration:
+                # 타임아웃 - 강제 삭제
+                lines_to_delete.append(line_id)
+                self.deleted_line_ids.add(line_id)
+                continue
+
+            # 2. 페이드아웃 계산 (drawing_end 이후)
+            if line_data.end_time is not None:
+                elapsed_since_end = current_time - line_data.end_time
+
+                if elapsed_since_end < self.fade_hold_duration:
+                    # 유지 단계 (alpha = 1.0)
+                    line_data.alpha = 1.0
+                elif elapsed_since_end < self.fade_hold_duration + self.fade_duration:
+                    # 페이드아웃 단계 (alpha: 1.0 → 0.0)
+                    fade_progress = (elapsed_since_end - self.fade_hold_duration) / self.fade_duration
+                    line_data.alpha = max(0.0, 1.0 - fade_progress)
+                else:
+                    # 완전히 사라짐 - 삭제
+                    line_data.alpha = 0.0
+                    lines_to_delete.append(line_id)
+                    self.deleted_line_ids.add(line_id)
+
+        # 삭제할 라인 제거
+        for line_id in lines_to_delete:
+            del self.remote_lines[line_id]
+
+        # 변경사항이 있으면 화면 갱신
+        if lines_to_delete or any(
+            line_data.alpha < 1.0 for line_data in self.remote_lines.values()
+        ):
+            self.update()
+
     def _save_my_drawing(self):
         """내 드로잉을 remote_lines에 저장 (렌더링 유지용)"""
         if not self.my_line_id:
@@ -352,6 +417,10 @@ class DrawingCanvas(QWidget):
             user_id: 사용자 ID
             data: 시작 데이터 (color, start_point 등) - start_point는 상대 좌표
         """
+        # 삭제된 라인 무시
+        if line_id in self.deleted_line_ids:
+            return
+
         # 색상 파싱
         color_str = data.get("color", "#FF0000")
         color = QColor(color_str)
@@ -380,6 +449,10 @@ class DrawingCanvas(QWidget):
             user_id: 사용자 ID
             data: 업데이트 데이터 (new_finalized_segments, current_raw_points) - 상대 좌표
         """
+        # 삭제된 라인 무시
+        if line_id in self.deleted_line_ids:
+            return
+
         # LineData 가져오기 (없으면 생성)
         if line_id not in self.remote_lines:
             color = self.user_colors.get(user_id, QColor(255, 0, 0))
@@ -422,6 +495,10 @@ class DrawingCanvas(QWidget):
             line_id: 라인 ID
             user_id: 사용자 ID
         """
+        # 삭제된 라인 무시
+        if line_id in self.deleted_line_ids:
+            return
+
         if line_id in self.remote_lines:
             self.remote_lines[line_id].finalize()
             self.update()
