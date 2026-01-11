@@ -133,7 +133,6 @@ screen-party/
         ├── guest-calibration.md        # Task: 게스트 영역 설정
         ├── drawing-engine.md           # Task: 실시간 드로잉 엔진
         ├── fade-animation.md           # Task: 페이드아웃 애니메이션
-        ├── persistence-mode.md         # Task: 장시간 그림 모드
         ├── color-system.md             # Task: 색상 설정 시스템
         ├── window-sync.md              # Task: 창 관리 동기화
         ├── testing.md                  # Task: 유닛 테스트
@@ -355,9 +354,8 @@ Claude Code가 monoserver 프로젝트에서 기존 Task를 작업할 때 다음
 11. `fade-animation.md` - 페이드아웃 애니메이션 (2초 대기 → 1초 페이드)
 
 ### P3 (Advanced Features - 고급 기능)
-12. `persistence-mode.md` - 장시간 그림 모드
-13. `color-system.md` - 색상 설정 시스템
-14. `window-sync.md` - 창 관리 동기화
+12. `color-system.md` - 색상 설정 시스템
+13. `window-sync.md` - 창 관리 동기화
 
 ## 마무리 체크리스트
 

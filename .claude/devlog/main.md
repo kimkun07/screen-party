@@ -52,7 +52,6 @@
 | P2 | host-overlay | ✅ 완료 | 호스트/게스트 투명 오버레이 + FAB + 그리기 모드 토글 | client-core, testing |
 | P2 | drawing-engine | ✅ 완료 | 실시간 베지어 커브 피팅 + Multi-user 동기화 | server-core, client-core, testing |
 | P2 | fade-animation | ✅ 완료 | 페이드아웃 애니메이션 (2초 유지 → 1초 페이드) | drawing-engine |
-| P3 | persistence-mode | 🟡 준비중 | 장시간 그림 모드 | drawing-engine |
 | P3 | color-system | 🟡 준비중 | 색상 설정 시스템 | drawing-engine |
 | P3 | window-sync | 🟡 준비중 | 창 관리 동기화 | host-overlay |
 
@@ -112,8 +111,8 @@
 - ✅ 기존 기능 영향 없음
 
 **다음 우선순위**:
-- P3: persistence-mode (장시간 그림 모드)
 - P3: color-system (색상 설정 시스템)
+- P3: window-sync (창 관리 동기화)
 
 ---
 
@@ -255,7 +254,6 @@
     │                       ├─> [server-deployment] (P1)
     │                       ├─> [drawing-engine] (P2)
     │                       │       ├─> [fade-animation] (P2)
-    │                       │       ├─> [persistence-mode] (P3)
     │                       │       └─> [color-system] (P3)
     │                       └─> [host-overlay] (P2)
                                    └─> [window-sync] (P3)
