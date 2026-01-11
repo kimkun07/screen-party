@@ -30,6 +30,7 @@ class MessageType(str, Enum):
     DRAWING_START = "drawing_start"
     DRAWING_UPDATE = "drawing_update"
     DRAWING_END = "drawing_end"
+    COLOR_CHANGE = "color_change"
 
 
 # 카테고리별 메시지 타입 그룹 (문자열 값으로 비교)
@@ -37,6 +38,7 @@ DRAWING_MESSAGE_TYPES = {
     MessageType.DRAWING_START.value,
     MessageType.DRAWING_UPDATE.value,
     MessageType.DRAWING_END.value,
+    MessageType.COLOR_CHANGE.value,
     # Legacy support (기존 "line_*" 메시지 타입)
     "line_start",
     "line_update",
@@ -147,3 +149,17 @@ class DrawingEndMessage(BaseMessage):
     line_id: str
     user_id: str
     type: MessageType = field(default=MessageType.DRAWING_END, init=False)
+
+
+@dataclass
+class ColorChangeMessage(BaseMessage):
+    """색상 변경 메시지
+
+    Attributes:
+        user_id: 사용자 ID
+        color: 새로운 펜 색상 (hex 형식, 예: "#FF0000")
+    """
+
+    user_id: str
+    color: str
+    type: MessageType = field(default=MessageType.COLOR_CHANGE, init=False)
