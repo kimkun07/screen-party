@@ -22,7 +22,11 @@
 		"IS_SANDBOX": "1",
 		"CLAUDE_CONFIG_DIR": "/workspaces/screen-party/.claude/claude-config",
 		"HAPPY_HOME_DIR": "/workspaces/screen-party/.claude/happy-config"
+		// HAPPY_SERVER_URL은 .devcontainer/.env.secret 파일에서 로드됨
 	},
+
+	// Load environment variables from .env.secret file (not committed to git)
+	"runArgs": ["--env-file", "${localWorkspaceFolder}/.devcontainer/.env.secret"],
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
