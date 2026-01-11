@@ -18,6 +18,10 @@ dependencies = [
     "psutil>=5.9.0",
 ]
 
+[project.scripts]
+client = "screen_party_client.__main__:main"
+client-test = "screen_party_client.test_clickthrough:main"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.3.0",

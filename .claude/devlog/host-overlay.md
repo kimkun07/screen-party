@@ -842,10 +842,96 @@ client/src/screen_party_client/
 
 ---
 
+### 2026-01-11 - Click Passthrough 테스트 완료
+
+**상태**: ✅ 완료 → ✅ 검증 완료
+
+**테스트 프로그램 개발**:
+- `client/src/screen_party_client/test_clickthrough.py` 생성
+- 5가지 방법을 독립적으로 테스트할 수 있는 프로그램
+- 컨트롤 창과 테스트 오버레이 창 분리 구조
+  - 문제: Passthrough ON 상태에서 토글 버튼 클릭 불가
+  - 해결: 컨트롤 창(클릭 가능)과 테스트 오버레이(투명)를 분리
+- `uv run client-test [방법번호]` 명령으로 실행 가능
+
+**테스트한 방법들**:
+1. **Method 1: WindowTransparentForInput** - ✅ **성공**
+   ```python
+   self.setWindowFlag(Qt.WindowType.WindowTransparentForInput, enabled)
+   self.show()  # 중요!
+   ```
+
+2. **Method 2: WA_TransparentForMouseEvents** - ❌ 실패
+   ```python
+   self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, enabled)
+   ```
+
+3. **Method 3: Combined Flags** - ✅ **성공**
+   ```python
+   # 플래그 조합을 동적으로 변경
+   if enabled:
+       self.setWindowFlags(... | Qt.WindowType.WindowTransparentForInput)
+   else:
+       self.setWindowFlags(...)
+   self.show()
+   ```
+
+4. **Method 4: Attribute + Flag** - ✅ **성공**
+   ```python
+   self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, enabled)
+   self.setWindowFlag(Qt.WindowType.WindowTransparentForInput, enabled)
+   self.show()
+   ```
+
+5. **Method 5: No Passthrough (Control)** - ✅ 대조군 (정상 동작)
+
+**Windows 환경 테스트 결과**:
+- ✅ **방법 1 (권장)**: 완벽하게 작동
+- ❌ **방법 2**: 작동하지 않음 (키보드 입력도 차단)
+- ✅ **방법 3**: 작동함
+- ✅ **방법 4**: 작동함
+
+**결론**:
+- **Qt 포럼 권장 방법 (Method 1)이 최선**
+- `setWindowFlag(Qt.WindowType.WindowTransparentForInput, enabled)` 사용
+- 플래그 변경 후 `show()` 재호출 필수
+- 현재 구현 (`overlay_window.py`)이 올바른 방법 사용 중
+
+**테스트 스크립트 구조**:
+```python
+# TestOverlayBase: 투명 오버레이 창 (버튼 없음)
+# - 노란색 테두리로 위치 표시
+# - 클릭 카운터로 이벤트 감지 확인
+# - paintEvent()로 상태 표시
+
+# ControlWindow: 컨트롤 창 (항상 클릭 가능)
+# - Passthrough ON/OFF 버튼
+# - 상태 표시
+# - 닫기 버튼
+```
+
+**참고 자료**:
+- Qt Forum: https://forum.qt.io/topic/127517/how-to-make-qpainter-elements-clickable-through-using-pyqt/9
+- 테스트 스크립트: `client/src/screen_party_client/test_clickthrough.py`
+
+**다음 단계**:
+- 실제 프로젝트에서 계속 방법 1 사용
+- 필요시 방법 3 또는 4로 전환 가능 (모두 검증됨)
+
+**블로커**: 없음
+
+**파일 변경사항**:
+```
+client/
+├── src/screen_party_client/
+│   └── test_clickthrough.py (NEW - 테스트 프로그램)
+└── pyproject.toml (MODIFIED - client-test 스크립트 추가)
+```
+
+---
+
 > **다음 클로드 코드에게**:
-> - 구현은 완료되었습니다!
-> - Windows 환경에서 테스트가 필요합니다
-> - Click passthrough가 가장 중요한 기능이니 반드시 확인하세요
-> - FAB가 클릭 가능한지 확인하세요 (독립 창으로 되어 있음)
-> - 창 동기화가 잘 작동하는지 확인하세요 (100ms 주기)
-> - 버그가 있다면 수정해주세요
+> - Click passthrough 구현이 Windows에서 검증 완료되었습니다!
+> - 방법 1 (WindowTransparentForInput)이 최선입니다
+> - test_clickthrough.py를 사용하여 언제든지 재테스트 가능합니다
+> - overlay_window.py의 현재 구현이 정확합니다
