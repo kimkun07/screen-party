@@ -4,21 +4,21 @@ from typing import Optional
 
 from PyQt6.QtWidgets import QWidget, QVBoxLayout
 from PyQt6.QtCore import Qt, QTimer, QRect, pyqtSignal
-from PyQt6.QtGui import QColor
+from PyQt6.QtGui import QPainter, QColor
 
 from ..drawing.canvas import DrawingCanvas
-from ..utils.window_manager import WindowManager, WindowInfo
+from ..utils.window_manager import WindowManager
 
 
 class OverlayWindow(QWidget):
     """Transparent overlay window that follows a target window"""
 
     # Signals
-    target_window_closed = pyqtSignal()  # Emitted when target window is closed
-    target_window_minimized = pyqtSignal()  # Emitted when target window is minimized
-    target_window_restored = pyqtSignal()  # Emitted when target window is restored
-    geometry_changed = pyqtSignal(QRect)  # Emitted when overlay geometry changes
-    drawing_mode_changed = pyqtSignal(bool)  # Emitted when drawing mode changes (True=enabled, False=disabled)
+    target_window_closed = pyqtSignal()
+    target_window_minimized = pyqtSignal()
+    target_window_restored = pyqtSignal()
+    geometry_changed = pyqtSignal(QRect)
+    drawing_mode_changed = pyqtSignal(bool)
 
     def __init__(
         self,
@@ -34,7 +34,8 @@ class OverlayWindow(QWidget):
         self.window_manager = WindowManager()
         self.is_tracking = True
         self._was_minimized = False
-        self._drawing_enabled = False  # Start with drawing disabled (click passthrough)
+        # Start with drawing disabled (click passthrough)
+        self._drawing_enabled = False
 
         if pen_color is None:
             pen_color = QColor(255, 0, 0)  # Default: red
@@ -49,15 +50,14 @@ class OverlayWindow(QWidget):
         """Initialize UI"""
         # Window flags for transparent, click-through overlay
         self.setWindowFlags(
-            Qt.WindowType.FramelessWindowHint  # No borders
-            | Qt.WindowType.WindowStaysOnTopHint  # Always on top
-            | Qt.WindowType.Tool  # Don't show in taskbar
+            Qt.WindowType.FramelessWindowHint
+            | Qt.WindowType.WindowStaysOnTopHint
+            | Qt.WindowType.Tool
             | Qt.WindowType.WindowTransparentForInput  # Click passthrough - KEY FEATURE!
         )
 
         # Transparent background
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
 
         # Enable focus to receive keyboard events (ESC key)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
@@ -78,6 +78,25 @@ class OverlayWindow(QWidget):
 
         self.setLayout(layout)
 
+    def paintEvent(self, event):
+        """Paint almost invisible background to receive click events
+
+        CRITICAL: Qt requires non-transparent pixels to receive mouse events.
+        Even with WindowTransparentForInput disabled, a completely transparent
+        background will not receive clicks. We need alpha > 0 to receive events.
+
+        Using QColor(0, 0, 0, 1) - almost invisible but clickable.
+        """
+        painter = QPainter(self)
+
+        # CRITICAL: This almost-invisible background enables click events
+        # Without this, clicks will pass through even when WindowTransparentForInput is disabled
+        # alpha=1: barely visible but clickable
+        painter.fillRect(self.rect(), QColor(0, 0, 0, 1))
+
+        # Call parent's paintEvent to render DrawingCanvas
+        super().paintEvent(event)
+
     def setup_sync_timer(self):
         """Setup timer for syncing with target window"""
         self.sync_timer = QTimer(self)
@@ -96,7 +115,8 @@ class OverlayWindow(QWidget):
             return
 
         # Check if minimized
-        is_minimized = self.window_manager.is_window_minimized(self.target_handle)
+        is_minimized = self.window_manager.is_window_minimized(
+            self.target_handle)
 
         if is_minimized:
             if self.isVisible():
@@ -153,9 +173,6 @@ class OverlayWindow(QWidget):
 
         self._drawing_enabled = enabled
 
-        # Store current geometry
-        current_geometry = self.geometry()
-
         # Update window flags (Method 3: Combined Flags)
         if enabled:
             # Drawing enabled: Remove WindowTransparentForInput (allow mouse input)
@@ -174,11 +191,8 @@ class OverlayWindow(QWidget):
                 | Qt.WindowType.WindowTransparentForInput  # Click passthrough
             )
 
-        # CRITICAL: Must hide, restore geometry, then show to apply flag changes
-        self.hide()
-        self.setGeometry(current_geometry)  # Restore geometry
         self.show()
-        self.update()  # Force repaint
+        self.update()
 
         # Set focus when drawing is enabled (to receive keyboard events)
         if enabled:
@@ -194,6 +208,7 @@ class OverlayWindow(QWidget):
         if event.key() == QtKey.Key.Key_Escape:
             # ESC key: Disable drawing mode
             if self._drawing_enabled:
+                print("[OverlayWindow] ESC pressed - disabling drawing mode")
                 self.set_drawing_enabled(False)
             event.accept()
         else:

@@ -112,7 +112,8 @@ class MainWindow(QMainWindow):
         self.join_button = QPushButton("접속")
         self.join_button.setMinimumHeight(40)
         self.join_button.setEnabled(False)
-        self.join_button.clicked.connect(lambda: asyncio.create_task(self.on_join_session()))
+        self.join_button.clicked.connect(
+            lambda: asyncio.create_task(self.on_join_session()))
         session_layout.addWidget(self.join_button)
 
         start_layout.addLayout(session_layout)
@@ -122,7 +123,8 @@ class MainWindow(QMainWindow):
         # 세션 생성 버튼
         self.create_button = QPushButton("세션 생성")
         self.create_button.setMinimumHeight(50)
-        self.create_button.clicked.connect(lambda: asyncio.create_task(self.on_create_session()))
+        self.create_button.clicked.connect(
+            lambda: asyncio.create_task(self.on_create_session()))
         start_layout.addWidget(self.create_button)
 
         start_layout.addSpacing(20)
@@ -489,7 +491,8 @@ class MainWindow(QMainWindow):
             line_id = message.get("line_id")
             user_id = message.get("user_id")
             if line_id and user_id and user_id != self.user_id:
-                self.drawing_canvas.handle_drawing_start(line_id, user_id, message)
+                self.drawing_canvas.handle_drawing_start(
+                    line_id, user_id, message)
                 # 오버레이가 있으면 오버레이에도 전달
                 if self.is_sharing and self.overlay_window:
                     self.overlay_window.get_canvas().handle_drawing_start(line_id, user_id, message)
@@ -498,7 +501,8 @@ class MainWindow(QMainWindow):
             line_id = message.get("line_id")
             user_id = message.get("user_id")
             if line_id and user_id and user_id != self.user_id:
-                self.drawing_canvas.handle_drawing_update(line_id, user_id, message)
+                self.drawing_canvas.handle_drawing_update(
+                    line_id, user_id, message)
                 # 오버레이가 있으면 오버레이에도 전달
                 if self.is_sharing and self.overlay_window:
                     self.overlay_window.get_canvas().handle_drawing_update(line_id, user_id, message)
@@ -581,17 +585,22 @@ class MainWindow(QMainWindow):
             )
 
             # 오버레이 시그널 연결
-            self.overlay_window.target_window_closed.connect(self.on_overlay_window_closed)
-            self.overlay_window.geometry_changed.connect(self.on_overlay_geometry_changed)
-            self.overlay_window.target_window_minimized.connect(self.on_overlay_minimized)
-            self.overlay_window.target_window_restored.connect(self.on_overlay_restored)
-            self.overlay_window.drawing_mode_changed.connect(self.on_drawing_mode_changed)
+            self.overlay_window.target_window_closed.connect(
+                self.on_overlay_window_closed)
+            self.overlay_window.geometry_changed.connect(
+                self.on_overlay_geometry_changed)
+            self.overlay_window.target_window_minimized.connect(
+                self.on_overlay_minimized)
+            self.overlay_window.target_window_restored.connect(
+                self.on_overlay_restored)
+            self.overlay_window.drawing_mode_changed.connect(
+                self.on_drawing_mode_changed)
 
             # DrawingCanvas 시그널 연결 (오버레이에서 그리기)
             canvas = self.overlay_window.get_canvas()
-            canvas.drawing_started.connect(self._on_drawing_started)
-            canvas.drawing_updated.connect(self._on_drawing_updated)
-            canvas.drawing_ended.connect(self._on_drawing_ended)
+            # canvas.drawing_started.connect(self._on_drawing_started)
+            # canvas.drawing_updated.connect(self._on_drawing_updated)
+            # canvas.drawing_ended.connect(self._on_drawing_ended)
 
             # 버튼 활성화 및 텍스트 업데이트
             self.toggle_drawing_button.setEnabled(True)

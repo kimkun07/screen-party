@@ -49,8 +49,7 @@
 | P1 | testing | 🟢 진행중 | 유닛 테스트 (서버 29개 + 클라이언트 120+개) + 통합 테스트 (3개) 완료 | server-core, client-core |
 | P1 | server-deployment | ✅ 완료 | Docker 이미지 및 배포 | server-core, testing |
 | P1 | client-deployment | ✅ 완료 | PyInstaller 기반 클라이언트 실행 파일 빌드 | client-core, testing |
-| P2 | host-overlay | ✅ 완료 | 호스트 투명 오버레이 + FAB (Phase 1+2) | client-core, testing |
-| P2 | guest-calibration | ✅ 완료 | 게스트 오버레이 + 그리기 모드 토글 (Phase 1) | client-core, host-overlay, testing |
+| P2 | host-overlay | ✅ 완료 | 호스트/게스트 투명 오버레이 + FAB + 그리기 모드 토글 | client-core, testing |
 | P2 | drawing-engine | ✅ 완료 | 실시간 베지어 커브 피팅 + Multi-user 동기화 | server-core, client-core, testing |
 | P2 | fade-animation | 🟡 준비중 | 페이드아웃 애니메이션 | drawing-engine |
 | P3 | persistence-mode | 🟡 준비중 | 장시간 그림 모드 | drawing-engine |
@@ -67,10 +66,10 @@
 
 ## 최근 업데이트
 
-### 2026-01-05 - Guest Overlay 완료 (Phase 1: 게스트 오버레이 + 그리기 모드 토글)
+### 2026-01-05 - Host/Guest Overlay 완료 (호스트/게스트 투명 오버레이 + 그리기 모드 토글)
 
 **완료된 Task**:
-- ✅ **guest-calibration**: 게스트 오버레이 + 그리기 모드 토글 기능
+- ✅ **host-overlay**: 호스트/게스트 투명 오버레이 + FAB + 그리기 모드 토글 기능
 
 **주요 성과**:
 
@@ -155,7 +154,6 @@
 - Windows 환경에서 수동 테스트 필요
 
 **다음 우선순위**:
-- P2: guest-calibration (게스트 영역 설정)
 - P2: fade-animation (페이드아웃 애니메이션)
 
 ---
@@ -194,8 +192,7 @@
 
 **다음 우선순위**:
 - P2: fade-animation (페이드아웃 애니메이션)
-- P2: host-overlay (호스트 투명 오버레이)
-- P2: guest-calibration (게스트 영역 설정)
+- P2: host-overlay (호스트/게스트 투명 오버레이)
 
 ## Task 의존성 다이어그램
 
@@ -209,9 +206,8 @@
     │                       │       ├─> [fade-animation] (P2)
     │                       │       ├─> [persistence-mode] (P3)
     │                       │       └─> [color-system] (P3)
-    │                       ├─> [host-overlay] (P2)
-    │                       │       └─> [window-sync] (P3)
-    │                       └─> [guest-calibration] (P2)
+    │                       └─> [host-overlay] (P2)
+                                   └─> [window-sync] (P3)
     │
     └─> [client-core] (P0)
             └─> [testing] (P1)
@@ -572,7 +568,7 @@ screen-party/
 
 **다음 단계**:
 1. P1 완성: CI/CD, Docker 배포, 클라이언트 빌드
-2. P2 시작: host-overlay (투명 오버레이), guest-calibration (좌표 매핑)
+2. P2 시작: host-overlay (호스트/게스트 투명 오버레이)
 3. P2 진행: drawing-engine (Spline 드로잉)
 
 ---

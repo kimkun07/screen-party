@@ -930,8 +930,73 @@ client/
 
 ---
 
+### 2026-01-11 - 핵심 발견: Qt 투명도와 클릭 이벤트의 관계
+
+**상태**: ✅ 검증 완료 → ✅ **핵심 문제 해결**
+
+**문제 발견**:
+- 그리기 모드 토글 버튼을 눌러도 계속 passthrough 상태 유지
+- WindowTransparentForInput 플래그를 제거해도 클릭 이벤트를 받지 못함
+
+**근본 원인 발견**:
+```python
+# paintEvent에서 이 줄을 주석처리하니 클릭 이벤트를 받을 수 없었음
+painter.fillRect(self.rect(), QColor(50, 50, 50, 80))
+```
+
+**Qt의 핵심 동작 원리**:
+- ⚠️ **완전히 투명한 픽셀(alpha=0)은 클릭 이벤트를 받지 못함**
+- ✅ **약간이라도 불투명한 픽셀(alpha>0)이 있어야 클릭 이벤트를 받음**
+- WindowTransparentForInput 플래그와 무관하게, 투명 픽셀은 클릭을 통과시킴
+
+**해결 방법**:
+```python
+def paintEvent(self, event):
+    """Paint almost invisible background to receive click events"""
+    painter = QPainter(self)
+
+    # CRITICAL: This almost-invisible background enables click events
+    # Without this, clicks will pass through even when WindowTransparentForInput is disabled
+    painter.fillRect(self.rect(), QColor(0, 0, 0, 1))  # alpha=1: barely visible but clickable
+
+    super().paintEvent(event)  # Render DrawingCanvas
+```
+
+**투명도 비교**:
+- `QColor(50, 50, 50, 80)`: 31% 불투명 → 눈에 띄게 어두워짐 ❌
+- `QColor(0, 0, 0, 1)`: 0.4% 불투명 → 거의 보이지 않지만 클릭 가능 ✅
+
+**변경사항**:
+1. `paintEvent()` 메서드 추가
+2. `QColor(0, 0, 0, 1)` 배경 그리기 (alpha=1)
+3. 상세한 주석으로 이유 설명
+4. DrawingCanvas 및 모든 원래 기능 복원
+
+**Windows 실사용 테스트 결과** (2026-01-11):
+- ✅ **Passthrough OFF**: 오버레이 클릭 시 그리기 가능
+- ✅ **Passthrough ON**: 오버레이 클릭이 뒤로 통과
+- ✅ **배경 투명도**: 거의 보이지 않음 (게임 화면 방해 최소화)
+- ✅ **ESC 키**: 그리기 모드 비활성화 정상 동작
+- ✅ **그리기 활성화/비활성화 토글**: 완벽하게 작동
+
+**핵심 교훈**:
+> Qt에서 투명 오버레이를 만들 때, WindowTransparentForInput 플래그만으로는 부족합니다.
+> 클릭을 받으려면 반드시 paintEvent에서 약간이라도 불투명한 배경을 그려야 합니다.
+
+**블로커**: 없음 (완전 해결)
+
+**파일 변경사항**:
+```
+client/src/screen_party_client/gui/overlay_window.py
+- paintEvent() 추가
+- QColor(0, 0, 0, 1) 배경
+- 모든 원래 기능 복원 (DrawingCanvas, ESC 키 등)
+```
+
+---
+
 > **다음 클로드 코드에게**:
-> - Click passthrough 구현이 Windows에서 검증 완료되었습니다!
-> - 방법 1 (WindowTransparentForInput)이 최선입니다
-> - test_clickthrough.py를 사용하여 언제든지 재테스트 가능합니다
-> - overlay_window.py의 현재 구현이 정확합니다
+> - **핵심**: Qt 투명 창에서 클릭 이벤트를 받으려면 paintEvent에서 alpha>0인 배경을 그려야 함!
+> - `QColor(0, 0, 0, 1)`은 거의 보이지 않지만 클릭 이벤트를 받을 수 있는 최적값
+> - Click passthrough 토글이 이제 완벽하게 작동합니다
+> - test_clickthrough.py로 재테스트 가능
