@@ -371,6 +371,9 @@ class DrawingCanvas(QWidget):
             is_complete=True,
         )
 
+        # 페이드아웃 시작을 위해 end_time 설정
+        line_data.finalize()
+
         self.remote_lines[self.my_line_id] = line_data
 
         # my_fitter 초기화

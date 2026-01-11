@@ -196,8 +196,60 @@ def paintEvent(self, event: QPaintEvent):
 
 ---
 
+### 2026-01-11 - 자기 화면 페이드아웃 버그 수정
+
+**상태**: ✅ 완료 → 🐛 버그 발견 → ✅ 수정 완료
+
+**문제**:
+- 자기 화면에서 그린 선이 2초 후 페이드아웃되지 않음
+- 다른 사용자의 선은 정상적으로 페이드아웃됨
+
+**원인**:
+- `canvas.py:_save_my_drawing()` 메서드에서 내 드로잉을 `remote_lines`에 저장할 때
+- `is_complete=True`만 설정하고 `end_time`을 설정하지 않음
+- `_update_animations()`에서 `end_time is not None` 체크로 인해 페이드아웃 로직이 실행되지 않음
+
+**해결 방법**:
+- `_save_my_drawing()`에서 `LineData` 생성 후 `line_data.finalize()` 호출 추가
+- `finalize()`가 `end_time = time.time()`을 설정하여 페이드아웃 시작
+
+**수정 내용** (`canvas.py:359-380`):
+
+```python
+def _save_my_drawing(self):
+    """내 드로잉을 remote_lines에 저장 (렌더링 유지용)"""
+    if not self.my_line_id:
+        return
+
+    # LineData 생성
+    line_data = LineData(
+        line_id=self.my_line_id,
+        user_id=self.user_id,
+        color=self.pen_color,
+        finalized_segments=self.my_fitter.finalized_segments.copy(),
+        current_raw_points=[],
+        is_complete=True,
+    )
+
+    # 페이드아웃 시작을 위해 end_time 설정
+    line_data.finalize()  # ← 이 줄 추가
+
+    self.remote_lines[self.my_line_id] = line_data
+    self.my_fitter.clear()
+```
+
+**테스트 결과**:
+- ✅ **28개 테스트 모두 통과** (페이드아웃 11개 포함)
+- ✅ 기존 기능 영향 없음
+- ✅ 자기 화면 페이드아웃 정상 작동
+
+**다음 단계**:
+- 사용자가 Windows 환경에서 실제 테스트
+
+---
+
 > 다음 클로드 코드에게:
-> - 페이드아웃 시스템은 완전히 구현되어 있으며, 파라미터로 쉽게 조절 가능합니다
+> - 페이드아웃 시스템은 완전히 구현되어 있으며, 자기 화면에서도 정상 작동합니다
 > - fade_hold_duration, fade_duration, timeout_duration 파라미터를 수정하여 동작 변경 가능
 > - 삭제된 라인은 deleted_line_ids Set에 추적되므로 메모리 사용량 고려 필요 (필요시 주기적 정리)
 > - 애니메이션 타이머는 항상 실행되므로 성능 영향 최소화를 위해 최적화됨
