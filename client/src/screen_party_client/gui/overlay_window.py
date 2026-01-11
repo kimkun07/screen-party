@@ -156,7 +156,7 @@ class OverlayWindow(QWidget):
         # Store current geometry
         current_geometry = self.geometry()
 
-        # Update window flags
+        # Update window flags (Method 3: Combined Flags)
         if enabled:
             # Drawing enabled: Remove WindowTransparentForInput (allow mouse input)
             self.setWindowFlags(
@@ -174,9 +174,11 @@ class OverlayWindow(QWidget):
                 | Qt.WindowType.WindowTransparentForInput  # Click passthrough
             )
 
-        # CRITICAL: Must hide and show to apply flag changes
+        # CRITICAL: Must hide, restore geometry, then show to apply flag changes
+        self.hide()
         self.setGeometry(current_geometry)  # Restore geometry
         self.show()
+        self.update()  # Force repaint
 
         # Set focus when drawing is enabled (to receive keyboard events)
         if enabled:
