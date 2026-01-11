@@ -15,6 +15,7 @@ from PyQt6.QtGui import QFont, QColor
 from screen_party_common import MessageType, DrawingEndMessage, ColorChangeMessage
 from ..network.client import WebSocketClient
 from ..drawing import DrawingCanvas
+from .constants import PRESET_COLORS, get_default_pen_color
 
 logger = logging.getLogger(__name__)
 
@@ -199,7 +200,7 @@ class MainWindow(QMainWindow):
         self.drawing_canvas = DrawingCanvas(
             parent=self.main_widget,
             user_id=None,  # 세션 연결 시 설정
-            pen_color=QColor(255, 0, 0),
+            pen_color=get_default_pen_color(),  # 첫 번째 프리셋 색상 (파스텔 핑크)
             pen_width=3,
         )
         self.drawing_canvas.setMinimumSize(600, 400)
@@ -221,21 +222,13 @@ class MainWindow(QMainWindow):
 
         palette_layout = QHBoxLayout()
         self.color_buttons = []
-        preset_colors = [
-            ("핑크", QColor(255, 182, 193)),  # 파스텔 핑크
-            ("블루", QColor(173, 216, 230)),  # 파스텔 블루
-            ("그린", QColor(152, 251, 152)),  # 파스텔 그린
-            ("퍼플", QColor(221, 160, 221)),  # 파스텔 퍼플
-            ("오렌지", QColor(255, 218, 185)),  # 파스텔 오렌지
-            ("옐로우", QColor(255, 255, 224)),  # 파스텔 옐로우
-        ]
 
-        for name, color in preset_colors:
-            btn = QPushButton(name)
-            btn.setMinimumHeight(30)
+        for color in PRESET_COLORS:
+            btn = QPushButton()
+            btn.setFixedSize(40, 40)  # 정사각형 버튼
             btn.setStyleSheet(
                 f"background-color: rgb({color.red()}, {color.green()}, {color.blue()}); "
-                f"color: {'white' if color.lightness() < 128 else 'black'};"
+                f"border: 2px solid #888; border-radius: 4px;"
             )
             btn.clicked.connect(lambda checked, c=color: self.set_pen_color(c))
             palette_layout.addWidget(btn)
@@ -744,7 +737,7 @@ class MainWindow(QMainWindow):
             self.overlay_window = OverlayWindow(
                 target_handle=window_handle,
                 user_id=self.user_id,
-                pen_color=QColor(255, 0, 0),
+                pen_color=get_default_pen_color(),  # 첫 번째 프리셋 색상 (파스텔 핑크)
             )
 
             # 오버레이 시그널 연결

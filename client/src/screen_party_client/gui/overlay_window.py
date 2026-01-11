@@ -38,7 +38,7 @@ class OverlayWindow(QWidget):
         self._drawing_enabled = False
 
         if pen_color is None:
-            pen_color = QColor(255, 0, 0)  # Default: red
+            pen_color = QColor(255, 182, 193)  # Default: 파스텔 핑크 (첫 번째 프리셋)
 
         self.init_ui(pen_color)
         self.setup_sync_timer()

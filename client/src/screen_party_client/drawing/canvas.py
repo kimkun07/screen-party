@@ -5,7 +5,7 @@
 여러 사용자의 드로잉을 line_id별로 관리합니다.
 """
 
-from typing import Optional, Dict, Any, Tuple, Set
+from typing import Optional, Dict, Any, Tuple, Set, TYPE_CHECKING
 import uuid
 import time
 from PyQt6.QtWidgets import QWidget
@@ -16,6 +16,14 @@ from screen_party_common import MessageType, DrawingStartMessage, DrawingUpdateM
 from .incremental_fitter import IncrementalFitter
 from .bezier_fitter import BezierSegment
 from .line_data import LineData
+
+if TYPE_CHECKING:
+    pass
+
+
+def _get_default_pen_color() -> QColor:
+    """기본 펜 색상 반환 (파스텔 핑크)"""
+    return QColor(255, 182, 193)  # 첫 번째 프리셋 색상과 동일
 
 
 class DrawingCanvas(QWidget):
@@ -39,7 +47,7 @@ class DrawingCanvas(QWidget):
         self,
         parent: Optional[QWidget] = None,
         user_id: Optional[str] = None,
-        pen_color: QColor = QColor(255, 0, 0),
+        pen_color: Optional[QColor] = None,
         pen_width: int = 3,
         pen_alpha: float = 1.0,
         trigger_count: int = 10,
@@ -65,7 +73,7 @@ class DrawingCanvas(QWidget):
 
         # 사용자 정보
         self.user_id = user_id or str(uuid.uuid4())
-        self.pen_color = pen_color
+        self.pen_color = pen_color if pen_color is not None else _get_default_pen_color()
         self.pen_width = pen_width
         self.pen_alpha = pen_alpha
 

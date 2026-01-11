@@ -433,11 +433,11 @@ class TestColorSystem:
 
         window.drawing_canvas.set_user_id("user-001")
 
-        # 초기 색상: 빨강
+        # 초기 색상: 파스텔 핑크 (첫 번째 프리셋)
         initial_color = window.drawing_canvas.pen_color
         assert initial_color.red() == 255
-        assert initial_color.green() == 0
-        assert initial_color.blue() == 0
+        assert initial_color.green() == 182
+        assert initial_color.blue() == 193
 
         # 파스텔 블루로 변경
         qtbot.mouseClick(window.color_buttons[1], Qt.MouseButton.LeftButton)
