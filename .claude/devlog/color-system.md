@@ -164,8 +164,78 @@ class User:
 
 ---
 
+### 2026-01-11 - 색상 시스템 개선 및 버그 수정
+
+**상태**: ✅ 완료 → 🐛 버그 발견 → ✅ 수정 완료
+
+**문제**:
+1. **알파값 조정 버그**: 자신에게만 적용되고 상대 화면에서 보이지 않음
+2. **프리셋 색상**: 원색 위주로 되어 있어 눈이 피로함
+3. **참여자 중복 버그**: A가 색상을 변경하면 B 입장에서 A가 두 명으로 보임
+
+**해결 방법**:
+
+1. **알파값 동기화**:
+   - `ColorChangeMessage`에 `alpha: float` 필드 추가
+   - `DrawingCanvas`에 `user_alphas: Dict[str, float]` 추가
+   - `set_user_alpha(user_id, alpha)` 메서드 추가
+   - `MainWindow`에서 알파값 변경 시 서버에 전송
+   - COLOR_CHANGE 메시지 수신 시 알파값도 반영
+   - `handle_drawing_start`, `handle_drawing_update`에서 user_alphas 사용
+
+2. **파스텔 톤 프리셋**:
+   - 기존 원색 (빨강, 파랑, 초록, 노랑, 검정, 흰색)
+   - 파스텔 톤 (핑크, 블루, 그린, 퍼플, 오렌지, 옐로우)으로 변경
+   - RGB 값:
+     - 핑크: (255, 182, 193)
+     - 블루: (173, 216, 230)
+     - 그린: (152, 251, 152)
+     - 퍼플: (221, 160, 221)
+     - 오렌지: (255, 218, 185)
+     - 옐로우: (255, 255, 224)
+
+3. **참여자 중복 버그 수정**:
+   - 원인: `DrawingCanvas` 생성 시 user_id=None으로 UUID 생성
+   - `set_user_id` 호출 시 이전 UUID가 `user_colors`에 남음
+   - 해결: `set_user_id`에서 이전 user_id를 user_colors, user_alphas에서 제거
+
+**테스트 결과**:
+- ✅ **27개 테스트 모두 통과** (기존 26개 + 참여자 중복 테스트 1개)
+- ✅ 알파값 동기화 작동
+- ✅ 파스텔 톤 프리셋 적용
+- ✅ 참여자 중복 버그 수정
+
+**변경 파일**:
+- `common/src/screen_party_common/messages.py`: ColorChangeMessage에 alpha 추가
+- `client/src/screen_party_client/drawing/canvas.py`:
+  - user_alphas 딕셔너리 추가
+  - set_user_alpha 메서드 추가
+  - set_user_id 개선 (이전 user_id 제거)
+  - handle_drawing_start, handle_drawing_update에서 user_alphas 사용
+- `client/src/screen_party_client/gui/main_window.py`:
+  - current_alpha 필드 추가
+  - 파스텔 톤 프리셋으로 변경
+  - set_pen_color, on_alpha_changed에서 알파값 전송
+  - COLOR_CHANGE 메시지 핸들러에서 알파값 반영
+- `client/tests/test_main_window_gui.py`:
+  - 파스텔 톤 테스트 업데이트
+  - 참여자 중복 버그 테스트 추가
+
+**완료 상태**:
+- ✅ **P3 color-system Task 완전히 완료**
+- ✅ 알파값 동기화 기능 완성
+- ✅ 파스텔 톤 프리셋 적용
+- ✅ 참여자 중복 버그 수정
+
+**다음 단계**:
+- 사용자가 Windows 환경에서 실제 테스트
+- feature/color-system 브랜치를 main에 머지
+
+---
+
 > 다음 클로드 코드에게:
 > - 색상 시스템은 완전히 작동하며, feature/color-system 브랜치에 있습니다
+> - 알파값 동기화가 구현되어 상대 화면에서도 보입니다
+> - 파스텔 톤 프리셋으로 변경되어 눈이 편안합니다
+> - 참여자 중복 버그가 수정되었습니다
 > - main에 머지하려면 사용자에게 확인 받으세요
-> - 서버 동기화가 필요하면 color_change 메시지 타입을 추가하고 서버/클라이언트 핸들러를 구현하세요
-> - 현재는 각 사용자가 독립적으로 색상을 선택합니다 (다른 사용자는 변경 사항을 볼 수 없음)

@@ -83,6 +83,10 @@ class DrawingCanvas(QWidget):
         self.user_colors: Dict[str, QColor] = {}
         self.user_colors[self.user_id] = pen_color
 
+        # 사용자별 알파값 (user_id -> float, 0.0 ~ 1.0)
+        self.user_alphas: Dict[str, float] = {}
+        self.user_alphas[self.user_id] = pen_alpha
+
         # 페이드아웃 설정
         self.fade_hold_duration = fade_hold_duration
         self.fade_duration = fade_duration
@@ -109,13 +113,27 @@ class DrawingCanvas(QWidget):
 
     def set_user_id(self, user_id: str):
         """사용자 ID 설정"""
+        # 이전 user_id 제거 (중복 방지)
+        old_user_id = self.user_id
+        if old_user_id and old_user_id in self.user_colors:
+            del self.user_colors[old_user_id]
+        if old_user_id and old_user_id in self.user_alphas:
+            del self.user_alphas[old_user_id]
+
+        # 새로운 user_id 설정
         self.user_id = user_id
         if user_id not in self.user_colors:
             self.user_colors[user_id] = self.pen_color
+        if user_id not in self.user_alphas:
+            self.user_alphas[user_id] = self.pen_alpha
 
     def set_user_color(self, user_id: str, color: QColor):
         """사용자별 색상 설정"""
         self.user_colors[user_id] = color
+
+    def set_user_alpha(self, user_id: str, alpha: float):
+        """사용자별 알파값 설정"""
+        self.user_alphas[user_id] = max(0.0, min(1.0, alpha))
 
     # === 좌표 변환 메서드 ===
 
@@ -435,14 +453,19 @@ class DrawingCanvas(QWidget):
         color_str = data.get("color", "#FF0000")
         color = QColor(color_str)
 
+        # 사용자별 알파값 가져오기 (없으면 1.0)
+        user_alpha = self.user_alphas.get(user_id, 1.0)
+
         # 상대 좌표 start_point (참고용, LineData 생성에는 사용하지 않음)
         # start_point = data.get("start_point")  # 필요 시 사용
 
-        # LineData 생성
+        # LineData 생성 (사용자의 알파값 적용)
         line_data = LineData(
             line_id=line_id,
             user_id=user_id,
             color=color,
+            alpha=user_alpha,
+            initial_alpha=user_alpha,
         )
 
         self.remote_lines[line_id] = line_data
@@ -466,10 +489,13 @@ class DrawingCanvas(QWidget):
         # LineData 가져오기 (없으면 생성)
         if line_id not in self.remote_lines:
             color = self.user_colors.get(user_id, QColor(255, 0, 0))
+            user_alpha = self.user_alphas.get(user_id, 1.0)
             self.remote_lines[line_id] = LineData(
                 line_id=line_id,
                 user_id=user_id,
                 color=color,
+                alpha=user_alpha,
+                initial_alpha=user_alpha,
             )
 
         line_data = self.remote_lines[line_id]

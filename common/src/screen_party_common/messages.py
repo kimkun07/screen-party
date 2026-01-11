@@ -158,8 +158,10 @@ class ColorChangeMessage(BaseMessage):
     Attributes:
         user_id: 사용자 ID
         color: 새로운 펜 색상 (hex 형식, 예: "#FF0000")
+        alpha: 투명도 (0.0 ~ 1.0, 기본값 1.0)
     """
 
     user_id: str
     color: str
+    alpha: float = 1.0
     type: MessageType = field(default=MessageType.COLOR_CHANGE, init=False)

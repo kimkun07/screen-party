@@ -46,6 +46,9 @@ class MainWindow(QMainWindow):
         self.is_sharing = False
         self.overlay_window = None
 
+        # 현재 알파값 추적 (0.0 ~ 1.0)
+        self.current_alpha = 1.0
+
         self.init_ui()
 
     def init_ui(self):
@@ -219,12 +222,12 @@ class MainWindow(QMainWindow):
         palette_layout = QHBoxLayout()
         self.color_buttons = []
         preset_colors = [
-            ("빨강", QColor(255, 0, 0)),
-            ("파랑", QColor(0, 0, 255)),
-            ("초록", QColor(0, 255, 0)),
-            ("노랑", QColor(255, 255, 0)),
-            ("검정", QColor(0, 0, 0)),
-            ("흰색", QColor(255, 255, 255)),
+            ("핑크", QColor(255, 182, 193)),  # 파스텔 핑크
+            ("블루", QColor(173, 216, 230)),  # 파스텔 블루
+            ("그린", QColor(152, 251, 152)),  # 파스텔 그린
+            ("퍼플", QColor(221, 160, 221)),  # 파스텔 퍼플
+            ("오렌지", QColor(255, 218, 185)),  # 파스텔 오렌지
+            ("옐로우", QColor(255, 255, 224)),  # 파스텔 옐로우
         ]
 
         for name, color in preset_colors:
@@ -589,16 +592,19 @@ class MainWindow(QMainWindow):
         elif msg_type == MessageType.COLOR_CHANGE.value:
             user_id = message.get("user_id")
             color_str = message.get("color", "#FF0000")
+            alpha = message.get("alpha", 1.0)
             if user_id:
-                # DrawingCanvas의 user_colors 업데이트
+                # DrawingCanvas의 user_colors 및 user_alphas 업데이트
                 color = QColor(color_str)
                 self.drawing_canvas.user_colors[user_id] = color
+                self.drawing_canvas.user_alphas[user_id] = alpha
                 # 오버레이가 있으면 오버레이에도 업데이트
                 if self.is_sharing and self.overlay_window:
                     self.overlay_window.get_canvas().user_colors[user_id] = color
+                    self.overlay_window.get_canvas().user_alphas[user_id] = alpha
                 # UI 업데이트
                 self.update_users_colors_display()
-                logger.info(f"User {user_id} changed color to {color_str}")
+                logger.info(f"User {user_id} changed color to {color_str}, alpha to {alpha:.2f}")
 
     def set_status(self, status: str):
         """메인 화면 상태 메시지 설정
@@ -648,11 +654,12 @@ class MainWindow(QMainWindow):
         # UI 업데이트
         self.update_users_colors_display()
 
-        # 서버에 색상 변경 알림
+        # 서버에 색상 변경 알림 (알파값 포함)
         if self.client and self.is_connected and self.user_id:
             msg = ColorChangeMessage(
                 user_id=self.user_id,
                 color=color.name(),
+                alpha=self.current_alpha,
             )
             asyncio.create_task(self._send_color_change(msg.to_dict()))
 
@@ -664,9 +671,20 @@ class MainWindow(QMainWindow):
             label: 업데이트할 라벨
         """
         alpha = value / 100.0
+        self.current_alpha = alpha
         self.drawing_canvas.set_pen_alpha(alpha)
         label.setText(f"투명도: {value}%")
         logger.info(f"Pen alpha changed to {alpha:.2f}")
+
+        # 서버에 알파값 변경 알림 (현재 색상과 함께 전송)
+        if self.client and self.is_connected and self.user_id:
+            current_color = self.drawing_canvas.pen_color
+            msg = ColorChangeMessage(
+                user_id=self.user_id,
+                color=current_color.name(),
+                alpha=alpha,
+            )
+            asyncio.create_task(self._send_color_change(msg.to_dict()))
 
     def update_users_colors_display(self):
         """참여자별 색상 정보 UI 업데이트"""
