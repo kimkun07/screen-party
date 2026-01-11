@@ -335,3 +335,263 @@ class TestDrawingCanvasIntegration:
         packet = received_packets[0]
         assert "new_finalized_segments" in packet
         assert "current_raw_points" in packet
+
+
+class TestDrawingCanvasFadeAnimation:
+    """페이드아웃 애니메이션 테스트"""
+
+    def test_fade_animation_initialization(self, qtbot: QtBot):
+        """페이드아웃 파라미터 초기화 테스트"""
+        canvas = DrawingCanvas(
+            fade_hold_duration=3.0,
+            fade_duration=2.0,
+            timeout_duration=15.0,
+        )
+        qtbot.addWidget(canvas)
+
+        assert canvas.fade_hold_duration == 3.0
+        assert canvas.fade_duration == 2.0
+        assert canvas.timeout_duration == 15.0
+        assert canvas.animation_timer.isActive()
+
+    def test_fade_animation_default_parameters(self, qtbot: QtBot):
+        """페이드아웃 기본 파라미터 테스트"""
+        canvas = DrawingCanvas()
+        qtbot.addWidget(canvas)
+
+        assert canvas.fade_hold_duration == 2.0
+        assert canvas.fade_duration == 1.0
+        assert canvas.timeout_duration == 10.0
+
+    def test_line_data_has_fade_fields(self, qtbot: QtBot):
+        """LineData에 페이드아웃 필드가 있는지 확인"""
+        canvas = DrawingCanvas()
+        qtbot.addWidget(canvas)
+
+        line_id = "test-fade-line"
+        user_id = "test-user"
+
+        canvas.handle_drawing_start(line_id, user_id, {"color": "#FF0000"})
+
+        line_data = canvas.remote_lines[line_id]
+        assert hasattr(line_data, "alpha")
+        assert hasattr(line_data, "end_time")
+        assert hasattr(line_data, "last_update_time")
+        assert line_data.alpha == 1.0
+        assert line_data.end_time is None
+
+    def test_drawing_end_sets_end_time(self, qtbot: QtBot):
+        """drawing_end 호출 시 end_time 설정 확인"""
+        canvas = DrawingCanvas()
+        qtbot.addWidget(canvas)
+
+        line_id = "test-end-time"
+        user_id = "test-user"
+
+        canvas.handle_drawing_start(line_id, user_id, {"color": "#00FF00"})
+        canvas.handle_drawing_end(line_id, user_id)
+
+        line_data = canvas.remote_lines[line_id]
+        assert line_data.end_time is not None
+        assert line_data.is_complete is True
+
+    def test_fade_hold_phase(self, qtbot: QtBot):
+        """페이드 유지 단계 (2초) 테스트"""
+        import time
+
+        canvas = DrawingCanvas(
+            fade_hold_duration=0.5,  # 테스트용 짧은 시간
+            fade_duration=0.3,
+        )
+        qtbot.addWidget(canvas)
+
+        line_id = "test-hold-phase"
+        user_id = "test-user"
+
+        canvas.handle_drawing_start(line_id, user_id, {"color": "#0000FF"})
+        canvas.handle_drawing_end(line_id, user_id)
+
+        # 0.2초 대기 (hold 단계)
+        qtbot.wait(200)
+
+        # 알파값이 1.0이어야 함
+        line_data = canvas.remote_lines.get(line_id)
+        assert line_data is not None
+        assert line_data.alpha == 1.0
+
+    def test_fade_animation_phase(self, qtbot: QtBot):
+        """페이드아웃 단계 (1초) 테스트"""
+        import time
+
+        canvas = DrawingCanvas(
+            fade_hold_duration=0.1,  # 매우 짧은 hold
+            fade_duration=0.5,
+        )
+        qtbot.addWidget(canvas)
+
+        line_id = "test-fade-phase"
+        user_id = "test-user"
+
+        canvas.handle_drawing_start(line_id, user_id, {"color": "#FF00FF"})
+        canvas.handle_drawing_end(line_id, user_id)
+
+        # hold 단계 대기
+        qtbot.wait(150)
+
+        # 페이드 중간 대기
+        qtbot.wait(250)
+
+        # 알파값이 감소했어야 함
+        line_data = canvas.remote_lines.get(line_id)
+        assert line_data is not None
+        assert 0.0 < line_data.alpha < 1.0
+
+    def test_fade_complete_removes_line(self, qtbot: QtBot):
+        """페이드 완료 후 라인 삭제 테스트"""
+        canvas = DrawingCanvas(
+            fade_hold_duration=0.1,
+            fade_duration=0.2,
+        )
+        qtbot.addWidget(canvas)
+
+        line_id = "test-fade-complete"
+        user_id = "test-user"
+
+        canvas.handle_drawing_start(line_id, user_id, {"color": "#00FFFF"})
+        canvas.handle_drawing_end(line_id, user_id)
+
+        # hold + fade 완료 대기
+        qtbot.wait(400)
+
+        # 라인이 삭제되었어야 함
+        assert line_id not in canvas.remote_lines
+        assert line_id in canvas.deleted_line_ids
+
+    def test_timeout_removes_line_without_fade(self, qtbot: QtBot):
+        """타임아웃 시 페이드 없이 즉시 삭제 테스트"""
+        canvas = DrawingCanvas(
+            timeout_duration=0.3,  # 짧은 타임아웃
+        )
+        qtbot.addWidget(canvas)
+
+        line_id = "test-timeout"
+        user_id = "test-user"
+
+        canvas.handle_drawing_start(line_id, user_id, {"color": "#FFFF00"})
+
+        # drawing_end 호출하지 않음 (타임아웃 시나리오)
+        # 타임아웃 대기
+        qtbot.wait(400)
+
+        # 라인이 강제 삭제되었어야 함
+        assert line_id not in canvas.remote_lines
+        assert line_id in canvas.deleted_line_ids
+
+    def test_deleted_line_ignores_subsequent_events(self, qtbot: QtBot):
+        """삭제된 라인은 이후 이벤트 무시"""
+        canvas = DrawingCanvas(
+            fade_hold_duration=0.1,
+            fade_duration=0.1,
+        )
+        qtbot.addWidget(canvas)
+
+        line_id = "test-deleted-ignore"
+        user_id = "test-user"
+
+        canvas.handle_drawing_start(line_id, user_id, {"color": "#FF8800"})
+        canvas.handle_drawing_end(line_id, user_id)
+
+        # 페이드 완료 대기
+        qtbot.wait(300)
+
+        # 라인 삭제 확인
+        assert line_id in canvas.deleted_line_ids
+
+        # 이후 이벤트 전송
+        canvas.handle_drawing_update(
+            line_id,
+            user_id,
+            {
+                "new_finalized_segments": [],
+                "current_raw_points": [(100.0, 100.0)],
+            },
+        )
+
+        # 여전히 삭제 상태여야 함
+        assert line_id not in canvas.remote_lines
+
+    def test_last_update_time_updated_on_events(self, qtbot: QtBot):
+        """이벤트 발생 시 last_update_time 갱신 확인"""
+        import time
+
+        canvas = DrawingCanvas()
+        qtbot.addWidget(canvas)
+
+        line_id = "test-last-update"
+        user_id = "test-user"
+
+        canvas.handle_drawing_start(line_id, user_id, {"color": "#8800FF"})
+
+        initial_time = canvas.remote_lines[line_id].last_update_time
+
+        # 약간 대기
+        time.sleep(0.1)
+
+        # 업데이트 이벤트
+        canvas.handle_drawing_update(
+            line_id,
+            user_id,
+            {
+                "new_finalized_segments": [],
+                "current_raw_points": [(50.0, 50.0)],
+            },
+        )
+
+        # last_update_time이 갱신되었어야 함
+        updated_time = canvas.remote_lines[line_id].last_update_time
+        assert updated_time > initial_time
+
+    def test_alpha_applied_to_rendering(self, qtbot: QtBot):
+        """렌더링 시 알파값 적용 확인 (간접 테스트)"""
+        canvas = DrawingCanvas(
+            fade_hold_duration=0.1,
+            fade_duration=0.5,
+        )
+        qtbot.addWidget(canvas)
+        canvas.show()
+
+        line_id = "test-alpha-render"
+        user_id = "test-user"
+
+        canvas.handle_drawing_start(line_id, user_id, {"color": "#FF0080"})
+        canvas.handle_drawing_update(
+            line_id,
+            user_id,
+            {
+                "new_finalized_segments": [
+                    {
+                        "p0": (10.0, 10.0),
+                        "p1": (20.0, 30.0),
+                        "p2": (40.0, 50.0),
+                        "p3": (60.0, 70.0),
+                    }
+                ],
+                "current_raw_points": [],
+            },
+        )
+        canvas.handle_drawing_end(line_id, user_id)
+
+        # hold 대기
+        qtbot.wait(150)
+
+        # 페이드 중간
+        qtbot.wait(250)
+
+        # 알파값 감소 확인
+        line_data = canvas.remote_lines.get(line_id)
+        assert line_data is not None
+        assert 0.0 < line_data.alpha < 1.0
+
+        # 렌더링 (오류 없이 완료되어야 함)
+        canvas.update()
+        qtbot.wait(50)
