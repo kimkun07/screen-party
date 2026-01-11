@@ -259,18 +259,82 @@ uv run package-client v0.1.0
 
 ---
 
+### 2026-01-11 - uv workspace 환경에서 패키징 스크립트 개선
+
+**상태**: 🟢 진행중 → ✅ 완료
+
+**문제**:
+- `uv run package-client`를 root에서 실행 시 PyInstaller를 찾지 못함
+- root pyproject.toml에는 pyinstaller가 없고, client/pyproject.toml의 dev 의존성에만 존재
+- 사용자가 root pyproject.toml에 pyinstaller를 추가하지 않기를 원함
+
+**해결 방법**:
+- `package_client.py` 스크립트를 수정하여 PyInstaller를 client 환경에서 실행하도록 변경
+- `python -m PyInstaller` → `uv run --directory client pyinstaller`로 변경
+- `--with pyinstaller` 불필요 (client의 dev 의존성에 이미 포함)
+
+**변경 내용**:
+
+```python
+# 이전
+pyinstaller_cmd = [
+    sys.executable,
+    "-m",
+    "PyInstaller",
+    "--clean",
+    "--noconfirm",
+    str(spec_file)
+]
+
+# 이후
+pyinstaller_cmd = [
+    "uv",
+    "run",
+    "--directory",
+    str(project_root / "client"),
+    "pyinstaller",
+    "--clean",
+    "--noconfirm",
+    str(spec_file)
+]
+```
+
+**테스트 결과**:
+- ✅ Dry-run 테스트 성공 (WSL)
+- ✅ Windows 환경에서 실제 패키징 테스트 성공
+
+**실행 방법** (변경 없음):
+```bash
+# root에서 실행 가능
+uv run package-client v0.1.0
+```
+
+**장점**:
+- ✅ root pyproject.toml에 pyinstaller 추가 불필요
+- ✅ 간결한 명령어 유지
+- ✅ uv workspace 구조에 적합한 방식
+
+**결과물**:
+- `dist/ScreenParty.exe` - Windows 실행 파일
+- `ScreenParty-v0.1.0-windows.zip` - 배포용 ZIP
+
+---
+
 > **다음 Claude Code에게**:
 >
 > **클라이언트 패키징 시스템 완성됨**:
 > - `uv run package-client v0.1.0` 명령어로 Windows 실행 파일 생성
 > - client.spec: PyInstaller 설정 (단일 파일, hidden imports)
-> - scripts/package_client.py: 자동화 스크립트
-> - Windows 환경에서만 실행 가능
+> - scripts/package_client.py: 자동화 스크립트 (uv workspace 지원)
+> - Windows 환경에서 테스트 완료 ✅
+>
+> **패키징 스크립트 개선사항**:
+> - `uv run --directory client pyinstaller` 방식 사용
+> - root에 pyinstaller 의존성 추가하지 않고도 실행 가능
+> - uv workspace monorepo 구조에 적합
 >
 > **사용자가 할 일**:
-> 1. Windows에서 `uv run package-client v0.1.0` 실행
-> 2. dist/ScreenParty.exe 테스트
-> 3. GitHub Release 생성 및 ZIP 업로드
+> 1. GitHub Release 생성 및 ZIP 업로드
 >
 > **향후 개선 사항** (선택):
 > - 앱 아이콘 추가 (client.spec의 icon 파라미터)

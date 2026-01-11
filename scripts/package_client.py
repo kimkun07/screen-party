@@ -213,11 +213,13 @@ def main():
             print(f"\n[DRY RUN] 기존 빌드 정리")
 
     # 2. PyInstaller 실행
-    # Windows에서는 python -m PyInstaller 사용
+    # uv를 통해 client 환경에서 PyInstaller 실행 (dev 의존성 포함)
     pyinstaller_cmd = [
-        sys.executable,  # Python 인터프리터 경로
-        "-m",
-        "PyInstaller",
+        "uv",
+        "run",
+        "--directory",
+        str(project_root / "client"),
+        "pyinstaller",
         "--clean",
         "--noconfirm",
         str(spec_file)
