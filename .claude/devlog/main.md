@@ -51,7 +51,7 @@
 | P1 | client-deployment | ✅ 완료 | PyInstaller 기반 클라이언트 실행 파일 빌드 | client-core, testing |
 | P2 | host-overlay | ✅ 완료 | 호스트/게스트 투명 오버레이 + FAB + 그리기 모드 토글 | client-core, testing |
 | P2 | drawing-engine | ✅ 완료 | 실시간 베지어 커브 피팅 + Multi-user 동기화 | server-core, client-core, testing |
-| P2 | fade-animation | 🟡 준비중 | 페이드아웃 애니메이션 | drawing-engine |
+| P2 | fade-animation | ✅ 완료 | 페이드아웃 애니메이션 (2초 유지 → 1초 페이드) | drawing-engine |
 | P3 | persistence-mode | 🟡 준비중 | 장시간 그림 모드 | drawing-engine |
 | P3 | color-system | 🟡 준비중 | 색상 설정 시스템 | drawing-engine |
 | P3 | window-sync | 🟡 준비중 | 창 관리 동기화 | host-overlay |
@@ -65,6 +65,57 @@
 - ⏸️ **보류** (On Hold): 임시로 중단
 
 ## 최근 업데이트
+
+### 2026-01-11 - Fade Animation 완료 (페이드아웃 애니메이션)
+
+**완료된 Task**:
+- ✅ **fade-animation**: 페이드아웃 애니메이션 (2초 유지 → 1초 페이드)
+
+**주요 성과**:
+
+1. **LineData 확장**
+   - alpha: 투명도 (0.0 ~ 1.0)
+   - end_time: 드로잉 종료 시각
+   - last_update_time: 마지막 업데이트 시각 (타임아웃 감지)
+
+2. **DrawingCanvas 페이드아웃 시스템**
+   - 파라미터화된 페이드아웃 설정:
+     - fade_hold_duration (기본 2초)
+     - fade_duration (기본 1초)
+     - timeout_duration (기본 10초)
+   - 60fps 애니메이션 타이머
+   - 자동 알파값 계산 및 렌더링
+
+3. **페이드아웃 로직**
+   - drawing_end 후 2초 유지 (alpha = 1.0)
+   - 1초에 걸쳐 페이드아웃 (alpha: 1.0 → 0.0)
+   - 완료 후 자동 삭제
+
+4. **타임아웃 로직**
+   - 마지막 이벤트로부터 10초 후 강제 삭제
+   - 페이드 없이 즉시 삭제
+   - 삭제된 라인은 이후 이벤트 무시
+
+5. **유닛 테스트**
+   - 11개 페이드아웃 테스트 추가
+   - 총 82개 테스트 모두 통과
+
+**기술 구현**:
+- ✅ 파라미터화된 페이드아웃 시간
+- ✅ 타임아웃 기반 강제 삭제
+- ✅ 삭제된 라인 추적 (deleted_line_ids Set)
+- ✅ 렌더링 시 알파값 적용
+- ✅ 60fps 애니메이션 타이머
+
+**테스트 결과**:
+- ✅ 82개 테스트 모두 통과 (기존 71개 + 페이드아웃 11개)
+- ✅ 기존 기능 영향 없음
+
+**다음 우선순위**:
+- P3: persistence-mode (장시간 그림 모드)
+- P3: color-system (색상 설정 시스템)
+
+---
 
 ### 2026-01-05 - Host/Guest Overlay 완료 (호스트/게스트 투명 오버레이 + 그리기 모드 토글)
 

@@ -99,13 +99,105 @@ def paintEvent(self, event: QPaintEvent):
 
 ## TODO
 
-- [ ] LineAnimator 클래스 구현 (drawing/animator.py)
-- [ ] Line 데이터 구조 확장 (end_time, fade_start_time 추가)
-- [ ] QTimer로 주기적 업데이트 (16ms)
-- [ ] alpha 값 적용하여 렌더링
-- [ ] alpha = 0.0인 선 자동 삭제
-- [ ] 유닛 테스트 작성 (test_animator.py)
+- [x] Line 데이터 구조 확장 (end_time, last_update_time, alpha 추가)
+- [x] QTimer로 주기적 업데이트 (16ms, ~60 FPS)
+- [x] alpha 값 적용하여 렌더링
+- [x] alpha = 0.0인 선 자동 삭제
+- [x] 타임아웃 로직 구현 (10초 후 강제 삭제)
+- [x] 삭제된 라인 무시 로직 추가
+- [x] 유닛 테스트 작성 (11개 테스트)
+- [x] 페이드아웃 파라미터화 (생성자 인자)
 
 ## 클로드 코드 일기
 
-_이 섹션은 작업 진행 시 업데이트됩니다._
+### 2026-01-11 - 페이드아웃 애니메이션 시스템 구현 완료
+
+**상태**: 🟡 준비중 → ✅ 완료
+
+**진행 내용**:
+
+1. **LineData 확장** (`client/src/screen_party_client/drawing/line_data.py`)
+   - `alpha: float = 1.0` - 투명도 (0.0 ~ 1.0)
+   - `end_time: Optional[float] = None` - 드로잉 종료 시각 (time.time())
+   - `last_update_time: float` - 마지막 업데이트 시각 (타임아웃 감지용)
+   - `add_finalized_segments()`, `update_raw_points()` 호출 시 last_update_time 갱신
+   - `finalize()` 호출 시 end_time 설정
+
+2. **DrawingCanvas 페이드아웃 시스템** (`client/src/screen_party_client/drawing/canvas.py`)
+   - 생성자 파라미터 추가:
+     - `fade_hold_duration: float = 2.0` - 페이드 전 유지 시간
+     - `fade_duration: float = 1.0` - 페이드아웃 시간
+     - `timeout_duration: float = 10.0` - 강제 삭제 타임아웃
+   - `deleted_line_ids: Set[str]` - 삭제된 라인 추적
+   - `animation_timer: QTimer` - 60fps (16ms) 애니메이션 타이머
+   - `_update_animations()` 메서드:
+     - 모든 라인의 알파값 계산
+     - 타임아웃 체크 (마지막 업데이트로부터 10초)
+     - 페이드아웃 단계 처리 (hold → fade → delete)
+
+3. **페이드아웃 로직**
+   ```
+   0s          2s          3s
+   │───────────│───────────│
+    그리는 중    유지       페이드아웃
+                (alpha=1.0) (alpha: 1.0→0.0)
+                                    └─ 삭제
+   ```
+   - drawing_end 후 2초 유지 (alpha = 1.0)
+   - 1초에 걸쳐 페이드아웃 (alpha: 1.0 → 0.0)
+   - 완료 후 삭제 (deleted_line_ids에 추가)
+
+4. **타임아웃 로직**
+   - 마지막 이벤트로부터 10초 경과 시 강제 삭제
+   - 페이드 없이 즉시 삭제
+   - deleted_line_ids에 추가
+
+5. **삭제된 라인 무시**
+   - `handle_drawing_start()`, `handle_drawing_update()`, `handle_drawing_end()`에서 삭제된 라인 무시
+   - 타임아웃으로 삭제된 라인은 이후 이벤트가 와도 무시됨
+
+6. **렌더링 시 알파값 적용**
+   - `paintEvent()`에서 QColor에 알파값 설정
+   - `color.setAlphaF(line_data.alpha)`
+
+7. **유닛 테스트** (`client/tests/test_drawing_canvas.py`)
+   - 11개 페이드아웃 테스트 추가:
+     - 파라미터 초기화
+     - LineData 필드 확인
+     - drawing_end 시 end_time 설정
+     - 페이드 유지 단계
+     - 페이드아웃 단계
+     - 페이드 완료 후 삭제
+     - 타임아웃 강제 삭제
+     - 삭제된 라인 무시
+     - last_update_time 갱신
+     - 알파값 렌더링
+
+**테스트 결과**:
+- ✅ **82개 테스트 모두 통과** (기존 71개 + 페이드아웃 11개)
+- ✅ 페이드아웃 테스트 11/11 통과
+- ✅ 기존 기능 영향 없음
+
+**주요 기술 결정**:
+- **LineAnimator 클래스 별도 분리 안 함**: DrawingCanvas에 통합하여 단순화
+- **time.time() 사용**: datetime보다 가벼운 타임스탬프
+- **60fps 타이머**: 부드러운 애니메이션을 위해 16ms 간격
+- **삭제된 라인 추적**: 타임아웃 후 이벤트 무시를 위해 Set[str] 사용
+
+**완료 상태**:
+- ✅ **P2 fade-animation Task 완전히 완료**
+- ✅ 모든 요구사항 구현 (페이드아웃, 타임아웃, 파라미터화)
+- ✅ 11개 유닛 테스트 작성 및 통과
+
+**다음 우선순위**:
+- P3: persistence-mode (장시간 그림 모드)
+- P3: color-system (색상 설정 시스템)
+- P3: window-sync (창 관리 동기화)
+
+---
+
+> 다음 클로드 코드에게:
+> - 페이드아웃 시스템은 완전히 구현되어 있으며, 파라미터로 쉽게 조절 가능합니다
+> - fade_hold_duration, fade_duration, timeout_duration 파라미터를 수정하여 동작 변경 가능
+> - 삭제된 라인은 deleted_line_ids Set에 추적되므로 메모리 사용량 고려 필요 (필요시 주기적 정리)
+> - 애니메이션 타이머는 항상 실행되므로 성능 영향 최소화를 위해 최적화됨
