@@ -7,7 +7,7 @@ from typing import Optional
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QPushButton,
     QLabel, QInputDialog, QMessageBox, QHBoxLayout, QLineEdit,
-    QApplication
+    QApplication, QGroupBox, QSlider
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QSettings
 from PyQt6.QtGui import QFont, QColor
@@ -197,6 +197,58 @@ class MainWindow(QMainWindow):
 
         # Drawing Canvas 시그널 연결
         self._connect_drawing_signals()
+
+        main_screen_layout.addSpacing(30)
+
+        # 색상 설정 섹션
+        color_group = QGroupBox("색상 설정")
+        color_layout = QVBoxLayout()
+        color_group.setLayout(color_layout)
+
+        # 색상 팔레트 (프리셋 색상 버튼들)
+        palette_label = QLabel("색상:")
+        color_layout.addWidget(palette_label)
+
+        palette_layout = QHBoxLayout()
+        self.color_buttons = []
+        preset_colors = [
+            ("빨강", QColor(255, 0, 0)),
+            ("파랑", QColor(0, 0, 255)),
+            ("초록", QColor(0, 255, 0)),
+            ("노랑", QColor(255, 255, 0)),
+            ("검정", QColor(0, 0, 0)),
+            ("흰색", QColor(255, 255, 255)),
+        ]
+
+        for name, color in preset_colors:
+            btn = QPushButton(name)
+            btn.setMinimumHeight(30)
+            btn.setStyleSheet(
+                f"background-color: rgb({color.red()}, {color.green()}, {color.blue()}); "
+                f"color: {'white' if color.lightness() < 128 else 'black'};"
+            )
+            btn.clicked.connect(lambda checked, c=color: self.set_pen_color(c))
+            palette_layout.addWidget(btn)
+            self.color_buttons.append(btn)
+
+        color_layout.addLayout(palette_layout)
+
+        # Alpha 슬라이더
+        alpha_label = QLabel("투명도: 100%")
+        color_layout.addWidget(alpha_label)
+
+        self.alpha_slider = QSlider(Qt.Orientation.Horizontal)
+        self.alpha_slider.setMinimum(0)
+        self.alpha_slider.setMaximum(100)
+        self.alpha_slider.setValue(100)
+        self.alpha_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.alpha_slider.setTickInterval(10)
+        self.alpha_slider.valueChanged.connect(
+            lambda value: self.on_alpha_changed(value, alpha_label)
+        )
+        color_layout.addWidget(self.alpha_slider)
+
+        main_screen_layout.addWidget(color_group)
 
         main_screen_layout.addSpacing(30)
 
@@ -548,6 +600,30 @@ class MainWindow(QMainWindow):
         self.join_button.setEnabled(len(self.session_input.text().strip()) > 0)
         self.server_input.setEnabled(True)
         self.session_input.setEnabled(True)
+
+    # ========== 색상 설정 메서드 ==========
+
+    def set_pen_color(self, color: QColor):
+        """펜 색상 변경 (신규 곡선에만 적용)
+
+        Args:
+            color: 새로운 펜 색상
+        """
+        self.drawing_canvas.set_pen_color(color)
+        self.set_status(f"색상 변경: RGB({color.red()}, {color.green()}, {color.blue()})")
+        logger.info(f"Pen color changed to RGB({color.red()}, {color.green()}, {color.blue()})")
+
+    def on_alpha_changed(self, value: int, label: QLabel):
+        """투명도 슬라이더 변경 시 호출
+
+        Args:
+            value: 슬라이더 값 (0~100)
+            label: 업데이트할 라벨
+        """
+        alpha = value / 100.0
+        self.drawing_canvas.set_pen_alpha(alpha)
+        label.setText(f"투명도: {value}%")
+        logger.info(f"Pen alpha changed to {alpha:.2f}")
 
     # ========== 오버레이 모드 메서드 ==========
 

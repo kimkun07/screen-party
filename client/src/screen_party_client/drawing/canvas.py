@@ -41,6 +41,7 @@ class DrawingCanvas(QWidget):
         user_id: Optional[str] = None,
         pen_color: QColor = QColor(255, 0, 0),
         pen_width: int = 3,
+        pen_alpha: float = 1.0,
         trigger_count: int = 10,
         max_error: float = 4.0,
         fade_hold_duration: float = 2.0,
@@ -53,6 +54,7 @@ class DrawingCanvas(QWidget):
             user_id: 현재 사용자 ID
             pen_color: 펜 색상
             pen_width: 펜 두께
+            pen_alpha: 펜 초기 투명도 (0.0 ~ 1.0)
             trigger_count: 피팅 트리거 점 개수
             max_error: 베지어 피팅 최대 오차
             fade_hold_duration: 페이드아웃 전 유지 시간 (초)
@@ -65,6 +67,7 @@ class DrawingCanvas(QWidget):
         self.user_id = user_id or str(uuid.uuid4())
         self.pen_color = pen_color
         self.pen_width = pen_width
+        self.pen_alpha = pen_alpha
 
         # 자신의 드로잉
         self.my_fitter = IncrementalFitter(
@@ -334,12 +337,12 @@ class DrawingCanvas(QWidget):
                 elapsed_since_end = current_time - line_data.end_time
 
                 if elapsed_since_end < self.fade_hold_duration:
-                    # 유지 단계 (alpha = 1.0)
-                    line_data.alpha = 1.0
+                    # 유지 단계 (초기 alpha 유지)
+                    line_data.alpha = line_data.initial_alpha
                 elif elapsed_since_end < self.fade_hold_duration + self.fade_duration:
-                    # 페이드아웃 단계 (alpha: 1.0 → 0.0)
+                    # 페이드아웃 단계 (초기 alpha → 0.0)
                     fade_progress = (elapsed_since_end - self.fade_hold_duration) / self.fade_duration
-                    line_data.alpha = max(0.0, 1.0 - fade_progress)
+                    line_data.alpha = max(0.0, line_data.initial_alpha * (1.0 - fade_progress))
                 else:
                     # 완전히 사라짐 - 삭제
                     line_data.alpha = 0.0
@@ -361,7 +364,7 @@ class DrawingCanvas(QWidget):
         if not self.my_line_id:
             return
 
-        # LineData 생성
+        # LineData 생성 (초기 alpha 값 적용)
         line_data = LineData(
             line_id=self.my_line_id,
             user_id=self.user_id,
@@ -369,6 +372,8 @@ class DrawingCanvas(QWidget):
             finalized_segments=self.my_fitter.finalized_segments.copy(),
             current_raw_points=[],
             is_complete=True,
+            alpha=self.pen_alpha,  # 초기 alpha 값 적용
+            initial_alpha=self.pen_alpha,  # 초기 alpha 값 저장
         )
 
         self.remote_lines[self.my_line_id] = line_data
@@ -396,7 +401,7 @@ class DrawingCanvas(QWidget):
         self.update()
 
     def set_pen_color(self, color: QColor):
-        """펜 색상 변경"""
+        """펜 색상 변경 (신규 곡선에만 적용)"""
         self.pen_color = color
         self.user_colors[self.user_id] = color
         self.update()
@@ -404,6 +409,11 @@ class DrawingCanvas(QWidget):
     def set_pen_width(self, width: int):
         """펜 두께 변경"""
         self.pen_width = width
+        self.update()
+
+    def set_pen_alpha(self, alpha: float):
+        """펜 초기 투명도 변경 (0.0 ~ 1.0, 신규 곡선에만 적용)"""
+        self.pen_alpha = max(0.0, min(1.0, alpha))
         self.update()
 
     # === 수신 메시지 처리 ===

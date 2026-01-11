@@ -25,6 +25,7 @@ class LineData:
         current_raw_points: 아직 확정되지 않은 raw 점들
         is_complete: 드로잉 완료 여부 (마우스 up)
         alpha: 투명도 (0.0 ~ 1.0, 페이드아웃용)
+        initial_alpha: 초기 투명도 (페이드아웃 시 기준값)
         end_time: 드로잉 종료 시각 (time.time(), None이면 아직 그리는 중)
         last_update_time: 마지막 업데이트 시각 (타임아웃 감지용)
     """
@@ -36,6 +37,7 @@ class LineData:
     current_raw_points: List[Tuple[float, float]] = field(default_factory=list)
     is_complete: bool = False
     alpha: float = 1.0
+    initial_alpha: float = 1.0  # 초기 alpha 값 저장
     end_time: Optional[float] = None
     last_update_time: float = field(default_factory=time.time)
 
@@ -61,5 +63,6 @@ class LineData:
         self.current_raw_points = []
         self.is_complete = False
         self.alpha = 1.0
+        self.initial_alpha = 1.0
         self.end_time = None
         self.last_update_time = time.time()
