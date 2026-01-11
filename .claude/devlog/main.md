@@ -52,7 +52,7 @@
 | P2 | host-overlay | ✅ 완료 | 호스트/게스트 투명 오버레이 + FAB + 그리기 모드 토글 | client-core, testing |
 | P2 | drawing-engine | ✅ 완료 | 실시간 베지어 커브 피팅 + Multi-user 동기화 | server-core, client-core, testing |
 | P2 | fade-animation | ✅ 완료 | 페이드아웃 애니메이션 (2초 유지 → 1초 페이드) | drawing-engine |
-| P3 | color-system | 🟡 준비중 | 색상 설정 시스템 | drawing-engine |
+| P3 | color-system | ✅ 완료 | 색상 설정 시스템 (알파값 동기화, 파스텔 톤 프리셋) | drawing-engine |
 | P3 | window-sync | 🟡 준비중 | 창 관리 동기화 | host-overlay |
 
 ### 상태 범례
@@ -64,6 +64,46 @@
 - ⏸️ **보류** (On Hold): 임시로 중단
 
 ## 최근 업데이트
+
+### 2026-01-11 - Color System 완료 (색상 설정 시스템)
+
+**완료된 Task**:
+- ✅ **color-system**: 색상 설정 시스템 (알파값 동기화, 파스텔 톤 프리셋)
+
+**주요 성과**:
+
+1. **알파값 동기화**
+   - ColorChangeMessage에 alpha 필드 추가
+   - DrawingCanvas에 user_alphas 딕셔너리 추가
+   - 색상/알파값 변경 시 서버에 전송하여 상대 화면에도 적용
+
+2. **파스텔 톤 프리셋**
+   - 원색 → 파스텔 톤 6가지 색상으로 변경
+   - 핑크, 블루, 그린, 퍼플, 오렌지, 옐로우
+   - 눈에 편안한 색상 제공
+
+3. **참여자 중복 버그 수정**
+   - set_user_id에서 이전 user_id를 user_colors에서 자동 제거
+   - 색상 변경 시 참여자가 중복으로 표시되지 않음
+
+4. **프리셋 색상 상수화**
+   - constants.py 파일 생성 (PRESET_COLORS)
+   - 튜플 → QColor 리스트로 단순화
+   - get_default_pen_color() 헬퍼 함수
+   - 초기 색상을 파스텔 핑크(첫 번째 프리셋)로 설정
+
+5. **GUI 색상 버튼 개선**
+   - 버튼 텍스트(이름) 제거
+   - 정사각형 버튼(40x40)으로 변경
+   - 색상만 표시하여 시각적으로 깔끔
+
+6. **유닛 테스트**
+   - 27개 색상 시스템 테스트 통과 (참여자 중복 테스트 포함)
+
+**다음 우선순위**:
+- P3: window-sync (창 관리 동기화)
+
+---
 
 ### 2026-01-11 - Fade Animation 완료 (페이드아웃 애니메이션)
 
