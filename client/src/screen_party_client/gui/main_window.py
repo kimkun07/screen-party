@@ -336,7 +336,7 @@ class MainWindow(QMainWindow):
         info_layout.addWidget(self.leave_session_button)
 
         # 사용법: 깃허브 링크
-        github_label = QLabel('<a href="https://github.com/kimkundad/screen-party">사용법 (GitHub)</a>')
+        github_label = QLabel('<a href="https://github.com/kimkun07/screen-party">사용법 (GitHub)</a>')
         github_label.setOpenExternalLinks(True)
         github_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         info_layout.addWidget(github_label)
