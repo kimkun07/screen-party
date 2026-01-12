@@ -255,38 +255,26 @@ class MainWindow(QMainWindow):
 
         main_screen_layout.addSpacing(30)
 
-        # 오버레이 모드 섹션 (호스트/게스트 공통)
+        # 오버레이 모드 섹션
         overlay_section_layout = QVBoxLayout()
 
-        overlay_label = QLabel("Overlay Mode")
+        overlay_label = QLabel("그림 영역")
         overlay_label_font = QFont()
         overlay_label_font.setPointSize(12)
         overlay_label_font.setBold(True)
         overlay_label.setFont(overlay_label_font)
         overlay_section_layout.addWidget(overlay_label)
 
-        self.setup_overlay_button = QPushButton("그림 영역 설정")
+        self.setup_overlay_button = QPushButton("그림 영역 생성")
         self.setup_overlay_button.setMinimumHeight(50)
         self.setup_overlay_button.clicked.connect(self.toggle_overlay)
         overlay_section_layout.addWidget(self.setup_overlay_button)
-
-        self.toggle_drawing_button = QPushButton("그리기 활성화")
-        self.toggle_drawing_button.setMinimumHeight(40)
-        self.toggle_drawing_button.setEnabled(False)
-        self.toggle_drawing_button.clicked.connect(self.toggle_drawing_mode)
-        overlay_section_layout.addWidget(self.toggle_drawing_button)
 
         self.resize_overlay_button = QPushButton("그림 영역 크기 조정")
         self.resize_overlay_button.setMinimumHeight(40)
         self.resize_overlay_button.setEnabled(False)
         self.resize_overlay_button.clicked.connect(self.toggle_resize_mode)
         overlay_section_layout.addWidget(self.resize_overlay_button)
-
-        self.clear_drawings_button = QPushButton("Clear Drawings")
-        self.clear_drawings_button.setMinimumHeight(40)
-        self.clear_drawings_button.setEnabled(False)
-        self.clear_drawings_button.clicked.connect(self.clear_overlay_drawings)
-        overlay_section_layout.addWidget(self.clear_drawings_button)
 
         main_screen_layout.addLayout(overlay_section_layout)
 
@@ -714,60 +702,33 @@ class MainWindow(QMainWindow):
     # ========== 오버레이 모드 메서드 ==========
 
     def toggle_overlay(self):
-        """오버레이 모드 토글 (호스트/게스트 공통)"""
+        """그림 영역 생성/삭제 토글"""
         if self.is_sharing:
             self.stop_overlay()
         else:
-            self.start_overlay()
+            self.create_overlay()
 
-    def start_overlay(self):
-        """오버레이 시작 (창 선택 다이얼로그 표시)"""
-        from .window_selector import WindowSelectorDialog
-
-        dialog = WindowSelectorDialog(self)
-        if dialog.exec():
-            window_handle = dialog.get_selected_handle()
-            if window_handle:
-                self.create_overlay(window_handle)
-
-    def create_overlay(self, window_handle: int):
-        """오버레이 생성 (호스트/게스트 공통)
-
-        Args:
-            window_handle: 타겟 윈도우 핸들
-        """
+    def create_overlay(self):
+        """그림 영역 생성"""
         from .overlay_window import OverlayWindow
 
         try:
             # 오버레이 윈도우 생성
             self.overlay_window = OverlayWindow(
-                target_handle=window_handle,
                 user_id=self.user_id,
                 pen_color=get_default_pen_color(),  # 첫 번째 프리셋 색상 (파스텔 핑크)
             )
 
-            # 오버레이 시그널 연결
-            self.overlay_window.target_window_closed.connect(
-                self.on_overlay_window_closed)
-            self.overlay_window.target_window_minimized.connect(
-                self.on_overlay_minimized)
-            self.overlay_window.target_window_restored.connect(
-                self.on_overlay_restored)
-            self.overlay_window.drawing_mode_changed.connect(
-                self.on_drawing_mode_changed)
-
-            # DrawingCanvas 시그널 연결 (오버레이에서 그리기)
+            # DrawingCanvas 시그널 연결
             canvas = self.overlay_window.get_canvas()
-            # canvas.drawing_started.connect(self._on_drawing_started)
-            # canvas.drawing_updated.connect(self._on_drawing_updated)
-            # canvas.drawing_ended.connect(self._on_drawing_ended)
+            canvas.drawing_started.connect(self._on_drawing_started)
+            canvas.drawing_updated.connect(self._on_drawing_updated)
+            canvas.drawing_ended.connect(self._on_drawing_ended)
 
             # 버튼 활성화 및 텍스트 업데이트
-            self.toggle_drawing_button.setEnabled(True)
             self.resize_overlay_button.setEnabled(True)
-            self.clear_drawings_button.setEnabled(True)
-            self.setup_overlay_button.setText("Stop Overlay")
-            self.set_status("Overlay started (drawing disabled)")
+            self.setup_overlay_button.setText("그림 영역 삭제")
+            self.set_status("그림 영역이 생성되었습니다. 크기를 조정하세요.")
 
             # 창 표시
             self.overlay_window.show()
@@ -775,19 +736,23 @@ class MainWindow(QMainWindow):
             # 상태 업데이트
             self.is_sharing = True
 
-            logger.info(f"Overlay created for window {window_handle}")
+            # 즉시 리사이즈 모드 활성화
+            self.overlay_window.set_resize_mode(True)
+            self.resize_overlay_button.setText("그림 영역 크기 조정 완료")
+
+            logger.info("Overlay created and resize mode enabled")
 
         except Exception as e:
             logger.error(f"Failed to create overlay: {e}", exc_info=True)
             QMessageBox.critical(
                 self,
-                "Error",
-                f"Failed to create overlay:\n{e}",
+                "오류",
+                f"그림 영역 생성 실패:\n{e}",
             )
             self.stop_overlay()
 
     def stop_overlay(self):
-        """오버레이 종료 (호스트/게스트 공통)"""
+        """그림 영역 삭제"""
         if self.overlay_window:
             try:
                 self.overlay_window.close()
@@ -797,61 +762,16 @@ class MainWindow(QMainWindow):
 
         # 버튼 상태 리셋
         self.is_sharing = False
-        self.setup_overlay_button.setText("그림 영역 설정")
-        self.toggle_drawing_button.setEnabled(False)
-        self.toggle_drawing_button.setText("그리기 활성화")
+        self.setup_overlay_button.setText("그림 영역 생성")
         self.resize_overlay_button.setEnabled(False)
         self.resize_overlay_button.setText("그림 영역 크기 조정")
-        self.clear_drawings_button.setEnabled(False)
 
-        self.set_status("Overlay stopped")
+        self.set_status("그림 영역이 삭제되었습니다")
 
         logger.info("Overlay stopped")
 
-    def on_overlay_window_closed(self):
-        """오버레이 창이 닫혔을 때 (타겟 창이 닫힘)"""
-        QMessageBox.information(
-            self,
-            "Window Closed",
-            "The target window was closed. Overlay will exit.",
-        )
-        self.stop_overlay()
-
-    def clear_overlay_drawings(self):
-        """Clear all drawings on overlay"""
-        if self.overlay_window:
-            self.overlay_window.get_canvas().clear_all_drawings()
-            self.set_status("Overlay drawings cleared")
-            logger.info("Overlay drawings cleared")
-
-
-    def on_overlay_minimized(self):
-        """Handle overlay minimized"""
-        pass
-
-    def on_overlay_restored(self):
-        """Handle overlay restored"""
-        pass
-
-    def toggle_drawing_mode(self):
-        """Toggle drawing mode (게스트용)"""
-        if self.overlay_window:
-            current = self.overlay_window.is_drawing_enabled()
-            self.overlay_window.set_drawing_enabled(not current)
-
-    def on_drawing_mode_changed(self, enabled: bool):
-        """Drawing mode changed handler (게스트용)"""
-        if enabled:
-            self.toggle_drawing_button.setText("그리기 비활성화")
-            self.set_status("Drawing enabled (press ESC to disable)")
-            logger.info("Drawing mode enabled")
-        else:
-            self.toggle_drawing_button.setText("그리기 활성화")
-            self.set_status("Drawing disabled (click passthrough)")
-            logger.info("Drawing mode disabled")
-
     def toggle_resize_mode(self):
-        """Toggle resize mode"""
+        """그림 영역 크기 조정 토글"""
         if self.overlay_window:
             current = self.overlay_window.is_resize_mode()
             self.overlay_window.set_resize_mode(not current)
@@ -859,12 +779,12 @@ class MainWindow(QMainWindow):
             # Update button text
             if not current:
                 self.resize_overlay_button.setText("그림 영역 크기 조정 완료")
-                self.set_status("Resize mode enabled (drag borders/corners to resize)")
+                self.set_status("크기 조정 모드: 창 테두리를 드래그하여 조정하세요")
                 logger.info("Resize mode enabled")
             else:
                 self.resize_overlay_button.setText("그림 영역 크기 조정")
-                self.set_status("Resize mode disabled")
-                logger.info("Resize mode disabled")
+                self.set_status("그림 영역 준비 완료. 그리기를 시작하세요!")
+                logger.info("Resize mode disabled, drawing enabled")
 
     # ================================================================
 

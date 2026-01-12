@@ -1,38 +1,29 @@
-"""Transparent overlay window that follows a target window"""
+"""Transparent overlay window for drawing"""
 
 from typing import Optional
 
 from PyQt6.QtWidgets import QWidget, QVBoxLayout
-from PyQt6.QtCore import Qt, QTimer, QRect, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QPainter, QColor
 
 from ..drawing.canvas import DrawingCanvas
-from ..utils.window_manager import WindowManager
 
 
 class OverlayWindow(QWidget):
-    """Transparent overlay window that follows a target window"""
+    """Transparent overlay window for drawing"""
 
     # Signals
-    target_window_closed = pyqtSignal()
-    target_window_minimized = pyqtSignal()
-    target_window_restored = pyqtSignal()
     drawing_mode_changed = pyqtSignal(bool)
 
     def __init__(
         self,
-        target_handle: int,
         user_id: str,
         pen_color: Optional[QColor] = None,
         parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
 
-        self.target_handle = target_handle
         self.user_id = user_id
-        self.window_manager = WindowManager()
-        self.is_tracking = True
-        self._was_minimized = False
         # Start with drawing disabled (click passthrough)
         self._drawing_enabled = False
 
@@ -43,12 +34,9 @@ class OverlayWindow(QWidget):
             pen_color = QColor(255, 182, 193)  # Default: 파스텔 핑크 (첫 번째 프리셋)
 
         self.init_ui(pen_color)
-        self.setup_sync_timer()
 
-        # Set initial position/size from target window
-        self.set_initial_geometry()
-        # Start tracking for minimize/close events
-        self.sync_with_target()
+        # Set default geometry (center of screen, 800x600)
+        self.setGeometry(100, 100, 800, 600)
 
     def init_ui(self, pen_color: QColor):
         """Initialize UI"""
@@ -102,71 +90,6 @@ class OverlayWindow(QWidget):
 
         # Call parent's paintEvent to render DrawingCanvas
         super().paintEvent(event)
-
-    def setup_sync_timer(self):
-        """Setup timer for syncing with target window"""
-        self.sync_timer = QTimer(self)
-        self.sync_timer.timeout.connect(self.sync_with_target)
-        self.sync_timer.start(100)  # 100ms interval (10 FPS)
-
-    def set_initial_geometry(self):
-        """Set initial position/size from target window"""
-        import logging
-        logger = logging.getLogger(__name__)
-
-        window_info = self.window_manager.get_window_info(self.target_handle)
-        if not window_info:
-            logger.error(
-                f"[OverlayWindow] Failed to get window info for handle {self.target_handle}")
-            return
-
-        # Set geometry to match target window
-        initial_rect = QRect(
-            window_info.x, window_info.y, window_info.width, window_info.height
-        )
-        self.setGeometry(initial_rect)
-
-        logger.info(f"[OverlayWindow] Initial geometry set:")
-        logger.info(f"  Position: ({window_info.x}, {window_info.y})")
-        logger.info(f"  Size: {window_info.width}x{window_info.height}")
-        logger.info(f"  Target handle: {self.target_handle}")
-
-    def sync_with_target(self):
-        """Check target window status (minimized/closed only, no position/size sync)"""
-        if not self.is_tracking:
-            return
-
-        # Check if window still exists
-        if not self.window_manager.window_exists(self.target_handle):
-            self.target_window_closed.emit()
-            self.close()
-            return
-
-        # Check if minimized
-        is_minimized = self.window_manager.is_window_minimized(
-            self.target_handle)
-
-        if is_minimized:
-            if self.isVisible():
-                self.hide()
-                self._was_minimized = True
-                self.target_window_minimized.emit()
-            return
-        else:
-            if self._was_minimized and not self.isVisible():
-                self.show()
-                self._was_minimized = False
-                self.target_window_restored.emit()
-
-    def stop_tracking(self):
-        """Stop tracking target window"""
-        self.is_tracking = False
-        self.sync_timer.stop()
-
-    def resume_tracking(self):
-        """Resume tracking target window"""
-        self.is_tracking = True
-        self.sync_timer.start(100)
 
     def get_canvas(self) -> DrawingCanvas:
         """Get the drawing canvas"""
@@ -274,26 +197,19 @@ class OverlayWindow(QWidget):
             # Set window opacity to 30% (transparent enough to see through)
             self.setWindowOpacity(0.3)
         else:
-            # Normal mode: Frameless transparent overlay
+            # Normal mode: Frameless overlay with drawing enabled
             # Remove minimum size constraint
             self.setMinimumSize(0, 0)
             # Restore full opacity
             self.setWindowOpacity(1.0)
-            # unless drawing mode is enabled
-            if not self._drawing_enabled:
-                self.setWindowFlags(
-                    Qt.WindowType.FramelessWindowHint
-                    | Qt.WindowType.WindowStaysOnTopHint
-                    | Qt.WindowType.Tool
-                    | Qt.WindowType.WindowTransparentForInput
-                )
-            else:
-                # Drawing mode: Frameless but accepts input
-                self.setWindowFlags(
-                    Qt.WindowType.FramelessWindowHint
-                    | Qt.WindowType.WindowStaysOnTopHint
-                    | Qt.WindowType.Tool
-                )
+            # Always enable drawing after resize
+            self._drawing_enabled = True
+            self.setWindowFlags(
+                Qt.WindowType.FramelessWindowHint
+                | Qt.WindowType.WindowStaysOnTopHint
+                | Qt.WindowType.Tool
+                # No WindowTransparentForInput - drawing is always enabled
+            )
 
         self.show()
         self.update()
@@ -309,5 +225,4 @@ class OverlayWindow(QWidget):
 
     def closeEvent(self, event):
         """Handle close event"""
-        self.stop_tracking()
         super().closeEvent(event)
