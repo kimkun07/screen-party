@@ -108,11 +108,11 @@ class MainWindow(QMainWindow):
 
         start_layout.addSpacing(20)
 
-        # 세션 생성 / 세션 참여 (두 column 배치)
+        # 세션 생성 / 세션 참여 (두 column 배치, 1:1 비율)
         columns_layout = QHBoxLayout()
         columns_layout.setSpacing(20)
 
-        # 세션 생성 column
+        # 세션 생성 column (왼쪽)
         create_column = QVBoxLayout()
         create_label = QLabel("세션 생성")
         create_label_font = QFont()
@@ -128,10 +128,11 @@ class MainWindow(QMainWindow):
         self.create_button.clicked.connect(
             lambda: asyncio.create_task(self.on_create_session()))
         create_column.addWidget(self.create_button)
+        create_column.addStretch()  # 아래쪽 공간 채우기
 
-        columns_layout.addLayout(create_column)
+        columns_layout.addLayout(create_column, 1)  # stretch factor = 1
 
-        # 세션 참여 column
+        # 세션 참여 column (오른쪽)
         join_column = QVBoxLayout()
         join_label = QLabel("세션 참여")
         join_label_font = QFont()
@@ -150,6 +151,8 @@ class MainWindow(QMainWindow):
         self.session_input.textChanged.connect(self.on_session_input_changed)
         join_column.addWidget(self.session_input)
 
+        join_column.addSpacing(5)  # 입력과 버튼 사이 간격
+
         self.join_button = QPushButton("접속")
         self.join_button.setMinimumHeight(50)
         self.join_button.setEnabled(False)
@@ -157,7 +160,7 @@ class MainWindow(QMainWindow):
             lambda: asyncio.create_task(self.on_join_session()))
         join_column.addWidget(self.join_button)
 
-        columns_layout.addLayout(join_column)
+        columns_layout.addLayout(join_column, 1)  # stretch factor = 1
 
         start_layout.addLayout(columns_layout)
 
