@@ -6,7 +6,7 @@ from typing import Optional
 
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QPushButton,
-    QLabel, QInputDialog, QMessageBox, QHBoxLayout, QLineEdit,
+    QLabel, QInputDialog, QHBoxLayout, QLineEdit,
     QApplication, QGroupBox, QSlider
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QSettings
@@ -103,33 +103,58 @@ class MainWindow(QMainWindow):
 
         start_layout.addSpacing(20)
 
-        # 세션 번호 입력 + 접속 버튼 (가로 레이아웃)
-        session_label = QLabel("세션 번호:")
-        start_layout.addWidget(session_label)
+        # 세션 생성 / 세션 참여 (두 column 배치)
+        columns_layout = QHBoxLayout()
+        columns_layout.setSpacing(20)
 
-        session_layout = QHBoxLayout()
-        self.session_input = QLineEdit()
-        self.session_input.setPlaceholderText("세션 번호 입력")
-        self.session_input.textChanged.connect(self.on_session_input_changed)
-        session_layout.addWidget(self.session_input)
+        # 세션 생성 column
+        create_column = QVBoxLayout()
+        create_label = QLabel("세션 생성")
+        create_label_font = QFont()
+        create_label_font.setPointSize(14)
+        create_label_font.setBold(True)
+        create_label.setFont(create_label_font)
+        create_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        create_column.addWidget(create_label)
+        create_column.addSpacing(10)
 
-        self.join_button = QPushButton("접속")
-        self.join_button.setMinimumHeight(40)
-        self.join_button.setEnabled(False)
-        self.join_button.clicked.connect(
-            lambda: asyncio.create_task(self.on_join_session()))
-        session_layout.addWidget(self.join_button)
-
-        start_layout.addLayout(session_layout)
-
-        start_layout.addSpacing(20)
-
-        # 세션 생성 버튼
         self.create_button = QPushButton("세션 생성")
         self.create_button.setMinimumHeight(50)
         self.create_button.clicked.connect(
             lambda: asyncio.create_task(self.on_create_session()))
-        start_layout.addWidget(self.create_button)
+        create_column.addWidget(self.create_button)
+
+        columns_layout.addLayout(create_column)
+
+        # 세션 참여 column
+        join_column = QVBoxLayout()
+        join_label = QLabel("세션 참여")
+        join_label_font = QFont()
+        join_label_font.setPointSize(14)
+        join_label_font.setBold(True)
+        join_label.setFont(join_label_font)
+        join_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        join_column.addWidget(join_label)
+        join_column.addSpacing(10)
+
+        session_label = QLabel("세션 번호:")
+        join_column.addWidget(session_label)
+
+        self.session_input = QLineEdit()
+        self.session_input.setPlaceholderText("세션 번호 입력")
+        self.session_input.textChanged.connect(self.on_session_input_changed)
+        join_column.addWidget(self.session_input)
+
+        self.join_button = QPushButton("접속")
+        self.join_button.setMinimumHeight(50)
+        self.join_button.setEnabled(False)
+        self.join_button.clicked.connect(
+            lambda: asyncio.create_task(self.on_join_session()))
+        join_column.addWidget(self.join_button)
+
+        columns_layout.addLayout(join_column)
+
+        start_layout.addLayout(columns_layout)
 
         start_layout.addSpacing(20)
 
@@ -334,7 +359,7 @@ class MainWindow(QMainWindow):
         try:
             server_url = self.server_input.text().strip()
             if not server_url:
-                QMessageBox.warning(self, "입력 오류", "서버 주소를 입력해주세요")
+                self.set_start_status("오류: 서버 주소를 입력해주세요")
                 return
 
             logger.info("=" * 60)
@@ -373,21 +398,9 @@ class MainWindow(QMainWindow):
                 # DrawingCanvas에 user_id 설정
                 self.drawing_canvas.set_user_id(self.user_id)
 
-                # 클립보드에 (서버주소, 세션번호) 복사
-                clipboard = QApplication.clipboard()
-                clipboard_text = f"({server_url}, {self.session_id})"
-                clipboard.setText(clipboard_text)
-
                 # 서버 주소 저장
                 self.settings.setValue("server_url", server_url)
                 logger.info(f"Server URL saved to settings: {server_url}")
-
-                # 성공 팝업 표시
-                QMessageBox.information(
-                    self,
-                    "세션 생성 성공",
-                    f"세션이 생성되었습니다.\n\n서버 주소: {server_url}\n세션 번호: {self.session_id}\n\n클립보드에 복사되었습니다."
-                )
 
                 self.session_created.emit(self.session_id, self.user_id)
 
@@ -407,7 +420,6 @@ class MainWindow(QMainWindow):
             logger.error(f"Session creation failed: {e}", exc_info=True)
             self.set_start_status(f"오류: {e}")
             self.error_occurred.emit(str(e))
-            QMessageBox.critical(self, "오류", f"세션 생성 실패:\n{e}")
             self.enable_start_buttons()
             if self.client:
                 await self.client.disconnect()
@@ -420,11 +432,11 @@ class MainWindow(QMainWindow):
             session_id = self.session_input.text().strip().upper()
 
             if not server_url:
-                QMessageBox.warning(self, "입력 오류", "서버 주소를 입력해주세요")
+                self.set_start_status("오류: 서버 주소를 입력해주세요")
                 return
 
             if not session_id:
-                QMessageBox.warning(self, "입력 오류", "세션 번호를 입력해주세요")
+                self.set_start_status("오류: 세션 번호를 입력해주세요")
                 return
 
             logger.info("=" * 60)
@@ -486,7 +498,6 @@ class MainWindow(QMainWindow):
             logger.error(f"Session join failed: {e}", exc_info=True)
             self.set_start_status(f"오류: {e}")
             self.error_occurred.emit(str(e))
-            QMessageBox.critical(self, "오류", f"세션 참여 실패:\n{e}")
             self.enable_start_buttons()
             if self.client:
                 await self.client.disconnect()
@@ -550,7 +561,6 @@ class MainWindow(QMainWindow):
         elif msg_type == "session_expired":
             reason = message.get("message", "Session expired")
             self.set_status(f"Session expired: {reason}")
-            QMessageBox.warning(self, "Session Expired", reason)
             await self.disconnect()
 
         elif msg_type == "error":
@@ -762,11 +772,7 @@ class MainWindow(QMainWindow):
 
         except Exception as e:
             logger.error(f"Failed to create overlay: {e}", exc_info=True)
-            QMessageBox.critical(
-                self,
-                "오류",
-                f"그림 영역 생성 실패:\n{e}",
-            )
+            self.set_status(f"오류: 그림 영역 생성 실패: {e}")
             self.stop_overlay()
 
     def stop_overlay(self):
