@@ -1,13 +1,37 @@
 """Transparent overlay window that follows a target window"""
 
+from enum import Enum
 from typing import Optional
 
 from PyQt6.QtWidgets import QWidget, QVBoxLayout
-from PyQt6.QtCore import Qt, QTimer, QRect, pyqtSignal
-from PyQt6.QtGui import QPainter, QColor
+from PyQt6.QtCore import Qt, QTimer, QRect, QPoint, pyqtSignal
+from PyQt6.QtGui import QPainter, QColor, QPen
 
 from ..drawing.canvas import DrawingCanvas
 from ..utils.window_manager import WindowManager
+
+
+class ResizeDirection(Enum):
+    """Resize direction for overlay window"""
+    NONE = 0
+    TOP_LEFT = 1
+    TOP = 2
+    TOP_RIGHT = 3
+    RIGHT = 4
+    BOTTOM_RIGHT = 5
+    BOTTOM = 6
+    BOTTOM_LEFT = 7
+    LEFT = 8
+    MOVE = 9  # Title bar drag (move entire window)
+
+
+# Resize handle constants
+HANDLE_SIZE = 10  # Handle area size (pixels)
+HANDLE_COLOR = QColor(0, 120, 215)  # Handle color (blue)
+BORDER_COLOR = QColor(0, 120, 215)  # Border color
+BORDER_WIDTH = 2  # Border width
+MIN_WIDTH = 200  # Minimum window width
+MIN_HEIGHT = 150  # Minimum window height
 
 
 class OverlayWindow(QWidget):
@@ -35,6 +59,12 @@ class OverlayWindow(QWidget):
         self._was_minimized = False
         # Start with drawing disabled (click passthrough)
         self._drawing_enabled = False
+
+        # Resize mode state
+        self._resize_mode = False
+        self._resize_direction = ResizeDirection.NONE
+        self._resize_start_pos = None
+        self._resize_start_geometry = None
 
         if pen_color is None:
             pen_color = QColor(255, 182, 193)  # Default: 파스텔 핑크 (첫 번째 프리셋)
@@ -85,6 +115,8 @@ class OverlayWindow(QWidget):
         background will not receive clicks. We need alpha > 0 to receive events.
 
         Using QColor(0, 0, 0, 1) - almost invisible but clickable.
+
+        In resize mode, also draw border and handles.
         """
         painter = QPainter(self)
 
@@ -92,6 +124,39 @@ class OverlayWindow(QWidget):
         # Without this, clicks will pass through even when WindowTransparentForInput is disabled
         # alpha=1: barely visible but clickable
         painter.fillRect(self.rect(), QColor(0, 0, 0, 1))
+
+        # Draw border and handles in resize mode
+        if self._resize_mode:
+            # Draw border
+            pen = QPen(BORDER_COLOR, BORDER_WIDTH)
+            painter.setPen(pen)
+            painter.drawRect(self.rect().adjusted(1, 1, -1, -1))
+
+            # Draw handles (8 directions)
+            painter.setBrush(HANDLE_COLOR)
+            painter.setPen(Qt.PenStyle.NoPen)
+
+            w, h = self.width(), self.height()
+
+            # Corner handles
+            # Top-left
+            painter.drawRect(0, 0, HANDLE_SIZE, HANDLE_SIZE)
+            # Top-right
+            painter.drawRect(w - HANDLE_SIZE, 0, HANDLE_SIZE, HANDLE_SIZE)
+            # Bottom-left
+            painter.drawRect(0, h - HANDLE_SIZE, HANDLE_SIZE, HANDLE_SIZE)
+            # Bottom-right
+            painter.drawRect(w - HANDLE_SIZE, h - HANDLE_SIZE, HANDLE_SIZE, HANDLE_SIZE)
+
+            # Edge handles (centered)
+            # Top
+            painter.drawRect((w - HANDLE_SIZE) // 2, 0, HANDLE_SIZE, HANDLE_SIZE)
+            # Bottom
+            painter.drawRect((w - HANDLE_SIZE) // 2, h - HANDLE_SIZE, HANDLE_SIZE, HANDLE_SIZE)
+            # Left
+            painter.drawRect(0, (h - HANDLE_SIZE) // 2, HANDLE_SIZE, HANDLE_SIZE)
+            # Right
+            painter.drawRect(w - HANDLE_SIZE, (h - HANDLE_SIZE) // 2, HANDLE_SIZE, HANDLE_SIZE)
 
         # Call parent's paintEvent to render DrawingCanvas
         super().paintEvent(event)
@@ -199,6 +264,230 @@ class OverlayWindow(QWidget):
             event.accept()
         else:
             super().keyPressEvent(event)
+
+    # ========== Resize Mode Methods ==========
+
+    def is_resize_mode(self) -> bool:
+        """Check if resize mode is enabled"""
+        return self._resize_mode
+
+    def set_resize_mode(self, enabled: bool):
+        """Enable or disable resize mode
+
+        Args:
+            enabled: True to enable resize mode, False to disable
+        """
+        if self._resize_mode == enabled:
+            return
+
+        self._resize_mode = enabled
+
+        # Disable drawing mode when entering resize mode
+        if enabled and self._drawing_enabled:
+            self.set_drawing_enabled(False)
+
+        # Update window flags to allow mouse input in resize mode
+        if enabled:
+            # Resize mode: Remove WindowTransparentForInput (allow mouse input)
+            self.setWindowFlags(
+                Qt.WindowType.FramelessWindowHint
+                | Qt.WindowType.WindowStaysOnTopHint
+                | Qt.WindowType.Tool
+            )
+        else:
+            # Normal mode: Add WindowTransparentForInput (click passthrough)
+            # unless drawing mode is enabled
+            if not self._drawing_enabled:
+                self.setWindowFlags(
+                    Qt.WindowType.FramelessWindowHint
+                    | Qt.WindowType.WindowStaysOnTopHint
+                    | Qt.WindowType.Tool
+                    | Qt.WindowType.WindowTransparentForInput
+                )
+
+        self.show()
+        self.update()
+
+        # Set focus to receive mouse events
+        if enabled:
+            self.setFocus()
+
+    def get_resize_direction(self, pos: QPoint) -> ResizeDirection:
+        """Get resize direction from mouse position
+
+        Args:
+            pos: Mouse position
+
+        Returns:
+            ResizeDirection enum value
+        """
+        x, y = pos.x(), pos.y()
+        w, h = self.width(), self.height()
+
+        # Define handle regions
+        in_left = x < HANDLE_SIZE
+        in_right = x > w - HANDLE_SIZE
+        in_top = y < HANDLE_SIZE
+        in_bottom = y > h - HANDLE_SIZE
+        in_title = y < 30 and not (in_left or in_right)  # Title bar area (30px)
+
+        # Check corners first (priority)
+        if in_top and in_left:
+            return ResizeDirection.TOP_LEFT
+        if in_top and in_right:
+            return ResizeDirection.TOP_RIGHT
+        if in_bottom and in_left:
+            return ResizeDirection.BOTTOM_LEFT
+        if in_bottom and in_right:
+            return ResizeDirection.BOTTOM_RIGHT
+
+        # Check edges
+        if in_top:
+            return ResizeDirection.TOP
+        if in_bottom:
+            return ResizeDirection.BOTTOM
+        if in_left:
+            return ResizeDirection.LEFT
+        if in_right:
+            return ResizeDirection.RIGHT
+
+        # Title bar (move entire window)
+        if in_title:
+            return ResizeDirection.MOVE
+
+        return ResizeDirection.NONE
+
+    def get_cursor_for_direction(self, direction: ResizeDirection) -> Qt.CursorShape:
+        """Get cursor shape for resize direction
+
+        Args:
+            direction: Resize direction
+
+        Returns:
+            Qt.CursorShape enum value
+        """
+        cursor_map = {
+            ResizeDirection.TOP_LEFT: Qt.CursorShape.SizeFDiagCursor,
+            ResizeDirection.TOP_RIGHT: Qt.CursorShape.SizeBDiagCursor,
+            ResizeDirection.BOTTOM_LEFT: Qt.CursorShape.SizeBDiagCursor,
+            ResizeDirection.BOTTOM_RIGHT: Qt.CursorShape.SizeFDiagCursor,
+            ResizeDirection.TOP: Qt.CursorShape.SizeVerCursor,
+            ResizeDirection.BOTTOM: Qt.CursorShape.SizeVerCursor,
+            ResizeDirection.LEFT: Qt.CursorShape.SizeHorCursor,
+            ResizeDirection.RIGHT: Qt.CursorShape.SizeHorCursor,
+            ResizeDirection.MOVE: Qt.CursorShape.SizeAllCursor,
+        }
+        return cursor_map.get(direction, Qt.CursorShape.ArrowCursor)
+
+    def mousePressEvent(self, event):
+        """Handle mouse press events for resize"""
+        if not self._resize_mode:
+            super().mousePressEvent(event)
+            return
+
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._resize_direction = self.get_resize_direction(event.pos())
+            if self._resize_direction != ResizeDirection.NONE:
+                self._resize_start_pos = event.globalPosition().toPoint()
+                self._resize_start_geometry = self.geometry()
+                event.accept()
+                return
+
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        """Handle mouse move events for resize"""
+        if not self._resize_mode:
+            super().mouseMoveEvent(event)
+            return
+
+        # Update cursor based on position
+        if self._resize_direction == ResizeDirection.NONE:
+            direction = self.get_resize_direction(event.pos())
+            self.setCursor(self.get_cursor_for_direction(direction))
+            super().mouseMoveEvent(event)
+            return
+
+        # Perform resize
+        if self._resize_start_pos is None or self._resize_start_geometry is None:
+            super().mouseMoveEvent(event)
+            return
+
+        delta = event.globalPosition().toPoint() - self._resize_start_pos
+        dx, dy = delta.x(), delta.y()
+
+        # Calculate new geometry
+        x = self._resize_start_geometry.x()
+        y = self._resize_start_geometry.y()
+        w = self._resize_start_geometry.width()
+        h = self._resize_start_geometry.height()
+
+        direction = self._resize_direction
+
+        if direction == ResizeDirection.TOP_LEFT:
+            x += dx
+            y += dy
+            w -= dx
+            h -= dy
+        elif direction == ResizeDirection.TOP:
+            y += dy
+            h -= dy
+        elif direction == ResizeDirection.TOP_RIGHT:
+            y += dy
+            w += dx
+            h -= dy
+        elif direction == ResizeDirection.RIGHT:
+            w += dx
+        elif direction == ResizeDirection.BOTTOM_RIGHT:
+            w += dx
+            h += dy
+        elif direction == ResizeDirection.BOTTOM:
+            h += dy
+        elif direction == ResizeDirection.BOTTOM_LEFT:
+            x += dx
+            w -= dx
+            h += dy
+        elif direction == ResizeDirection.LEFT:
+            x += dx
+            w -= dx
+        elif direction == ResizeDirection.MOVE:
+            x += dx
+            y += dy
+
+        # Apply minimum size constraints
+        if w < MIN_WIDTH:
+            if direction in [ResizeDirection.LEFT, ResizeDirection.TOP_LEFT, ResizeDirection.BOTTOM_LEFT]:
+                x = self._resize_start_geometry.x() + self._resize_start_geometry.width() - MIN_WIDTH
+            w = MIN_WIDTH
+
+        if h < MIN_HEIGHT:
+            if direction in [ResizeDirection.TOP, ResizeDirection.TOP_LEFT, ResizeDirection.TOP_RIGHT]:
+                y = self._resize_start_geometry.y() + self._resize_start_geometry.height() - MIN_HEIGHT
+            h = MIN_HEIGHT
+
+        # Update geometry
+        self.setGeometry(x, y, w, h)
+        event.accept()
+
+    def mouseReleaseEvent(self, event):
+        """Handle mouse release events for resize"""
+        if not self._resize_mode:
+            super().mouseReleaseEvent(event)
+            return
+
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._resize_direction = ResizeDirection.NONE
+            self._resize_start_pos = None
+            self._resize_start_geometry = None
+            # Update cursor
+            direction = self.get_resize_direction(event.pos())
+            self.setCursor(self.get_cursor_for_direction(direction))
+            event.accept()
+            return
+
+        super().mouseReleaseEvent(event)
+
+    # ========== End Resize Mode Methods ==========
 
     def closeEvent(self, event):
         """Handle close event"""

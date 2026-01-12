@@ -276,6 +276,12 @@ class MainWindow(QMainWindow):
         self.toggle_drawing_button.clicked.connect(self.toggle_drawing_mode)
         overlay_section_layout.addWidget(self.toggle_drawing_button)
 
+        self.resize_overlay_button = QPushButton("그림 영역 크기 조정")
+        self.resize_overlay_button.setMinimumHeight(40)
+        self.resize_overlay_button.setEnabled(False)
+        self.resize_overlay_button.clicked.connect(self.toggle_resize_mode)
+        overlay_section_layout.addWidget(self.resize_overlay_button)
+
         self.clear_drawings_button = QPushButton("Clear Drawings")
         self.clear_drawings_button.setMinimumHeight(40)
         self.clear_drawings_button.setEnabled(False)
@@ -758,6 +764,7 @@ class MainWindow(QMainWindow):
 
             # 버튼 활성화 및 텍스트 업데이트
             self.toggle_drawing_button.setEnabled(True)
+            self.resize_overlay_button.setEnabled(True)
             self.clear_drawings_button.setEnabled(True)
             self.setup_overlay_button.setText("Stop Overlay")
             self.set_status("Overlay started (drawing disabled)")
@@ -793,6 +800,8 @@ class MainWindow(QMainWindow):
         self.setup_overlay_button.setText("그림 영역 설정")
         self.toggle_drawing_button.setEnabled(False)
         self.toggle_drawing_button.setText("그리기 활성화")
+        self.resize_overlay_button.setEnabled(False)
+        self.resize_overlay_button.setText("그림 영역 크기 조정")
         self.clear_drawings_button.setEnabled(False)
 
         self.set_status("Overlay stopped")
@@ -840,6 +849,22 @@ class MainWindow(QMainWindow):
             self.toggle_drawing_button.setText("그리기 활성화")
             self.set_status("Drawing disabled (click passthrough)")
             logger.info("Drawing mode disabled")
+
+    def toggle_resize_mode(self):
+        """Toggle resize mode"""
+        if self.overlay_window:
+            current = self.overlay_window.is_resize_mode()
+            self.overlay_window.set_resize_mode(not current)
+
+            # Update button text
+            if not current:
+                self.resize_overlay_button.setText("그림 영역 크기 조정 완료")
+                self.set_status("Resize mode enabled (drag borders/corners to resize)")
+                logger.info("Resize mode enabled")
+            else:
+                self.resize_overlay_button.setText("그림 영역 크기 조정")
+                self.set_status("Resize mode disabled")
+                logger.info("Resize mode disabled")
 
     # ================================================================
 
