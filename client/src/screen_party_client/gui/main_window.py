@@ -743,8 +743,6 @@ class MainWindow(QMainWindow):
             # 오버레이 시그널 연결
             self.overlay_window.target_window_closed.connect(
                 self.on_overlay_window_closed)
-            self.overlay_window.geometry_changed.connect(
-                self.on_overlay_geometry_changed)
             self.overlay_window.target_window_minimized.connect(
                 self.on_overlay_minimized)
             self.overlay_window.target_window_restored.connect(
@@ -817,9 +815,6 @@ class MainWindow(QMainWindow):
             self.set_status("Overlay drawings cleared")
             logger.info("Overlay drawings cleared")
 
-    def on_overlay_geometry_changed(self, new_rect):
-        """Handle overlay geometry change"""
-        pass  # No FAB to update
 
     def on_overlay_minimized(self):
         """Handle overlay minimized"""

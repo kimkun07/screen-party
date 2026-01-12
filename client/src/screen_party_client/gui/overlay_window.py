@@ -17,7 +17,6 @@ class OverlayWindow(QWidget):
     target_window_closed = pyqtSignal()
     target_window_minimized = pyqtSignal()
     target_window_restored = pyqtSignal()
-    geometry_changed = pyqtSignal(QRect)
     drawing_mode_changed = pyqtSignal(bool)
 
     def __init__(
@@ -104,7 +103,7 @@ class OverlayWindow(QWidget):
         self.sync_timer.start(100)  # 100ms interval (10 FPS)
 
     def sync_with_target(self):
-        """Sync overlay position/size with target window"""
+        """Check target window status (minimized/closed only, no position/size sync)"""
         if not self.is_tracking:
             return
 
@@ -129,19 +128,6 @@ class OverlayWindow(QWidget):
                 self.show()
                 self._was_minimized = False
                 self.target_window_restored.emit()
-
-        # Get current window info
-        window_info = self.window_manager.get_window_info(self.target_handle)
-        if not window_info:
-            return
-
-        # Update geometry if changed
-        new_rect = QRect(
-            window_info.x, window_info.y, window_info.width, window_info.height
-        )
-        if self.geometry() != new_rect:
-            self.setGeometry(new_rect)
-            self.geometry_changed.emit(new_rect)
 
     def stop_tracking(self):
         """Stop tracking target window"""
