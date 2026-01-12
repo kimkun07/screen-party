@@ -207,40 +207,47 @@ class MainWindow(QMainWindow):
 
         main_screen_layout.addSpacing(20)
 
-        # ===== 그림 화면 설정 섹션 =====
-        overlay_group = QGroupBox("그림 화면 설정")
-        overlay_layout = QVBoxLayout()
-        overlay_group.setLayout(overlay_layout)
+        # ===== 그림 영역 설정 섹션 (통합) =====
+        overlay_group = QGroupBox("그림 영역 설정")
+        self.overlay_group_layout = QVBoxLayout()
+        overlay_group.setLayout(self.overlay_group_layout)
 
+        # 초기 상태: 그림 영역 생성 버튼
         self.setup_overlay_button = QPushButton("그림 영역 생성")
         self.setup_overlay_button.setMinimumHeight(45)
         self.setup_overlay_button.clicked.connect(self.toggle_overlay)
-        overlay_layout.addWidget(self.setup_overlay_button)
+        self.overlay_group_layout.addWidget(self.setup_overlay_button)
+
+        # 생성 후 상태: 크기 조정 + 삭제 버튼 (8:2 비율)
+        self.overlay_control_widget = QWidget()
+        overlay_control_layout = QHBoxLayout()
+        overlay_control_layout.setContentsMargins(0, 0, 0, 0)
+        overlay_control_layout.setSpacing(10)
+        self.overlay_control_widget.setLayout(overlay_control_layout)
 
         self.resize_overlay_button = QPushButton("그림 영역 크기 조정")
         self.resize_overlay_button.setMinimumHeight(40)
-        self.resize_overlay_button.setEnabled(False)
         self.resize_overlay_button.clicked.connect(self.toggle_resize_mode)
-        overlay_layout.addWidget(self.resize_overlay_button)
+        overlay_control_layout.addWidget(self.resize_overlay_button, 8)  # 80%
 
-        main_screen_layout.addWidget(overlay_group)
+        self.delete_overlay_button = QPushButton("삭제")
+        self.delete_overlay_button.setMinimumHeight(40)
+        self.delete_overlay_button.clicked.connect(self.stop_overlay)
+        overlay_control_layout.addWidget(self.delete_overlay_button, 2)  # 20%
 
-        main_screen_layout.addSpacing(15)
+        self.overlay_group_layout.addWidget(self.overlay_control_widget)
+        self.overlay_control_widget.hide()  # 초기에는 숨김
 
-        # ===== 그리기 설정 섹션 =====
-        drawing_group = QGroupBox("그리기 설정")
-        drawing_layout = QVBoxLayout()
-        drawing_group.setLayout(drawing_layout)
-
+        # 그리기 활성화/비활성화 버튼
         self.toggle_drawing_button = QPushButton("그리기 활성화")
         self.toggle_drawing_button.setMinimumHeight(40)
         self.toggle_drawing_button.setEnabled(False)
         self.toggle_drawing_button.clicked.connect(self.toggle_drawing_mode)
-        drawing_layout.addWidget(self.toggle_drawing_button)
+        self.overlay_group_layout.addWidget(self.toggle_drawing_button)
 
         # 색상 팔레트 (프리셋 색상 버튼들)
         palette_label = QLabel("색상:")
-        drawing_layout.addWidget(palette_label)
+        self.overlay_group_layout.addWidget(palette_label)
 
         palette_layout = QHBoxLayout()
         self.color_buttons = []
@@ -256,11 +263,11 @@ class MainWindow(QMainWindow):
             palette_layout.addWidget(btn)
             self.color_buttons.append(btn)
 
-        drawing_layout.addLayout(palette_layout)
+        self.overlay_group_layout.addLayout(palette_layout)
 
         # Alpha 슬라이더
         alpha_label = QLabel("투명도: 100%")
-        drawing_layout.addWidget(alpha_label)
+        self.overlay_group_layout.addWidget(alpha_label)
 
         self.alpha_slider = QSlider(Qt.Orientation.Horizontal)
         self.alpha_slider.setMinimum(0)
@@ -271,15 +278,16 @@ class MainWindow(QMainWindow):
         self.alpha_slider.valueChanged.connect(
             lambda value: self.on_alpha_changed(value, alpha_label)
         )
-        drawing_layout.addWidget(self.alpha_slider)
+        self.overlay_group_layout.addWidget(self.alpha_slider)
 
+        # 그림 모두 지우기 버튼
         self.clear_drawings_button = QPushButton("그림 모두 지우기")
         self.clear_drawings_button.setMinimumHeight(40)
         self.clear_drawings_button.setEnabled(False)
         self.clear_drawings_button.clicked.connect(self.clear_overlay_drawings)
-        drawing_layout.addWidget(self.clear_drawings_button)
+        self.overlay_group_layout.addWidget(self.clear_drawings_button)
 
-        main_screen_layout.addWidget(drawing_group)
+        main_screen_layout.addWidget(overlay_group)
 
         main_screen_layout.addSpacing(15)
 
@@ -758,11 +766,8 @@ class MainWindow(QMainWindow):
     # ========== 오버레이 모드 메서드 ==========
 
     def toggle_overlay(self):
-        """그림 영역 생성/삭제 토글"""
-        if self.is_sharing:
-            self.stop_overlay()
-        else:
-            self.create_overlay()
+        """그림 영역 생성 (버튼에서 호출)"""
+        self.create_overlay()
 
     def create_overlay(self):
         """그림 영역 생성"""
@@ -785,11 +790,12 @@ class MainWindow(QMainWindow):
             self.overlay_window.drawing_mode_changed.connect(
                 self.on_drawing_mode_changed)
 
-            # 버튼 활성화 및 텍스트 업데이트
-            self.resize_overlay_button.setEnabled(True)
+            # UI 상태 전환: 생성 버튼 숨기고 컨트롤 위젯 표시
+            self.setup_overlay_button.hide()
+            self.overlay_control_widget.show()
             self.toggle_drawing_button.setEnabled(True)
             self.clear_drawings_button.setEnabled(True)
-            self.setup_overlay_button.setText("그림 영역 삭제")
+
             self.set_status("그림 영역이 생성되었습니다. 크기를 조정하세요.")
 
             # 창 표시
@@ -818,10 +824,12 @@ class MainWindow(QMainWindow):
                 logger.error(f"Error closing overlay: {e}")
             self.overlay_window = None
 
+        # UI 상태 전환: 컨트롤 위젯 숨기고 생성 버튼 표시
+        self.overlay_control_widget.hide()
+        self.setup_overlay_button.show()
+
         # 버튼 상태 리셋
         self.is_sharing = False
-        self.setup_overlay_button.setText("그림 영역 생성")
-        self.resize_overlay_button.setEnabled(False)
         self.resize_overlay_button.setText("그림 영역 크기 조정")
         self.toggle_drawing_button.setEnabled(False)
         self.toggle_drawing_button.setText("그리기 활성화")
