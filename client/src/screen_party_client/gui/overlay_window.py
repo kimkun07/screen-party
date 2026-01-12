@@ -72,7 +72,9 @@ class OverlayWindow(QWidget):
         self.init_ui(pen_color)
         self.setup_sync_timer()
 
-        # Initial sync
+        # Set initial position/size from target window
+        self.set_initial_geometry()
+        # Start tracking for minimize/close events
         self.sync_with_target()
 
     def init_ui(self, pen_color: QColor):
@@ -166,6 +168,27 @@ class OverlayWindow(QWidget):
         self.sync_timer = QTimer(self)
         self.sync_timer.timeout.connect(self.sync_with_target)
         self.sync_timer.start(100)  # 100ms interval (10 FPS)
+
+    def set_initial_geometry(self):
+        """Set initial position/size from target window"""
+        import logging
+        logger = logging.getLogger(__name__)
+
+        window_info = self.window_manager.get_window_info(self.target_handle)
+        if not window_info:
+            logger.error(f"[OverlayWindow] Failed to get window info for handle {self.target_handle}")
+            return
+
+        # Set geometry to match target window
+        initial_rect = QRect(
+            window_info.x, window_info.y, window_info.width, window_info.height
+        )
+        self.setGeometry(initial_rect)
+
+        logger.info(f"[OverlayWindow] Initial geometry set:")
+        logger.info(f"  Position: ({window_info.x}, {window_info.y})")
+        logger.info(f"  Size: {window_info.width}x{window_info.height}")
+        logger.info(f"  Target handle: {self.target_handle}")
 
     def sync_with_target(self):
         """Check target window status (minimized/closed only, no position/size sync)"""
@@ -281,6 +304,15 @@ class OverlayWindow(QWidget):
             return
 
         self._resize_mode = enabled
+
+        # Log current geometry when entering resize mode
+        import logging
+        logger = logging.getLogger(__name__)
+        g = self.geometry()
+        if enabled:
+            logger.info(f"[OverlayWindow] Resize mode ENABLED. Current geometry: pos=({g.x()}, {g.y()}), size={g.width()}x{g.height()}")
+        else:
+            logger.info(f"[OverlayWindow] Resize mode DISABLED. Final geometry: pos=({g.x()}, {g.y()}), size={g.width()}x{g.height()}")
 
         # Disable drawing mode when entering resize mode
         if enabled and self._drawing_enabled:
@@ -467,6 +499,13 @@ class OverlayWindow(QWidget):
 
         # Update geometry
         self.setGeometry(x, y, w, h)
+
+        # Log geometry change (only on significant changes to reduce spam)
+        import logging
+        logger = logging.getLogger(__name__)
+        if abs(dx) > 5 or abs(dy) > 5:  # Only log if moved/resized more than 5px
+            logger.debug(f"[OverlayWindow] Resized: pos=({x}, {y}), size={w}x{h}")
+
         event.accept()
 
     def mouseReleaseEvent(self, event):
@@ -476,6 +515,13 @@ class OverlayWindow(QWidget):
             return
 
         if event.button() == Qt.MouseButton.LeftButton:
+            # Log final geometry
+            if self._resize_direction != ResizeDirection.NONE:
+                import logging
+                logger = logging.getLogger(__name__)
+                g = self.geometry()
+                logger.info(f"[OverlayWindow] Resize completed: pos=({g.x()}, {g.y()}), size={g.width()}x{g.height()}")
+
             self._resize_direction = ResizeDirection.NONE
             self._resize_start_pos = None
             self._resize_start_geometry = None
