@@ -197,19 +197,25 @@ class OverlayWindow(QWidget):
             # Set window opacity to 30% (transparent enough to see through)
             self.setWindowOpacity(0.3)
         else:
-            # Normal mode: Frameless overlay with drawing enabled
+            # Normal mode: Frameless overlay (drawing controlled by user)
             # Remove minimum size constraint
             self.setMinimumSize(0, 0)
             # Restore full opacity
             self.setWindowOpacity(1.0)
-            # Always enable drawing after resize
-            self._drawing_enabled = True
-            self.setWindowFlags(
-                Qt.WindowType.FramelessWindowHint
-                | Qt.WindowType.WindowStaysOnTopHint
-                | Qt.WindowType.Tool
-                # No WindowTransparentForInput - drawing is always enabled
-            )
+            # Set window flags based on drawing state
+            if not self._drawing_enabled:
+                self.setWindowFlags(
+                    Qt.WindowType.FramelessWindowHint
+                    | Qt.WindowType.WindowStaysOnTopHint
+                    | Qt.WindowType.Tool
+                    | Qt.WindowType.WindowTransparentForInput
+                )
+            else:
+                self.setWindowFlags(
+                    Qt.WindowType.FramelessWindowHint
+                    | Qt.WindowType.WindowStaysOnTopHint
+                    | Qt.WindowType.Tool
+                )
 
         self.show()
         self.update()

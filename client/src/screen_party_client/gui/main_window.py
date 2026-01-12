@@ -276,6 +276,18 @@ class MainWindow(QMainWindow):
         self.resize_overlay_button.clicked.connect(self.toggle_resize_mode)
         overlay_section_layout.addWidget(self.resize_overlay_button)
 
+        self.toggle_drawing_button = QPushButton("그리기 활성화")
+        self.toggle_drawing_button.setMinimumHeight(40)
+        self.toggle_drawing_button.setEnabled(False)
+        self.toggle_drawing_button.clicked.connect(self.toggle_drawing_mode)
+        overlay_section_layout.addWidget(self.toggle_drawing_button)
+
+        self.clear_drawings_button = QPushButton("그림 모두 지우기")
+        self.clear_drawings_button.setMinimumHeight(40)
+        self.clear_drawings_button.setEnabled(False)
+        self.clear_drawings_button.clicked.connect(self.clear_overlay_drawings)
+        overlay_section_layout.addWidget(self.clear_drawings_button)
+
         main_screen_layout.addLayout(overlay_section_layout)
 
         main_screen_layout.addStretch()
@@ -725,8 +737,14 @@ class MainWindow(QMainWindow):
             canvas.drawing_updated.connect(self._on_drawing_updated)
             canvas.drawing_ended.connect(self._on_drawing_ended)
 
+            # 오버레이 시그널 연결
+            self.overlay_window.drawing_mode_changed.connect(
+                self.on_drawing_mode_changed)
+
             # 버튼 활성화 및 텍스트 업데이트
             self.resize_overlay_button.setEnabled(True)
+            self.toggle_drawing_button.setEnabled(True)
+            self.clear_drawings_button.setEnabled(True)
             self.setup_overlay_button.setText("그림 영역 삭제")
             self.set_status("그림 영역이 생성되었습니다. 크기를 조정하세요.")
 
@@ -765,6 +783,9 @@ class MainWindow(QMainWindow):
         self.setup_overlay_button.setText("그림 영역 생성")
         self.resize_overlay_button.setEnabled(False)
         self.resize_overlay_button.setText("그림 영역 크기 조정")
+        self.toggle_drawing_button.setEnabled(False)
+        self.toggle_drawing_button.setText("그리기 활성화")
+        self.clear_drawings_button.setEnabled(False)
 
         self.set_status("그림 영역이 삭제되었습니다")
 
@@ -783,8 +804,32 @@ class MainWindow(QMainWindow):
                 logger.info("Resize mode enabled")
             else:
                 self.resize_overlay_button.setText("그림 영역 크기 조정")
-                self.set_status("그림 영역 준비 완료. 그리기를 시작하세요!")
-                logger.info("Resize mode disabled, drawing enabled")
+                self.set_status("그림 영역 준비 완료. 그리기 활성화 버튼을 누르세요")
+                logger.info("Resize mode disabled")
+
+    def toggle_drawing_mode(self):
+        """그리기 모드 토글"""
+        if self.overlay_window:
+            current = self.overlay_window.is_drawing_enabled()
+            self.overlay_window.set_drawing_enabled(not current)
+
+    def on_drawing_mode_changed(self, enabled: bool):
+        """그리기 모드 변경 핸들러"""
+        if enabled:
+            self.toggle_drawing_button.setText("그리기 비활성화")
+            self.set_status("그리기 활성화됨 (ESC 키로 비활성화 가능)")
+            logger.info("Drawing mode enabled")
+        else:
+            self.toggle_drawing_button.setText("그리기 활성화")
+            self.set_status("그리기 비활성화됨 (클릭이 아래로 전달됨)")
+            logger.info("Drawing mode disabled")
+
+    def clear_overlay_drawings(self):
+        """그림 모두 지우기"""
+        if self.overlay_window:
+            self.overlay_window.get_canvas().clear_all_drawings()
+            self.set_status("모든 그림이 지워졌습니다")
+            logger.info("All drawings cleared")
 
     # ================================================================
 
