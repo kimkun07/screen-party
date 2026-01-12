@@ -7,7 +7,7 @@ from typing import Optional
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QPushButton,
     QLabel, QInputDialog, QHBoxLayout, QLineEdit,
-    QApplication, QGroupBox, QSlider
+    QApplication, QGroupBox, QSlider, QScrollArea
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QSettings
 from PyQt6.QtGui import QFont, QColor
@@ -75,6 +75,11 @@ class MainWindow(QMainWindow):
 
     def create_start_screen(self):
         """시작 화면 생성"""
+        # 스크롤 영역 생성
+        self.start_scroll = QScrollArea()
+        self.start_scroll.setWidgetResizable(True)
+        self.start_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
         self.start_widget = QWidget()
         start_layout = QVBoxLayout()
         start_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -165,10 +170,17 @@ class MainWindow(QMainWindow):
 
         start_layout.addStretch()
 
-        self.main_layout.addWidget(self.start_widget)
+        # 스크롤 영역에 위젯 설정
+        self.start_scroll.setWidget(self.start_widget)
+        self.main_layout.addWidget(self.start_scroll)
 
     def create_main_screen(self):
         """메인 화면 생성"""
+        # 스크롤 영역 생성
+        self.main_scroll = QScrollArea()
+        self.main_scroll.setWidgetResizable(True)
+        self.main_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
         self.main_widget = QWidget()
         main_screen_layout = QVBoxLayout()
         main_screen_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
@@ -183,67 +195,49 @@ class MainWindow(QMainWindow):
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         main_screen_layout.addWidget(title)
 
-        main_screen_layout.addSpacing(30)
-
-        # 서버 주소 표시 + 복사 버튼
-        server_info_layout = QHBoxLayout()
-        self.server_info_label = QLabel("")
-        server_info_layout.addWidget(self.server_info_label)
-        self.copy_server_button = QPushButton("복사")
-        self.copy_server_button.clicked.connect(self.copy_server_address)
-        server_info_layout.addWidget(self.copy_server_button)
-        main_screen_layout.addLayout(server_info_layout)
-
-        main_screen_layout.addSpacing(10)
-
-        # 세션 번호 표시 + 복사 버튼
-        session_info_layout = QHBoxLayout()
-        self.session_info_label = QLabel("")
-        session_info_layout.addWidget(self.session_info_label)
-        self.copy_session_button = QPushButton("복사")
-        self.copy_session_button.clicked.connect(self.copy_session_id)
-        session_info_layout.addWidget(self.copy_session_button)
-        main_screen_layout.addLayout(session_info_layout)
-
-        main_screen_layout.addSpacing(10)
-
-        # 참여자 색상 정보 (user_id -> color indicator label)
-        self.users_colors_label = QLabel("")
-        self.users_colors_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        main_screen_layout.addWidget(self.users_colors_label)
-
         main_screen_layout.addSpacing(20)
 
-        # Status label
+        # Status label (상단에 배치)
         self.status_label = QLabel("")
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         main_screen_layout.addWidget(self.status_label)
 
         main_screen_layout.addSpacing(20)
 
-        # Drawing Canvas
-        self.drawing_canvas = DrawingCanvas(
-            parent=self.main_widget,
-            user_id=None,  # 세션 연결 시 설정
-            pen_color=get_default_pen_color(),  # 첫 번째 프리셋 색상 (파스텔 핑크)
-            pen_width=3,
-        )
-        self.drawing_canvas.setMinimumSize(600, 400)
-        main_screen_layout.addWidget(self.drawing_canvas)
+        # ===== 그림 화면 설정 섹션 =====
+        overlay_group = QGroupBox("그림 화면 설정")
+        overlay_layout = QVBoxLayout()
+        overlay_group.setLayout(overlay_layout)
 
-        # Drawing Canvas 시그널 연결
-        self._connect_drawing_signals()
+        self.setup_overlay_button = QPushButton("그림 영역 생성")
+        self.setup_overlay_button.setMinimumHeight(45)
+        self.setup_overlay_button.clicked.connect(self.toggle_overlay)
+        overlay_layout.addWidget(self.setup_overlay_button)
 
-        main_screen_layout.addSpacing(30)
+        self.resize_overlay_button = QPushButton("그림 영역 크기 조정")
+        self.resize_overlay_button.setMinimumHeight(40)
+        self.resize_overlay_button.setEnabled(False)
+        self.resize_overlay_button.clicked.connect(self.toggle_resize_mode)
+        overlay_layout.addWidget(self.resize_overlay_button)
 
-        # 색상 설정 섹션
-        color_group = QGroupBox("색상 설정")
-        color_layout = QVBoxLayout()
-        color_group.setLayout(color_layout)
+        main_screen_layout.addWidget(overlay_group)
+
+        main_screen_layout.addSpacing(15)
+
+        # ===== 그리기 설정 섹션 =====
+        drawing_group = QGroupBox("그리기 설정")
+        drawing_layout = QVBoxLayout()
+        drawing_group.setLayout(drawing_layout)
+
+        self.toggle_drawing_button = QPushButton("그리기 활성화")
+        self.toggle_drawing_button.setMinimumHeight(40)
+        self.toggle_drawing_button.setEnabled(False)
+        self.toggle_drawing_button.clicked.connect(self.toggle_drawing_mode)
+        drawing_layout.addWidget(self.toggle_drawing_button)
 
         # 색상 팔레트 (프리셋 색상 버튼들)
         palette_label = QLabel("색상:")
-        color_layout.addWidget(palette_label)
+        drawing_layout.addWidget(palette_label)
 
         palette_layout = QHBoxLayout()
         self.color_buttons = []
@@ -259,11 +253,11 @@ class MainWindow(QMainWindow):
             palette_layout.addWidget(btn)
             self.color_buttons.append(btn)
 
-        color_layout.addLayout(palette_layout)
+        drawing_layout.addLayout(palette_layout)
 
         # Alpha 슬라이더
         alpha_label = QLabel("투명도: 100%")
-        color_layout.addWidget(alpha_label)
+        drawing_layout.addWidget(alpha_label)
 
         self.alpha_slider = QSlider(Qt.Orientation.Horizontal)
         self.alpha_slider.setMinimum(0)
@@ -274,60 +268,97 @@ class MainWindow(QMainWindow):
         self.alpha_slider.valueChanged.connect(
             lambda value: self.on_alpha_changed(value, alpha_label)
         )
-        color_layout.addWidget(self.alpha_slider)
-
-        main_screen_layout.addWidget(color_group)
-
-        main_screen_layout.addSpacing(30)
-
-        # 오버레이 모드 섹션
-        overlay_section_layout = QVBoxLayout()
-
-        overlay_label = QLabel("그림 영역")
-        overlay_label_font = QFont()
-        overlay_label_font.setPointSize(12)
-        overlay_label_font.setBold(True)
-        overlay_label.setFont(overlay_label_font)
-        overlay_section_layout.addWidget(overlay_label)
-
-        self.setup_overlay_button = QPushButton("그림 영역 생성")
-        self.setup_overlay_button.setMinimumHeight(50)
-        self.setup_overlay_button.clicked.connect(self.toggle_overlay)
-        overlay_section_layout.addWidget(self.setup_overlay_button)
-
-        self.resize_overlay_button = QPushButton("그림 영역 크기 조정")
-        self.resize_overlay_button.setMinimumHeight(40)
-        self.resize_overlay_button.setEnabled(False)
-        self.resize_overlay_button.clicked.connect(self.toggle_resize_mode)
-        overlay_section_layout.addWidget(self.resize_overlay_button)
-
-        self.toggle_drawing_button = QPushButton("그리기 활성화")
-        self.toggle_drawing_button.setMinimumHeight(40)
-        self.toggle_drawing_button.setEnabled(False)
-        self.toggle_drawing_button.clicked.connect(self.toggle_drawing_mode)
-        overlay_section_layout.addWidget(self.toggle_drawing_button)
+        drawing_layout.addWidget(self.alpha_slider)
 
         self.clear_drawings_button = QPushButton("그림 모두 지우기")
         self.clear_drawings_button.setMinimumHeight(40)
         self.clear_drawings_button.setEnabled(False)
         self.clear_drawings_button.clicked.connect(self.clear_overlay_drawings)
-        overlay_section_layout.addWidget(self.clear_drawings_button)
+        drawing_layout.addWidget(self.clear_drawings_button)
 
-        main_screen_layout.addLayout(overlay_section_layout)
+        main_screen_layout.addWidget(drawing_group)
+
+        main_screen_layout.addSpacing(15)
+
+        # ===== 참여자 섹션 =====
+        participants_group = QGroupBox("참여자")
+        participants_layout = QVBoxLayout()
+        participants_group.setLayout(participants_layout)
+
+        self.users_colors_label = QLabel("연결 대기 중...")
+        self.users_colors_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        participants_layout.addWidget(self.users_colors_label)
+
+        main_screen_layout.addWidget(participants_group)
+
+        main_screen_layout.addSpacing(15)
+
+        # ===== 정보 섹션 =====
+        info_group = QGroupBox("정보")
+        info_layout = QVBoxLayout()
+        info_group.setLayout(info_layout)
+
+        # 서버 주소 표시 + 복사 버튼
+        server_info_layout = QHBoxLayout()
+        self.server_info_label = QLabel("")
+        server_info_layout.addWidget(self.server_info_label)
+        self.copy_server_button = QPushButton("복사")
+        self.copy_server_button.setMaximumWidth(60)
+        self.copy_server_button.clicked.connect(self.copy_server_address)
+        server_info_layout.addWidget(self.copy_server_button)
+        info_layout.addLayout(server_info_layout)
+
+        # 세션 번호 표시 + 복사 버튼
+        session_info_layout = QHBoxLayout()
+        self.session_info_label = QLabel("")
+        session_info_layout.addWidget(self.session_info_label)
+        self.copy_session_button = QPushButton("복사")
+        self.copy_session_button.setMaximumWidth(60)
+        self.copy_session_button.clicked.connect(self.copy_session_id)
+        session_info_layout.addWidget(self.copy_session_button)
+        info_layout.addLayout(session_info_layout)
+
+        # 세션 나가기 버튼
+        self.leave_session_button = QPushButton("세션 나가기")
+        self.leave_session_button.setMinimumHeight(40)
+        self.leave_session_button.clicked.connect(lambda: asyncio.create_task(self.disconnect()))
+        info_layout.addWidget(self.leave_session_button)
+
+        # 사용법: 깃허브 링크
+        github_label = QLabel('<a href="https://github.com/kimkundad/screen-party">사용법 (GitHub)</a>')
+        github_label.setOpenExternalLinks(True)
+        github_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        info_layout.addWidget(github_label)
+
+        main_screen_layout.addWidget(info_group)
 
         main_screen_layout.addStretch()
 
-        self.main_layout.addWidget(self.main_widget)
+        # 스크롤 영역에 위젯 설정
+        self.main_scroll.setWidget(self.main_widget)
+        self.main_layout.addWidget(self.main_scroll)
+
+        # Drawing Canvas 생성 (오버레이용으로만 사용)
+        self.drawing_canvas = DrawingCanvas(
+            parent=self.main_widget,
+            user_id=None,  # 세션 연결 시 설정
+            pen_color=get_default_pen_color(),  # 첫 번째 프리셋 색상 (파스텔 핑크)
+            pen_width=3,
+        )
+        self.drawing_canvas.hide()  # 화면에 표시하지 않음
+
+        # Drawing Canvas 시그널 연결
+        self._connect_drawing_signals()
 
     def show_start_screen(self):
         """시작 화면 표시"""
-        self.start_widget.show()
-        self.main_widget.hide()
+        self.start_scroll.show()
+        self.main_scroll.hide()
 
     def show_main_screen(self):
         """메인 화면 표시"""
-        self.start_widget.hide()
-        self.main_widget.show()
+        self.start_scroll.hide()
+        self.main_scroll.show()
 
         # 서버 주소와 세션 번호 표시
         server_url = self.server_input.text()
