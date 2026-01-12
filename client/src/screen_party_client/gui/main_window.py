@@ -265,7 +265,7 @@ class MainWindow(QMainWindow):
         overlay_label.setFont(overlay_label_font)
         overlay_section_layout.addWidget(overlay_label)
 
-        self.setup_overlay_button = QPushButton("화면 영역 설정")
+        self.setup_overlay_button = QPushButton("그림 영역 설정")
         self.setup_overlay_button.setMinimumHeight(50)
         self.setup_overlay_button.clicked.connect(self.toggle_overlay)
         overlay_section_layout.addWidget(self.setup_overlay_button)
@@ -790,7 +790,7 @@ class MainWindow(QMainWindow):
 
         # 버튼 상태 리셋
         self.is_sharing = False
-        self.setup_overlay_button.setText("화면 영역 설정")
+        self.setup_overlay_button.setText("그림 영역 설정")
         self.toggle_drawing_button.setEnabled(False)
         self.toggle_drawing_button.setText("그리기 활성화")
         self.clear_drawings_button.setEnabled(False)
