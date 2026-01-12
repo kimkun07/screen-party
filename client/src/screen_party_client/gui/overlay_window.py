@@ -116,7 +116,8 @@ class OverlayWindow(QWidget):
 
         window_info = self.window_manager.get_window_info(self.target_handle)
         if not window_info:
-            logger.error(f"[OverlayWindow] Failed to get window info for handle {self.target_handle}")
+            logger.error(
+                f"[OverlayWindow] Failed to get window info for handle {self.target_handle}")
             return
 
         # Set geometry to match target window
@@ -266,18 +267,18 @@ class OverlayWindow(QWidget):
                 Qt.WindowType.Window  # Regular window with title bar and borders
                 | Qt.WindowType.WindowStaysOnTopHint
             )
-            # CRITICAL: Re-apply transparent background attribute after setWindowFlags()
-            # setWindowFlags() causes the widget to be recreated, losing some attributes
-            self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-
             # Set window title for resize mode
             self.setWindowTitle("그림 영역 크기 조정 (드래그하여 조정)")
             # Set minimum size constraint
             self.setMinimumSize(200, 150)
+            # Set window opacity to 30% (transparent enough to see through)
+            self.setWindowOpacity(0.3)
         else:
             # Normal mode: Frameless transparent overlay
             # Remove minimum size constraint
             self.setMinimumSize(0, 0)
+            # Restore full opacity
+            self.setWindowOpacity(1.0)
             # unless drawing mode is enabled
             if not self._drawing_enabled:
                 self.setWindowFlags(
@@ -293,8 +294,6 @@ class OverlayWindow(QWidget):
                     | Qt.WindowType.WindowStaysOnTopHint
                     | Qt.WindowType.Tool
                 )
-            # CRITICAL: Re-apply transparent background attribute after setWindowFlags()
-            self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
 
         self.show()
         self.update()
