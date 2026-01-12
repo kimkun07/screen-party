@@ -1,50 +1,42 @@
-"""Transparent overlay window that follows a target window"""
+"""Transparent overlay window for drawing"""
 
 from typing import Optional
 
 from PyQt6.QtWidgets import QWidget, QVBoxLayout
-from PyQt6.QtCore import Qt, QTimer, QRect, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QPainter, QColor
 
 from ..drawing.canvas import DrawingCanvas
-from ..utils.window_manager import WindowManager
 
 
 class OverlayWindow(QWidget):
-    """Transparent overlay window that follows a target window"""
+    """Transparent overlay window for drawing"""
 
     # Signals
-    target_window_closed = pyqtSignal()
-    target_window_minimized = pyqtSignal()
-    target_window_restored = pyqtSignal()
-    geometry_changed = pyqtSignal(QRect)
     drawing_mode_changed = pyqtSignal(bool)
 
     def __init__(
         self,
-        target_handle: int,
         user_id: str,
         pen_color: Optional[QColor] = None,
         parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
 
-        self.target_handle = target_handle
         self.user_id = user_id
-        self.window_manager = WindowManager()
-        self.is_tracking = True
-        self._was_minimized = False
         # Start with drawing disabled (click passthrough)
         self._drawing_enabled = False
+
+        # Resize mode state
+        self._resize_mode = False
 
         if pen_color is None:
             pen_color = QColor(255, 182, 193)  # Default: 파스텔 핑크 (첫 번째 프리셋)
 
         self.init_ui(pen_color)
-        self.setup_sync_timer()
 
-        # Initial sync
-        self.sync_with_target()
+        # Set default geometry (center of screen, 800x600)
+        self.setGeometry(100, 100, 800, 600)
 
     def init_ui(self, pen_color: QColor):
         """Initialize UI"""
@@ -94,64 +86,10 @@ class OverlayWindow(QWidget):
         # alpha=1: barely visible but clickable
         painter.fillRect(self.rect(), QColor(0, 0, 0, 1))
 
+        # No need to draw border/handles - Windows will handle it in resize mode
+
         # Call parent's paintEvent to render DrawingCanvas
         super().paintEvent(event)
-
-    def setup_sync_timer(self):
-        """Setup timer for syncing with target window"""
-        self.sync_timer = QTimer(self)
-        self.sync_timer.timeout.connect(self.sync_with_target)
-        self.sync_timer.start(100)  # 100ms interval (10 FPS)
-
-    def sync_with_target(self):
-        """Sync overlay position/size with target window"""
-        if not self.is_tracking:
-            return
-
-        # Check if window still exists
-        if not self.window_manager.window_exists(self.target_handle):
-            self.target_window_closed.emit()
-            self.close()
-            return
-
-        # Check if minimized
-        is_minimized = self.window_manager.is_window_minimized(
-            self.target_handle)
-
-        if is_minimized:
-            if self.isVisible():
-                self.hide()
-                self._was_minimized = True
-                self.target_window_minimized.emit()
-            return
-        else:
-            if self._was_minimized and not self.isVisible():
-                self.show()
-                self._was_minimized = False
-                self.target_window_restored.emit()
-
-        # Get current window info
-        window_info = self.window_manager.get_window_info(self.target_handle)
-        if not window_info:
-            return
-
-        # Update geometry if changed
-        new_rect = QRect(
-            window_info.x, window_info.y, window_info.width, window_info.height
-        )
-        if self.geometry() != new_rect:
-            self.setGeometry(new_rect)
-            self.geometry_changed.emit(new_rect)
-
-    def stop_tracking(self):
-        """Stop tracking target window"""
-        self.is_tracking = False
-        self.sync_timer.stop()
-
-    def resume_tracking(self):
-        """Resume tracking target window"""
-        self.is_tracking = True
-        self.sync_timer.start(100)
 
     def get_canvas(self) -> DrawingCanvas:
         """Get the drawing canvas"""
@@ -214,7 +152,83 @@ class OverlayWindow(QWidget):
         else:
             super().keyPressEvent(event)
 
+    # ========== Resize Mode Methods ==========
+
+    def is_resize_mode(self) -> bool:
+        """Check if resize mode is enabled"""
+        return self._resize_mode
+
+    def set_resize_mode(self, enabled: bool):
+        """Enable or disable resize mode
+
+        Args:
+            enabled: True to enable resize mode, False to disable
+        """
+        if self._resize_mode == enabled:
+            return
+
+        self._resize_mode = enabled
+
+        # Log current geometry when entering resize mode
+        import logging
+        logger = logging.getLogger(__name__)
+        g = self.geometry()
+        if enabled:
+            logger.info(f"[OverlayWindow] Resize mode ENABLED. Current geometry: pos=({g.x()}, {g.y()}), size={g.width()}x{g.height()}")
+        else:
+            logger.info(f"[OverlayWindow] Resize mode DISABLED. Final geometry: pos=({g.x()}, {g.y()}), size={g.width()}x{g.height()}")
+
+        # Disable drawing mode when entering resize mode
+        if enabled and self._drawing_enabled:
+            self.set_drawing_enabled(False)
+
+        # Update window flags and size constraints
+        if enabled:
+            # Resize mode: Use Windows default window with title bar and resize handles
+            # Remove FramelessWindowHint to enable Windows native resize functionality
+            self.setWindowFlags(
+                Qt.WindowType.Window  # Regular window with title bar and borders
+                | Qt.WindowType.WindowStaysOnTopHint
+            )
+            # Set window title for resize mode
+            self.setWindowTitle("그림 영역 크기 조정 (드래그하여 조정)")
+            # Set minimum size constraint
+            self.setMinimumSize(200, 150)
+            # Set window opacity to 30% (transparent enough to see through)
+            self.setWindowOpacity(0.3)
+        else:
+            # Normal mode: Frameless overlay (drawing controlled by user)
+            # Remove minimum size constraint
+            self.setMinimumSize(0, 0)
+            # Restore full opacity
+            self.setWindowOpacity(1.0)
+            # Set window flags based on drawing state
+            if not self._drawing_enabled:
+                self.setWindowFlags(
+                    Qt.WindowType.FramelessWindowHint
+                    | Qt.WindowType.WindowStaysOnTopHint
+                    | Qt.WindowType.Tool
+                    | Qt.WindowType.WindowTransparentForInput
+                )
+            else:
+                self.setWindowFlags(
+                    Qt.WindowType.FramelessWindowHint
+                    | Qt.WindowType.WindowStaysOnTopHint
+                    | Qt.WindowType.Tool
+                )
+
+        self.show()
+        self.update()
+
+        # Set focus when enabled
+        if enabled:
+            self.setFocus()
+
+    # Mouse events are now handled by Windows native resize functionality
+    # No need for custom resize logic
+
+    # ========== End Resize Mode Methods ==========
+
     def closeEvent(self, event):
         """Handle close event"""
-        self.stop_tracking()
         super().closeEvent(event)
