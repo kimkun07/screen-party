@@ -202,6 +202,60 @@ screen-party 프로젝트는 **Task 기반 커밋 메시지 형식**을 사용�
   chore: regenerate nginx configs
   ```
 
+### 태스크 이름 선택 가이드
+
+**중요**: 태스크 이름은 **기능/목적**으로 선택하며, 파일 위치로 판단하지 않습니다.
+
+#### `-core` 태스크는 기본 구조/인프라에만 사용
+
+- `client-core`: 클라이언트 기본 GUI 프레임워크, WebSocket 연결, 프로젝트 초기 구조
+- `server-core`: WebSocket 서버 기본 구조, 세션 관리 인프라
+
+❌ **잘못된 사용** (파일 위치로 판단):
+```bash
+# client/ 디렉토리에 있다고 해서 무조건 client-core 사용
+[client-core] 드로잉 색상 버그 수정
+[client-core] FAB 버튼 클릭 피드백 개선
+[client-core] 오버레이 창 크기 조정 버그 수정
+```
+
+✅ **올바른 사용** (기능/목적으로 판단):
+```bash
+# 색상 관련 기능/버그 → color-system
+[color-system] 드로잉 색상 버그 수정
+
+# 오버레이 관련 기능/버그 → host-overlay
+[host-overlay] FAB 버튼 클릭 피드백 개선
+[host-overlay] 오버레이 창 크기 조정 버그 수정
+
+# 드로잉 엔진 관련 기능/버그 → drawing-engine
+[drawing-engine] 베지어 피팅 정확도 개선
+```
+
+#### 버그 수정도 해당 기능의 태스크 이름 사용
+
+버그가 발생한 **기능**의 태스크 이름을 사용합니다:
+
+- 드로잉 엔진 버그 → `[drawing-engine]`
+- 색상 시스템 버그 → `[color-system]`
+- 페이드 애니메이션 버그 → `[fade-animation]`
+- 오버레이 창 버그 → `[host-overlay]`
+- 세션 관리 버그 → `[session-management]`
+
+#### 새로운 기능은 별도 태스크 생성
+
+UI의 작은 기능이라도 별도 devlog 파일이 있으면 해당 태스크 이름 사용:
+
+- `[ui-redesign]`: UI 레이아웃 개선
+- `[overlay-resize]`: 오버레이 창 크기 조정 기능
+- `[persistence-mode]`: 장시간 모드 (선 유지 기능)
+
+#### 판단이 어려울 때
+
+1. `.claude/devlog/` 디렉토리에서 관련 태스크 파일 확인
+2. 해당 기능의 devlog 파일이 있으면 그 태스크 이름 사용
+3. 없으면 사용자에게 질문하거나 main.md에서 가장 가까운 태스크 선택
+
 ## devlog 시스템
 
 monoserver 프로젝트는 **devlog 시스템**을 사용하여 개발 작업을 관리합니다.
