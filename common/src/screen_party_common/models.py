@@ -6,8 +6,8 @@ from typing import Dict
 
 
 @dataclass
-class Guest:
-    """게스트 정보"""
+class Participant:
+    """참여자 정보"""
 
     user_id: str
     name: str
@@ -20,26 +20,27 @@ class Session:
     """세션 정보"""
 
     session_id: str
-    host_id: str
-    host_name: str
-    host_color: str = "#FF0000"  # 호스트 펜 색상 (hex 형식)
-    guests: Dict[str, Guest] = field(default_factory=dict)
+    participants: Dict[str, Participant] = field(default_factory=dict)
     created_at: datetime = field(default_factory=datetime.now)
     last_activity: datetime = field(default_factory=datetime.now)
     is_active: bool = True
 
-    def add_guest(self, guest: Guest) -> None:
-        """게스트 추가"""
-        self.guests[guest.user_id] = guest
+    def add_participant(self, participant: Participant) -> None:
+        """참여자 추가"""
+        self.participants[participant.user_id] = participant
         self.last_activity = datetime.now()
 
-    def remove_guest(self, user_id: str) -> bool:
-        """게스트 제거"""
-        if user_id in self.guests:
-            del self.guests[user_id]
+    def remove_participant(self, user_id: str) -> bool:
+        """참여자 제거"""
+        if user_id in self.participants:
+            del self.participants[user_id]
             self.last_activity = datetime.now()
             return True
         return False
+
+    def has_participants(self) -> bool:
+        """참여자가 있는지 확인"""
+        return len(self.participants) > 0
 
     def update_activity(self) -> None:
         """마지막 활동 시간 업데이트"""

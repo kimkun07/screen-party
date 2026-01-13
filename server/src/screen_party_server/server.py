@@ -12,7 +12,7 @@ from websockets.asyncio.server import ServerConnection
 from websockets.exceptions import ConnectionClosed
 
 from .session import SessionManager
-from screen_party_common import Guest, MessageType, DRAWING_MESSAGE_TYPES, PUBLIC_MESSAGE_TYPES
+from screen_party_common import Participant, MessageType, DRAWING_MESSAGE_TYPES, PUBLIC_MESSAGE_TYPES
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -111,18 +111,18 @@ class ScreenPartyServer:
         return user_id
 
     async def handle_create_session(self, websocket: ServerConnection, data: dict) -> str:
-        """세션 생성 처리 (호스트)"""
-        host_name = data.get("host_name", "Host")
+        """세션 생성 처리 (첫 참여자)"""
+        participant_name = data.get("host_name", "Participant")  # Keep "host_name" key for backward compat
 
-        # 세션 생성
-        session = self.session_manager.create_session(host_name=host_name)
-        host_id = session.host_id
+        # 세션 생성 및 첫 참여자 추가
+        session, participant = self.session_manager.create_session(participant_name=participant_name)
+        participant_id = participant.user_id
 
         # 클라이언트 등록
-        self.clients[host_id] = websocket
-        self.websocket_to_user[websocket] = host_id
+        self.clients[participant_id] = websocket
+        self.websocket_to_user[websocket] = participant_id
 
-        logger.info(f"Session created: {session.session_id} by {host_name} ({host_id})")
+        logger.info(f"Session created: {session.session_id} by {participant_name} ({participant_id})")
 
         # 응답 전송
         await websocket.send(
@@ -130,18 +130,18 @@ class ScreenPartyServer:
                 {
                     "type": "session_created",
                     "session_id": session.session_id,
-                    "host_id": host_id,
-                    "host_name": host_name,
+                    "host_id": participant_id,  # Keep for backward compat (actually participant_id)
+                    "host_name": participant_name,  # Keep for backward compat
                 }
             )
         )
 
-        return host_id
+        return participant_id
 
     async def handle_join_session(self, websocket: ServerConnection, data: dict) -> str:
-        """세션 참여 처리 (게스트)"""
+        """세션 참여 처리"""
         session_id = data.get("session_id")
-        guest_name = data.get("guest_name", "Guest")
+        participant_name = data.get("guest_name", "Participant")  # Keep "guest_name" key for backward compat
 
         if not session_id:
             await self.send_error(websocket, "Missing session_id")
@@ -157,29 +157,32 @@ class ScreenPartyServer:
             await self.send_error(websocket, f"Session is not active: {session_id}")
             return None
 
-        # 세션에 게스트 추가 (Guest 객체를 반환함)
-        guest = self.session_manager.add_guest(session_id, guest_name)
-        if not guest:
+        # 세션에 참여자 추가
+        participant = self.session_manager.add_participant(session_id, participant_name)
+        if not participant:
             await self.send_error(websocket, "Failed to join session")
             return None
 
-        guest_id = guest.user_id
+        participant_id = participant.user_id
 
         # 클라이언트 등록
-        self.clients[guest_id] = websocket
-        self.websocket_to_user[websocket] = guest_id
+        self.clients[participant_id] = websocket
+        self.websocket_to_user[websocket] = participant_id
 
-        logger.info(f"Guest {guest_name} ({guest_id}) joined session {session_id}")
+        logger.info(f"Participant {participant_name} ({participant_id}) joined session {session_id}")
 
-        # 게스트에게 응답 전송
+        # 참여자에게 응답 전송 (backward compat field names)
+        # 첫 번째 참여자 이름 가져오기 (이전 "host" 개념)
+        first_participant = next(iter(session.participants.values())) if session.participants else None
+
         await websocket.send(
             json.dumps(
                 {
                     "type": "session_joined",
                     "session_id": session_id,
-                    "user_id": guest_id,
-                    "guest_name": guest_name,
-                    "host_name": session.host_name,
+                    "user_id": participant_id,
+                    "guest_name": participant_name,  # Keep for backward compat
+                    "host_name": first_participant.name if first_participant else "Unknown",  # Keep for backward compat
                 }
             )
         )
@@ -187,11 +190,11 @@ class ScreenPartyServer:
         # 세션 내 다른 클라이언트들에게 알림
         await self.broadcast(
             session_id,
-            {"type": "guest_joined", "user_id": guest_id, "guest_name": guest_name},
-            exclude_user_id=guest_id,
+            {"type": "participant_joined", "user_id": participant_id, "participant_name": participant_name},
+            exclude_user_id=participant_id,
         )
 
-        return guest_id
+        return participant_id
 
     async def handle_ping(self, websocket: ServerConnection):
         """핑 처리"""
@@ -216,14 +219,9 @@ class ScreenPartyServer:
         color = data.get("color", "#FF0000")
 
         # 세션에 색상 업데이트
-        if user_id == session.host_id:
-            # 호스트인 경우
-            session.host_color = color
-            logger.info(f"Host {user_id} changed color to {color} in session {session_id}")
-        elif user_id in session.guests:
-            # 게스트인 경우
-            session.guests[user_id].color = color
-            logger.info(f"Guest {user_id} changed color to {color} in session {session_id}")
+        if user_id in session.participants:
+            session.participants[user_id].color = color
+            logger.info(f"Participant {user_id} changed color to {color} in session {session_id}")
         else:
             await self.send_error(websocket, "User not in session")
             return
@@ -267,8 +265,7 @@ class ScreenPartyServer:
             return
 
         # 세션 내 모든 사용자 ID 수집
-        user_ids = {session.host_id}
-        user_ids.update(session.guests.keys())
+        user_ids = set(session.participants.keys())
 
         # 제외할 사용자 제거
         if exclude_user_id:
@@ -295,7 +292,7 @@ class ScreenPartyServer:
     def find_user_session(self, user_id: str) -> Optional[str]:
         """사용자가 속한 세션 ID 찾기"""
         for session_id, session in self.session_manager.sessions.items():
-            if session.host_id == user_id or user_id in session.guests:
+            if user_id in session.participants:
                 return session_id
         return None
 
@@ -307,35 +304,37 @@ class ScreenPartyServer:
         session_id = None
         session = None
         for sid, sess in self.session_manager.sessions.items():
-            if sess.host_id == user_id or user_id in sess.guests:
+            if user_id in sess.participants:
                 session_id = sid
                 session = sess
                 break
 
         if session_id and session:
-            # 호스트가 나간 경우 세션 만료
-            if session.host_id == user_id:
-                logger.info(f"Host left, expiring session: {session_id}")
+            # 참여자 정보 가져오기
+            participant = session.participants.get(user_id)
+            participant_name = participant.name if participant else "Unknown"
 
-                # 먼저 게스트들에게 알림 (세션 만료 전에)
+            # 참여자 제거 (내부에서 마지막 참여자일 경우 세션 만료 처리)
+            self.session_manager.remove_participant(session_id, user_id)
+            logger.info(f"Participant {participant_name} left session {session_id}")
+
+            # 세션이 만료되었는지 확인
+            updated_session = self.session_manager.get_session(session_id)
+
+            if not updated_session or not updated_session.is_active:
+                # 세션이 만료됨 (마지막 참여자가 나감)
+                logger.info(f"Session {session_id} expired (no participants remaining)")
+                # 남은 클라이언트에게 알림 (이미 다 나갔으므로 실제로는 전송되지 않음)
                 await self.broadcast(
-                    session_id, {"type": "session_expired", "message": "Host disconnected"}
+                    session_id, {"type": "session_expired", "message": "All participants left"}
                 )
-
-                # 그 다음 세션 만료
-                self.session_manager.expire_session(session_id)
-            # 게스트가 나간 경우
             else:
-                guest = session.guests.get(user_id)
-                if guest:
-                    self.session_manager.remove_guest(session_id, user_id)
-                    logger.info(f"Guest {guest.name} left session {session_id}")
-
-                    # 세션 내 다른 클라이언트들에게 알림
-                    await self.broadcast(
-                        session_id,
-                        {"type": "guest_left", "user_id": user_id, "guest_name": guest.name},
-                    )
+                # 세션이 계속됨 (다른 참여자 존재)
+                # 세션 내 다른 클라이언트들에게 알림
+                await self.broadcast(
+                    session_id,
+                    {"type": "participant_left", "user_id": user_id, "participant_name": participant_name},
+                )
 
         # 클라이언트 제거
         websocket = self.clients.pop(user_id, None)

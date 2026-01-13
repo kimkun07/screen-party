@@ -1,6 +1,6 @@
 """Screen Party common module - shared models and protocol"""
 
-from .models import Guest, Session
+from .models import Participant, Session
 from .constants import DEFAULT_PORT, DEFAULT_SESSION_TIMEOUT_MINUTES
 from .messages import (
     MessageType,
@@ -15,7 +15,7 @@ from .messages import (
 )
 
 __all__ = [
-    "Guest",
+    "Participant",
     "Session",
     "DEFAULT_PORT",
     "DEFAULT_SESSION_TIMEOUT_MINUTES",

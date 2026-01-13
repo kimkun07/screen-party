@@ -10,19 +10,19 @@
 ### 핵심 시나리오
 
 1. **연결 및 준비**
-   - 호스트: 프로그램 실행 → 6자리 세션 번호 발급 → 게임 창 선택 → 투명 오버레이 생성
-   - 게스트: 세션 번호 입력 → 접속 → 디스코드 화면에서 게임 영역 지정 (좌표 매핑)
+   - 세션 생성: 프로그램 실행 → 6자리 세션 번호 발급 → 게임 창 선택 → 투명 오버레이 생성
+   - 세션 참여: 세션 번호 입력 → 접속 → 디스코드 화면에서 게임 영역 지정 (좌표 매핑)
 
 2. **실시간 드로잉**
-   - 게스트가 마우스로 그림 → Spline으로 변환 → 실시간 전송
+   - 참여자가 마우스로 그림 → Spline으로 변환 → 실시간 전송
    - 모든 참여자 화면에 매끄러운 곡선 표시
    - 페이드아웃: 마우스를 떼면 2초 유지 → 1초 동안 투명하게 사라짐
 
 3. **고급 기능**
    - 장시간 모드: 선이 사라지지 않고 유지 (전략 브리핑용)
    - 개별 초기화: ESC 키로 자신이 그린 선만 제거
-   - 색상 구분: 각 게스트별 펜 색상 설정
-   - 창 관리 동기화: 호스트가 게임 최소화 시 오버레이도 숨김
+   - 색상 구분: 각 참여자별 펜 색상 설정
+   - 세션 지속성: 세션 생성자가 나가도 다른 참여자가 있으면 세션 유지
 
 ### 기술 스택
 
@@ -49,7 +49,7 @@
 | P1 | testing | 🟢 진행중 | 유닛 테스트 (서버 29개 + 클라이언트 120+개) + 통합 테스트 (3개) 완료 | server-core, client-core |
 | P1 | server-deployment | ✅ 완료 | Docker 이미지 및 배포 | server-core, testing |
 | P1 | client-deployment | ✅ 완료 | PyInstaller 기반 클라이언트 실행 파일 빌드 | client-core, testing |
-| P2 | host-overlay | ✅ 완료 | 호스트/게스트 투명 오버레이 + FAB + 그리기 모드 토글 | client-core, testing |
+| P2 | host-overlay | ✅ 완료 | 투명 오버레이 + FAB + 그리기 모드 토글 | client-core, testing |
 | P2 | drawing-engine | ✅ 완료 | 실시간 베지어 커브 피팅 + Multi-user 동기화 | server-core, client-core, testing |
 | P2 | fade-animation | ✅ 완료 | 페이드아웃 애니메이션 (2초 유지 → 1초 페이드) | drawing-engine |
 | P3 | color-system | ✅ 완료 | 색상 설정 시스템 (알파값 동기화, 파스텔 톤 프리셋) | drawing-engine |
@@ -64,6 +64,61 @@
 - ⏸️ **보류** (On Hold): 임시로 중단
 
 ## 최근 업데이트
+
+### 2026-01-13 - 참여자 기반 세션 관리로 전환
+
+**완료된 작업**:
+- ✅ 호스트/게스트 개념 제거
+- ✅ 참여자 기반 세션 관리 시스템으로 전환
+
+**주요 변경사항**:
+
+1. **Backend Data Models**
+   - `Guest` → `Participant` 이름 변경
+   - `Session.host_id`, `Session.host_name`, `Session.host_color` 필드 제거
+   - `Session.guests` → `Session.participants` 변경
+   - `Session.has_participants()` 메서드 추가
+
+2. **Session Manager**
+   - `create_session()` 반환 타입: `Session` → `(Session, Participant)` 튜플
+   - `add_guest()` → `add_participant()` 이름 변경
+   - `remove_participant()`에서 마지막 참여자 체크 후 세션 자동 만료
+
+3. **Server WebSocket Handlers**
+   - `cleanup_client()` 로직 변경: 마지막 참여자가 나갈 때만 세션 만료
+   - 모든 핸들러에서 host/guest 구분 제거
+   - `broadcast()`, `find_user_session()` 단순화
+
+4. **Client UI**
+   - "세션 생성" → "새 세션"
+   - "세션 참여" → "기존 세션 참여"
+   - `guest_joined`/`participant_joined` 둘 다 지원 (backward compatibility)
+
+5. **Message Types**
+   - `PARTICIPANT_JOINED`, `PARTICIPANT_LEFT` 메시지 타입 추가
+   - 기존 `GUEST_JOINED`, `GUEST_LEFT`는 Deprecated로 표시하되 호환성 유지
+
+**핵심 개선사항**:
+- ✅ **세션 지속성**: 세션 생성자가 나가도 다른 참여자가 있으면 세션 유지
+- ✅ **평등한 권한**: 모든 참여자가 동등한 권한
+- ✅ **Backward compatibility**: 기존 메시지 타입 지원
+
+**테스트 결과**:
+- ✅ Server 유닛 테스트: 15/15 통과
+- ✅ Session 유닛 테스트: 14/14 통과
+- ✅ 총 29개 테스트 모두 통과
+
+**문서 업데이트**:
+- ✅ README.md: 사용 시나리오, 프로젝트 구조
+- ✅ CLAUDE.md: 프로젝트 개요
+- ✅ session-management.md devlog
+- ✅ main.md devlog
+
+**다음 단계**:
+- Integration 테스트 업데이트
+- 실제 클라이언트 테스트
+
+---
 
 ### 2026-01-11 - Color System 완료 (색상 설정 시스템)
 

@@ -17,8 +17,10 @@ class MessageType(str, Enum):
     JOIN_SESSION = "join_session"
     SESSION_CREATED = "session_created"
     SESSION_JOINED = "session_joined"
-    GUEST_JOINED = "guest_joined"
-    GUEST_LEFT = "guest_left"
+    GUEST_JOINED = "guest_joined"  # Deprecated: use PARTICIPANT_JOINED
+    GUEST_LEFT = "guest_left"  # Deprecated: use PARTICIPANT_LEFT
+    PARTICIPANT_JOINED = "participant_joined"
+    PARTICIPANT_LEFT = "participant_left"
     SESSION_EXPIRED = "session_expired"
 
     # === Communication ===
@@ -51,8 +53,10 @@ SESSION_MESSAGE_TYPES = {
     MessageType.JOIN_SESSION.value,
     MessageType.SESSION_CREATED.value,
     MessageType.SESSION_JOINED.value,
-    MessageType.GUEST_JOINED.value,
-    MessageType.GUEST_LEFT.value,
+    MessageType.GUEST_JOINED.value,  # Deprecated
+    MessageType.GUEST_LEFT.value,  # Deprecated
+    MessageType.PARTICIPANT_JOINED.value,
+    MessageType.PARTICIPANT_LEFT.value,
     MessageType.SESSION_EXPIRED.value,
 }
 

@@ -37,7 +37,7 @@ class MainWindow(QMainWindow):
         self.client: Optional[WebSocketClient] = None
         self.session_id: Optional[str] = None
         self.user_id: Optional[str] = None
-        self.is_host = False
+        self.is_host = False  # Deprecated: kept for backward compatibility
         self.listen_task: Optional[asyncio.Task] = None
 
         # UI 상태
@@ -114,7 +114,7 @@ class MainWindow(QMainWindow):
 
         # 세션 생성 column (왼쪽)
         create_column = QVBoxLayout()
-        create_label = QLabel("세션 생성")
+        create_label = QLabel("새 세션")
         create_label_font = QFont()
         create_label_font.setPointSize(14)
         create_label_font.setBold(True)
@@ -134,7 +134,7 @@ class MainWindow(QMainWindow):
 
         # 세션 참여 column (오른쪽)
         join_column = QVBoxLayout()
-        join_label = QLabel("세션 참여")
+        join_label = QLabel("기존 세션 참여")
         join_label_font = QFont()
         join_label_font.setPointSize(14)
         join_label_font.setBold(True)
@@ -592,13 +592,13 @@ class MainWindow(QMainWindow):
         msg_type = message.get("type")
         logger.info(f"Received message: {msg_type}")
 
-        if msg_type == "guest_joined":
-            guest_name = message.get("guest_name", "Guest")
-            self.set_status(f"{guest_name} joined the session")
+        if msg_type == "guest_joined" or msg_type == "participant_joined":
+            participant_name = message.get("guest_name") or message.get("participant_name", "Participant")
+            self.set_status(f"{participant_name} joined the session")
 
-        elif msg_type == "guest_left":
-            guest_name = message.get("guest_name", "Guest")
-            self.set_status(f"{guest_name} left the session")
+        elif msg_type == "guest_left" or msg_type == "participant_left":
+            participant_name = message.get("guest_name") or message.get("participant_name", "Participant")
+            self.set_status(f"{participant_name} left the session")
 
         elif msg_type == "session_expired":
             reason = message.get("message", "Session expired")

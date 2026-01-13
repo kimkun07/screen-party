@@ -6,7 +6,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from screen_party_server.server import ScreenPartyServer
-from screen_party_common import Session, Guest
+from screen_party_common import Session, Participant
 
 
 @pytest.fixture
@@ -61,50 +61,50 @@ class TestScreenPartyServer:
         session_id = response["session_id"]
         session = server.session_manager.get_session(session_id)
         assert session is not None
-        assert session.host_id == user_id
-        assert session.host_name == "TestHost"
+        assert user_id in session.participants
+        assert session.participants[user_id].name == "TestHost"
 
     @pytest.mark.asyncio
     async def test_join_session(self, server, mock_websocket):
         """세션 참여 메시지 처리 테스트"""
         # 먼저 세션 생성
-        session = server.session_manager.create_session("Host")
-        host_ws = AsyncMock()
-        server.clients[session.host_id] = host_ws
-        server.websocket_to_user[host_ws] = session.host_id
+        session, first_participant = server.session_manager.create_session("FirstParticipant")
+        first_ws = AsyncMock()
+        server.clients[first_participant.user_id] = first_ws
+        server.websocket_to_user[first_ws] = first_participant.user_id
 
-        # 게스트 참여
-        guest_ws = AsyncMock()
-        data = {"type": "join_session", "session_id": session.session_id, "guest_name": "TestGuest"}
+        # 두 번째 참여자 참여
+        second_ws = AsyncMock()
+        data = {"type": "join_session", "session_id": session.session_id, "guest_name": "SecondParticipant"}
 
-        user_id = await server.handle_join_session(guest_ws, data)
+        user_id = await server.handle_join_session(second_ws, data)
 
         # 사용자 ID 생성 확인
         assert user_id is not None
 
         # 클라이언트 등록 확인
         assert user_id in server.clients
-        assert server.clients[user_id] == guest_ws
-        assert server.websocket_to_user[guest_ws] == user_id
+        assert server.clients[user_id] == second_ws
+        assert server.websocket_to_user[second_ws] == user_id
 
-        # 게스트에게 응답 전송 확인
-        guest_ws.send.assert_called()
-        calls = [json.loads(call[0][0]) for call in guest_ws.send.call_args_list]
+        # 두 번째 참여자에게 응답 전송 확인
+        second_ws.send.assert_called()
+        calls = [json.loads(call[0][0]) for call in second_ws.send.call_args_list]
         join_response = next(msg for msg in calls if msg["type"] == "session_joined")
         assert join_response["session_id"] == session.session_id
         assert join_response["user_id"] == user_id
-        assert join_response["guest_name"] == "TestGuest"
+        assert join_response["guest_name"] == "SecondParticipant"
 
-        # 호스트에게 알림 전송 확인
-        host_ws.send.assert_called()
-        host_calls = [json.loads(call[0][0]) for call in host_ws.send.call_args_list]
-        guest_joined = next(msg for msg in host_calls if msg["type"] == "guest_joined")
-        assert guest_joined["user_id"] == user_id
-        assert guest_joined["guest_name"] == "TestGuest"
+        # 첫 번째 참여자에게 알림 전송 확인
+        first_ws.send.assert_called()
+        first_calls = [json.loads(call[0][0]) for call in first_ws.send.call_args_list]
+        participant_joined = next(msg for msg in first_calls if msg["type"] == "participant_joined")
+        assert participant_joined["user_id"] == user_id
+        assert participant_joined["participant_name"] == "SecondParticipant"
 
-        # 세션에 게스트 추가 확인
+        # 세션에 참여자 추가 확인
         updated_session = server.session_manager.get_session(session.session_id)
-        assert user_id in updated_session.guests
+        assert user_id in updated_session.participants
 
     @pytest.mark.asyncio
     async def test_join_nonexistent_session(self, server, mock_websocket):
@@ -135,35 +135,35 @@ class TestScreenPartyServer:
     async def test_broadcast(self, server):
         """브로드캐스트 테스트"""
         # 세션 생성
-        session = server.session_manager.create_session("Host")
+        session, first_participant = server.session_manager.create_session("FirstParticipant")
 
-        # 호스트 WebSocket 등록
-        host_ws = AsyncMock()
-        server.clients[session.host_id] = host_ws
-        server.websocket_to_user[host_ws] = session.host_id
+        # 첫 번째 참여자 WebSocket 등록
+        first_ws = AsyncMock()
+        server.clients[first_participant.user_id] = first_ws
+        server.websocket_to_user[first_ws] = first_participant.user_id
 
-        # 게스트 2명 추가
-        guest1 = server.session_manager.add_guest(session.session_id, "Guest1")
-        guest2 = server.session_manager.add_guest(session.session_id, "Guest2")
+        # 참여자 2명 추가
+        participant2 = server.session_manager.add_participant(session.session_id, "SecondParticipant")
+        participant3 = server.session_manager.add_participant(session.session_id, "ThirdParticipant")
 
-        guest1_ws = AsyncMock()
-        guest2_ws = AsyncMock()
-        server.clients[guest1.user_id] = guest1_ws
-        server.clients[guest2.user_id] = guest2_ws
-        server.websocket_to_user[guest1_ws] = guest1.user_id
-        server.websocket_to_user[guest2_ws] = guest2.user_id
+        participant2_ws = AsyncMock()
+        participant3_ws = AsyncMock()
+        server.clients[participant2.user_id] = participant2_ws
+        server.clients[participant3.user_id] = participant3_ws
+        server.websocket_to_user[participant2_ws] = participant2.user_id
+        server.websocket_to_user[participant3_ws] = participant3.user_id
 
         # 브로드캐스트
         message = {"type": "test", "data": "hello"}
         await server.broadcast(session.session_id, message)
 
         # 모든 클라이언트가 메시지를 받았는지 확인
-        host_ws.send.assert_called_once()
-        guest1_ws.send.assert_called_once()
-        guest2_ws.send.assert_called_once()
+        first_ws.send.assert_called_once()
+        participant2_ws.send.assert_called_once()
+        participant3_ws.send.assert_called_once()
 
         # 메시지 내용 확인
-        for ws in [host_ws, guest1_ws, guest2_ws]:
+        for ws in [first_ws, participant2_ws, participant3_ws]:
             response = json.loads(ws.send.call_args[0][0])
             assert response["type"] == "test"
             assert response["data"] == "hello"
@@ -172,117 +172,116 @@ class TestScreenPartyServer:
     async def test_broadcast_exclude_user(self, server):
         """특정 사용자 제외 브로드캐스트 테스트"""
         # 세션 생성
-        session = server.session_manager.create_session("Host")
+        session, first_participant = server.session_manager.create_session("FirstParticipant")
 
-        # 호스트 WebSocket 등록
-        host_ws = AsyncMock()
-        server.clients[session.host_id] = host_ws
+        # 첫 번째 참여자 WebSocket 등록
+        first_ws = AsyncMock()
+        server.clients[first_participant.user_id] = first_ws
 
-        # 게스트 추가
-        guest = server.session_manager.add_guest(session.session_id, "Guest1")
-        guest_ws = AsyncMock()
-        server.clients[guest.user_id] = guest_ws
+        # 두 번째 참여자 추가
+        participant2 = server.session_manager.add_participant(session.session_id, "SecondParticipant")
+        participant2_ws = AsyncMock()
+        server.clients[participant2.user_id] = participant2_ws
 
-        # 게스트 제외하고 브로드캐스트
+        # 두 번째 참여자 제외하고 브로드캐스트
         message = {"type": "test"}
-        await server.broadcast(session.session_id, message, exclude_user_id=guest.user_id)
+        await server.broadcast(session.session_id, message, exclude_user_id=participant2.user_id)
 
-        # 호스트만 메시지를 받았는지 확인
-        host_ws.send.assert_called_once()
-        guest_ws.send.assert_not_called()
+        # 첫 번째 참여자만 메시지를 받았는지 확인
+        first_ws.send.assert_called_once()
+        participant2_ws.send.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_find_user_session(self, server):
         """사용자 세션 찾기 테스트"""
         # 세션 생성
-        session = server.session_manager.create_session("Host")
-        host_id = session.host_id
+        session, first_participant = server.session_manager.create_session("FirstParticipant")
 
-        # 게스트 추가
-        guest = server.session_manager.add_guest(session.session_id, "Guest1")
+        # 두 번째 참여자 추가
+        participant2 = server.session_manager.add_participant(session.session_id, "SecondParticipant")
 
-        # 호스트 세션 찾기
-        assert server.find_user_session(host_id) == session.session_id
+        # 첫 번째 참여자 세션 찾기
+        assert server.find_user_session(first_participant.user_id) == session.session_id
 
-        # 게스트 세션 찾기
-        assert server.find_user_session(guest.user_id) == session.session_id
+        # 두 번째 참여자 세션 찾기
+        assert server.find_user_session(participant2.user_id) == session.session_id
 
         # 존재하지 않는 사용자
         assert server.find_user_session("nonexistent") is None
 
     @pytest.mark.asyncio
-    async def test_cleanup_client_host(self, server):
-        """호스트 연결 종료 시 세션 만료 테스트"""
-        # 세션 생성
-        session = server.session_manager.create_session("Host")
-        host_id = session.host_id
+    async def test_cleanup_client_last_participant(self, server):
+        """마지막 참여자 연결 종료 시 세션 만료 테스트"""
+        # 세션 생성 (3명의 참여자)
+        session, first_participant = server.session_manager.create_session("FirstParticipant")
+        participant2 = server.session_manager.add_participant(session.session_id, "SecondParticipant")
+        participant3 = server.session_manager.add_participant(session.session_id, "ThirdParticipant")
 
-        # 호스트 WebSocket 등록
-        host_ws = AsyncMock()
-        server.clients[host_id] = host_ws
-        server.websocket_to_user[host_ws] = host_id
+        # WebSocket 등록
+        first_ws = AsyncMock()
+        participant2_ws = AsyncMock()
+        participant3_ws = AsyncMock()
+        server.clients[first_participant.user_id] = first_ws
+        server.clients[participant2.user_id] = participant2_ws
+        server.clients[participant3.user_id] = participant3_ws
+        server.websocket_to_user[first_ws] = first_participant.user_id
+        server.websocket_to_user[participant2_ws] = participant2.user_id
+        server.websocket_to_user[participant3_ws] = participant3.user_id
 
-        # 게스트 추가
-        guest = server.session_manager.add_guest(session.session_id, "Guest1")
-        guest_ws = AsyncMock()
-        server.clients[guest.user_id] = guest_ws
-        server.websocket_to_user[guest_ws] = guest.user_id
+        # 첫 번째 참여자(세션 생성자) 정리 - 세션 유지되어야 함
+        await server.cleanup_client(first_participant.user_id)
+        updated_session = server.session_manager.get_session(session.session_id)
+        assert updated_session is not None
+        assert updated_session.is_active
 
-        # 호스트 정리
-        await server.cleanup_client(host_id)
+        # 두 번째 참여자 정리 - 세션 유지되어야 함
+        await server.cleanup_client(participant2.user_id)
+        updated_session = server.session_manager.get_session(session.session_id)
+        assert updated_session is not None
+        assert updated_session.is_active
 
-        # 세션 만료 확인
+        # 마지막 참여자 정리 - 세션 만료되어야 함
+        await server.cleanup_client(participant3.user_id)
         updated_session = server.session_manager.get_session(session.session_id)
         assert updated_session is None or not updated_session.is_active
 
-        # 클라이언트 제거 확인
-        assert host_id not in server.clients
-        assert host_ws not in server.websocket_to_user
-
-        # 게스트에게 알림 전송 확인
-        guest_ws.send.assert_called()
-        calls = [json.loads(call[0][0]) for call in guest_ws.send.call_args_list]
-        expired_msg = next(msg for msg in calls if msg["type"] == "session_expired")
-        assert "Host disconnected" in expired_msg["message"]
-
     @pytest.mark.asyncio
-    async def test_cleanup_client_guest(self, server):
-        """게스트 연결 종료 시 세션 유지 테스트"""
+    async def test_cleanup_client_participant(self, server):
+        """참여자 연결 종료 시 세션 유지 테스트"""
         # 세션 생성
-        session = server.session_manager.create_session("Host")
-        host_id = session.host_id
+        session, first_participant = server.session_manager.create_session("FirstParticipant")
 
-        # 호스트 WebSocket 등록
-        host_ws = AsyncMock()
-        server.clients[host_id] = host_ws
-        server.websocket_to_user[host_ws] = host_id
+        # 첫 번째 참여자 WebSocket 등록
+        first_ws = AsyncMock()
+        server.clients[first_participant.user_id] = first_ws
+        server.websocket_to_user[first_ws] = first_participant.user_id
 
-        # 게스트 추가
-        guest = server.session_manager.add_guest(session.session_id, "Guest1")
-        guest_ws = AsyncMock()
-        server.clients[guest.user_id] = guest_ws
-        server.websocket_to_user[guest_ws] = guest.user_id
+        # 두 번째 참여자 추가
+        participant2 = server.session_manager.add_participant(session.session_id, "SecondParticipant")
+        participant2_ws = AsyncMock()
+        server.clients[participant2.user_id] = participant2_ws
+        server.websocket_to_user[participant2_ws] = participant2.user_id
 
-        # 게스트 정리
-        await server.cleanup_client(guest.user_id)
+        # 두 번째 참여자 정리
+        await server.cleanup_client(participant2.user_id)
 
         # 세션 유지 확인
         updated_session = server.session_manager.get_session(session.session_id)
         assert updated_session is not None
         assert updated_session.is_active
 
-        # 게스트 제거 확인
-        assert guest.user_id not in updated_session.guests
+        # 두 번째 참여자 제거 확인
+        assert participant2.user_id not in updated_session.participants
 
         # 클라이언트 제거 확인
-        assert guest.user_id not in server.clients
-        assert guest_ws not in server.websocket_to_user
+        assert participant2.user_id not in server.clients
+        assert participant2_ws not in server.websocket_to_user
 
-        # 호스트에게 알림 전송 확인
-        host_ws.send.assert_called()
-        calls = [json.loads(call[0][0]) for call in host_ws.send.call_args_list]
-        left_msg = next(msg for msg in calls if msg["type"] == "guest_left")
-        assert left_msg["user_id"] == guest.user_id
+        # 첫 번째 참여자에게 알림 전송 확인
+        first_ws.send.assert_called()
+        calls = [json.loads(call[0][0]) for call in first_ws.send.call_args_list]
+        left_msg = next(msg for msg in calls if msg["type"] == "participant_left")
+        assert left_msg["user_id"] == participant2.user_id
 
     @pytest.mark.asyncio
     async def test_send_error(self, server, mock_websocket):
@@ -337,31 +336,30 @@ class TestScreenPartyServer:
     async def test_drawing_message_broadcast(self, server):
         """드로잉 메시지 브로드캐스트 테스트 (송신자 제외)"""
         # 세션 생성
-        session = server.session_manager.create_session("Host")
-        host_id = session.host_id
+        session, first_participant = server.session_manager.create_session("FirstParticipant")
 
-        # 호스트 WebSocket 등록
-        host_ws = AsyncMock()
-        server.clients[host_id] = host_ws
-        server.websocket_to_user[host_ws] = host_id
+        # 첫 번째 참여자 WebSocket 등록
+        first_ws = AsyncMock()
+        server.clients[first_participant.user_id] = first_ws
+        server.websocket_to_user[first_ws] = first_participant.user_id
 
-        # 게스트 추가
-        guest = server.session_manager.add_guest(session.session_id, "Guest1")
-        guest_ws = AsyncMock()
-        server.clients[guest.user_id] = guest_ws
-        server.websocket_to_user[guest_ws] = guest.user_id
+        # 두 번째 참여자 추가
+        participant2 = server.session_manager.add_participant(session.session_id, "SecondParticipant")
+        participant2_ws = AsyncMock()
+        server.clients[participant2.user_id] = participant2_ws
+        server.websocket_to_user[participant2_ws] = participant2.user_id
 
-        # 게스트가 드로잉 메시지 전송
+        # 두 번째 참여자가 드로잉 메시지 전송
         data = {"type": "line_start", "line_id": "line1", "color": "#FF0000"}
 
-        await server.handle_drawing_message(guest_ws, guest.user_id, data)
+        await server.handle_drawing_message(participant2_ws, participant2.user_id, data)
 
-        # 호스트는 메시지를 받지만, 송신자인 게스트는 받지 않음
-        host_ws.send.assert_called_once()
-        guest_ws.send.assert_not_called()
+        # 첫 번째 참여자는 메시지를 받지만, 송신자인 두 번째 참여자는 받지 않음
+        first_ws.send.assert_called_once()
+        participant2_ws.send.assert_not_called()
 
-        # 호스트가 받은 메시지 내용 확인
-        response = json.loads(host_ws.send.call_args[0][0])
+        # 첫 번째 참여자가 받은 메시지 내용 확인
+        response = json.loads(first_ws.send.call_args[0][0])
         assert response["type"] == "line_start"
         assert response["line_id"] == "line1"
         assert response["color"] == "#FF0000"

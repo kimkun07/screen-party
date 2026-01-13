@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Dict, Optional
 
-from screen_party_common import Guest, Session
+from screen_party_common import Participant, Session
 
 
 class SessionManager:
@@ -40,27 +40,31 @@ class SessionManager:
         # 최대 재시도 초과 시 예외 발생 (매우 드문 경우)
         raise RuntimeError("세션 ID 생성 실패: 최대 재시도 초과")
 
-    def create_session(self, host_name: str) -> Session:
+    def create_session(self, participant_name: str) -> tuple[Session, Participant]:
         """
-        새 세션 생성
+        새 세션 생성 (첫 참여자가 자동으로 추가됨)
 
         Args:
-            host_name: 호스트 이름
+            participant_name: 참여자 이름
 
         Returns:
-            생성된 Session 객체
+            (생성된 Session 객체, 첫 Participant 객체)
         """
         session_id = self._generate_session_id()
-        host_id = str(uuid.uuid4())
+        participant_id = str(uuid.uuid4())
 
-        session = Session(
-            session_id=session_id,
-            host_id=host_id,
-            host_name=host_name,
+        # 빈 세션 생성
+        session = Session(session_id=session_id)
+
+        # 첫 참여자 추가
+        participant = Participant(
+            user_id=participant_id,
+            name=participant_name,
         )
+        session.add_participant(participant)
 
         self.sessions[session_id] = session
-        return session
+        return session, participant
 
     def get_session(self, session_id: str) -> Optional[Session]:
         """
@@ -77,36 +81,36 @@ class SessionManager:
             return session
         return None
 
-    def add_guest(self, session_id: str, guest_name: str) -> Optional[Guest]:
+    def add_participant(self, session_id: str, participant_name: str) -> Optional[Participant]:
         """
-        세션에 게스트 추가
+        세션에 참여자 추가
 
         Args:
             session_id: 세션 ID
-            guest_name: 게스트 이름
+            participant_name: 참여자 이름
 
         Returns:
-            생성된 Guest 객체 또는 None (세션이 존재하지 않으면)
+            생성된 Participant 객체 또는 None (세션이 존재하지 않으면)
         """
         session = self.get_session(session_id)
         if not session:
             return None
 
-        guest = Guest(
+        participant = Participant(
             user_id=str(uuid.uuid4()),
-            name=guest_name,
+            name=participant_name,
         )
 
-        session.add_guest(guest)
-        return guest
+        session.add_participant(participant)
+        return participant
 
-    def remove_guest(self, session_id: str, user_id: str) -> bool:
+    def remove_participant(self, session_id: str, user_id: str) -> bool:
         """
-        세션에서 게스트 제거
+        세션에서 참여자 제거
 
         Args:
             session_id: 세션 ID
-            user_id: 게스트 user_id
+            user_id: 참여자 user_id
 
         Returns:
             성공 여부
@@ -115,7 +119,13 @@ class SessionManager:
         if not session:
             return False
 
-        return session.remove_guest(user_id)
+        result = session.remove_participant(user_id)
+
+        # 참여자가 모두 나간 경우 세션 만료
+        if not session.has_participants():
+            self.expire_session(session_id)
+
+        return result
 
     def expire_session(self, session_id: str) -> None:
         """
