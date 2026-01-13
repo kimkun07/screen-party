@@ -197,10 +197,10 @@ class DrawingCanvas(QWidget):
             rel_start_point = self._to_relative_point(abs_point[0], abs_point[1])
 
             # 시작 이벤트 전송 (상대 좌표)
+            # color는 더 이상 전송하지 않음 (user_id로 색상 참조)
             msg = DrawingStartMessage(
                 line_id=self.my_line_id,
                 user_id=self.user_id,
-                color=self.pen_color.name(),
                 start_point=rel_start_point,
             )
             self.drawing_started.emit(self.my_line_id, self.user_id, msg.to_dict())
@@ -269,7 +269,9 @@ class DrawingCanvas(QWidget):
 
         # 2. 내 드로잉 렌더링
         if self.my_fitter.is_drawing or len(self.my_fitter.finalized_segments) > 0:
-            pen = QPen(self.pen_color, self.pen_width)
+            # user_colors에서 내 색상 참조 (색상 변경 시 즉시 반영됨)
+            my_color = self.user_colors.get(self.user_id, self.pen_color)
+            pen = QPen(my_color, self.pen_width)
             pen.setCapStyle(Qt.PenCapStyle.RoundCap)
             pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
             painter.setPen(pen)
@@ -454,15 +456,14 @@ class DrawingCanvas(QWidget):
         Args:
             line_id: 라인 ID
             user_id: 사용자 ID
-            data: 시작 데이터 (color, start_point 등) - start_point는 상대 좌표
+            data: 시작 데이터 (start_point 등) - start_point는 상대 좌표
         """
         # 삭제된 라인 무시
         if line_id in self.deleted_line_ids:
             return
 
-        # 색상 파싱
-        color_str = data.get("color", "#FF0000")
-        color = QColor(color_str)
+        # 사용자별 색상 가져오기 (없으면 기본값)
+        color = self.user_colors.get(user_id, QColor("#FF0000"))
 
         # 사용자별 알파값 가져오기 (없으면 1.0)
         user_alpha = self.user_alphas.get(user_id, 1.0)
@@ -480,7 +481,6 @@ class DrawingCanvas(QWidget):
         )
 
         self.remote_lines[line_id] = line_data
-        self.user_colors[user_id] = color
 
         self.update()
 

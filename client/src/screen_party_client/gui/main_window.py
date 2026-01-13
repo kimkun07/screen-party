@@ -440,6 +440,17 @@ class MainWindow(QMainWindow):
                 # DrawingCanvas에 user_id 설정
                 self.drawing_canvas.set_user_id(self.user_id)
 
+                # 참여자 정보로 user_colors 초기화
+                participants = response.get("participants", [])
+                for participant in participants:
+                    user_id = participant.get("user_id")
+                    color_str = participant.get("color", "#FF0000")
+                    if user_id:
+                        color = QColor(color_str)
+                        self.drawing_canvas.user_colors[user_id] = color
+                        self.drawing_canvas.user_alphas[user_id] = 1.0
+                logger.info(f"Initialized user_colors with {len(participants)} participants")
+
                 # 서버 주소 저장
                 self.settings.setValue("server_url", server_url)
                 logger.info(f"Server URL saved to settings: {server_url}")
@@ -518,6 +529,17 @@ class MainWindow(QMainWindow):
                 # DrawingCanvas에 user_id 설정
                 self.drawing_canvas.set_user_id(self.user_id)
 
+                # 참여자 정보로 user_colors 초기화
+                participants = response.get("participants", [])
+                for participant in participants:
+                    user_id = participant.get("user_id")
+                    color_str = participant.get("color", "#FF0000")
+                    if user_id:
+                        color = QColor(color_str)
+                        self.drawing_canvas.user_colors[user_id] = color
+                        self.drawing_canvas.user_alphas[user_id] = 1.0
+                logger.info(f"Initialized user_colors with {len(participants)} participants")
+
                 # 서버 주소 저장
                 self.settings.setValue("server_url", server_url)
                 logger.info(f"Server URL saved to settings: {server_url}")
@@ -594,10 +616,44 @@ class MainWindow(QMainWindow):
 
         if msg_type == "guest_joined" or msg_type == "participant_joined":
             participant_name = message.get("guest_name") or message.get("participant_name", "Participant")
+            user_id = message.get("user_id")
+            color_str = message.get("color", "#FF0000")
+
+            # 참여자 색상 정보 추가
+            if user_id:
+                color = QColor(color_str)
+                self.drawing_canvas.user_colors[user_id] = color
+                self.drawing_canvas.user_alphas[user_id] = 1.0
+                # 오버레이가 있으면 오버레이에도 추가
+                if self.is_sharing and self.overlay_window:
+                    self.overlay_window.get_canvas().user_colors[user_id] = color
+                    self.overlay_window.get_canvas().user_alphas[user_id] = 1.0
+                logger.info(f"Added participant {user_id} with color {color_str}")
+                # UI 업데이트
+                self.update_users_colors_display()
+
             self.set_status(f"{participant_name} joined the session")
 
         elif msg_type == "guest_left" or msg_type == "participant_left":
             participant_name = message.get("guest_name") or message.get("participant_name", "Participant")
+            user_id = message.get("user_id")
+
+            # 참여자 색상 정보 제거
+            if user_id:
+                if user_id in self.drawing_canvas.user_colors:
+                    del self.drawing_canvas.user_colors[user_id]
+                if user_id in self.drawing_canvas.user_alphas:
+                    del self.drawing_canvas.user_alphas[user_id]
+                # 오버레이가 있으면 오버레이에서도 제거
+                if self.is_sharing and self.overlay_window:
+                    if user_id in self.overlay_window.get_canvas().user_colors:
+                        del self.overlay_window.get_canvas().user_colors[user_id]
+                    if user_id in self.overlay_window.get_canvas().user_alphas:
+                        del self.overlay_window.get_canvas().user_alphas[user_id]
+                logger.info(f"Removed participant {user_id}")
+                # UI 업데이트
+                self.update_users_colors_display()
+
             self.set_status(f"{participant_name} left the session")
 
         elif msg_type == "session_expired":
@@ -753,8 +809,11 @@ class MainWindow(QMainWindow):
         # HTML로 색상 인디케이터 생성
         color_indicators = []
         for user_id, color in user_colors.items():
-            # 자신인 경우 "나"로 표시
-            user_label = "나" if user_id == self.user_id else user_id[:8]
+            # 자신인 경우 "나 (ID)"로 표시, 다른 사람은 ID 앞 8자리만 표시
+            if user_id == self.user_id:
+                user_label = f"나 ({user_id[:8]})"
+            else:
+                user_label = user_id[:8]
             # 색상 원 표시
             color_html = f'<span style="color: {color.name()};">●</span> {user_label}'
             color_indicators.append(color_html)
@@ -785,6 +844,10 @@ class MainWindow(QMainWindow):
             canvas.drawing_started.connect(self._on_drawing_started)
             canvas.drawing_updated.connect(self._on_drawing_updated)
             canvas.drawing_ended.connect(self._on_drawing_ended)
+
+            # 메인 캔버스의 user_colors를 오버레이 캔버스에 복사
+            canvas.user_colors = self.drawing_canvas.user_colors.copy()
+            canvas.user_alphas = self.drawing_canvas.user_alphas.copy()
 
             # 오버레이 시그널 연결
             self.overlay_window.drawing_mode_changed.connect(

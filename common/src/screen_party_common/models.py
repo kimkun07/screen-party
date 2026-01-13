@@ -5,13 +5,17 @@ from datetime import datetime
 from typing import Dict
 
 
+# 기본 색상 상수 (파스텔 핑크 - 첫 번째 프리셋)
+DEFAULT_COLOR = "#FFB6C1"  # RGB(255, 182, 193)
+
+
 @dataclass
 class Participant:
     """참여자 정보"""
 
     user_id: str
     name: str
-    color: str = "#FF0000"  # 펜 색상 (hex 형식)
+    color: str = DEFAULT_COLOR  # 펜 색상 (hex 형식)
     joined_at: datetime = field(default_factory=datetime.now)
 
 

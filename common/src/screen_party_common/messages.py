@@ -112,14 +112,14 @@ class DrawingStartMessage(BaseMessage):
     Attributes:
         line_id: 라인 고유 ID
         user_id: 사용자 ID
-        color: 펜 색상 (hex 형식, 예: "#FF0000")
         start_point: 시작 점 (x, y)
+        color: 펜 색상 (hex 형식, 예: "#FF0000") - Deprecated, 이제 user_id로 색상을 참조
     """
 
     line_id: str
     user_id: str
-    color: str
     start_point: Tuple[float, float]
+    color: str = "#FF0000"  # Deprecated, 하위 호환성을 위해 남김
     type: MessageType = field(default=MessageType.DRAWING_START, init=False)
 
 

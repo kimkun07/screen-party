@@ -124,6 +124,16 @@ class ScreenPartyServer:
 
         logger.info(f"Session created: {session.session_id} by {participant_name} ({participant_id})")
 
+        # 모든 참여자 정보를 포함
+        participants_info = [
+            {
+                "user_id": p.user_id,
+                "name": p.name,
+                "color": p.color,
+            }
+            for p in session.participants.values()
+        ]
+
         # 응답 전송
         await websocket.send(
             json.dumps(
@@ -132,6 +142,7 @@ class ScreenPartyServer:
                     "session_id": session.session_id,
                     "host_id": participant_id,  # Keep for backward compat (actually participant_id)
                     "host_name": participant_name,  # Keep for backward compat
+                    "participants": participants_info,  # 모든 참여자 정보
                 }
             )
         )
@@ -175,6 +186,16 @@ class ScreenPartyServer:
         # 첫 번째 참여자 이름 가져오기 (이전 "host" 개념)
         first_participant = next(iter(session.participants.values())) if session.participants else None
 
+        # 모든 참여자 정보를 포함
+        participants_info = [
+            {
+                "user_id": p.user_id,
+                "name": p.name,
+                "color": p.color,
+            }
+            for p in session.participants.values()
+        ]
+
         await websocket.send(
             json.dumps(
                 {
@@ -183,6 +204,7 @@ class ScreenPartyServer:
                     "user_id": participant_id,
                     "guest_name": participant_name,  # Keep for backward compat
                     "host_name": first_participant.name if first_participant else "Unknown",  # Keep for backward compat
+                    "participants": participants_info,  # 모든 참여자 정보
                 }
             )
         )
@@ -190,7 +212,12 @@ class ScreenPartyServer:
         # 세션 내 다른 클라이언트들에게 알림
         await self.broadcast(
             session_id,
-            {"type": "participant_joined", "user_id": participant_id, "participant_name": participant_name},
+            {
+                "type": "participant_joined",
+                "user_id": participant_id,
+                "participant_name": participant_name,
+                "color": participant.color,
+            },
             exclude_user_id=participant_id,
         )
 
