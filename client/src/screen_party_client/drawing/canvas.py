@@ -393,10 +393,12 @@ class DrawingCanvas(QWidget):
             return
 
         # LineData 생성 (초기 alpha 값 적용)
+        # user_colors에서 현재 색상을 가져와야 함 (그리는 동안 사용한 색상과 동일)
+        my_color = self.user_colors.get(self.user_id, self.pen_color)
         line_data = LineData(
             line_id=self.my_line_id,
             user_id=self.user_id,
-            color=self.pen_color,
+            color=my_color,
             finalized_segments=self.my_fitter.finalized_segments.copy(),
             current_raw_points=[],
             is_complete=True,
