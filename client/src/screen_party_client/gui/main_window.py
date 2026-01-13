@@ -255,9 +255,28 @@ class MainWindow(QMainWindow):
         for color in PRESET_COLORS:
             btn = QPushButton()
             btn.setFixedSize(40, 40)  # 정사각형 버튼
+            # 기본 색상과 hover/pressed 효과를 모두 정의하여 Qt 기본 피드백 제공
+            base_r, base_g, base_b = color.red(), color.green(), color.blue()
+            hover_r = min(255, int(base_r * 1.1))  # 10% 밝게
+            hover_g = min(255, int(base_g * 1.1))
+            hover_b = min(255, int(base_b * 1.1))
+            pressed_r = max(0, int(base_r * 0.9))  # 10% 어둡게
+            pressed_g = max(0, int(base_g * 0.9))
+            pressed_b = max(0, int(base_b * 0.9))
             btn.setStyleSheet(
-                f"background-color: rgb({color.red()}, {color.green()}, {color.blue()}); "
-                f"border: 2px solid #888; border-radius: 4px;"
+                f"QPushButton {{"
+                f"  background-color: rgb({base_r}, {base_g}, {base_b}); "
+                f"  border: 2px solid #888; "
+                f"  border-radius: 4px;"
+                f"}}"
+                f"QPushButton:hover {{"
+                f"  background-color: rgb({hover_r}, {hover_g}, {hover_b}); "
+                f"  border: 2px solid #AAA;"
+                f"}}"
+                f"QPushButton:pressed {{"
+                f"  background-color: rgb({pressed_r}, {pressed_g}, {pressed_b}); "
+                f"  border: 2px solid #666;"
+                f"}}"
             )
             btn.clicked.connect(lambda checked, c=color: self.set_pen_color(c))
             palette_layout.addWidget(btn)
@@ -927,11 +946,22 @@ class MainWindow(QMainWindow):
     def on_drawing_mode_changed(self, enabled: bool):
         """그리기 모드 변경 핸들러"""
         if enabled:
-            self.toggle_drawing_button.setText("그리기 비활성화")
+            self.toggle_drawing_button.setText("그리기 비활성화 (ESC로 비활성화)")
+            # 테두리에 불빛 효과 추가 (배경색 없음)
+            self.toggle_drawing_button.setStyleSheet(
+                """
+                QPushButton {
+                    border: 3px solid #4CAF50;
+                    border-radius: 4px;
+                }
+                """
+            )
             self.set_status("그리기 활성화됨 (ESC 키로 비활성화 가능)")
             logger.info("Drawing mode enabled")
         else:
             self.toggle_drawing_button.setText("그리기 활성화")
+            # 일반 스타일로 되돌리기
+            self.toggle_drawing_button.setStyleSheet("")
             self.set_status("그리기 비활성화됨 (클릭이 아래로 전달됨)")
             logger.info("Drawing mode disabled")
 
