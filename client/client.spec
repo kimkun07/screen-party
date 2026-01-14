@@ -86,5 +86,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    # icon='assets/icon.ico',  # 아이콘 파일 (필요 시 주석 해제)
+    icon='assets/ScreenParty-Logo.ico',  # 프로그램 아이콘
 )
