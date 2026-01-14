@@ -15,6 +15,9 @@ datas = []
 binaries = []
 hiddenimports = []
 
+# assets 디렉토리 포함 (아이콘 파일)
+datas += [('assets', 'assets')]
+
 # common 패키지 수집
 tmp_ret = collect_all('screen_party_common')
 datas += tmp_ret[0]
@@ -44,7 +47,7 @@ hiddenimports += [
 ]
 
 a = Analysis(
-    ['../scripts/run_client.py'],
+    ['scripts/main.py'],
     pathex=[],
     binaries=binaries,
     datas=datas,

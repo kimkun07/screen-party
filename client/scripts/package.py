@@ -182,9 +182,10 @@ def main():
             print("❌ 취소됨")
             sys.exit(1)
 
-    # 프로젝트 루트 경로
-    project_root = Path(__file__).parent.parent
-    spec_file = project_root / "client" / "client.spec"
+    # 프로젝트 루트 경로 (client/scripts/package.py 기준)
+    client_dir = Path(__file__).parent.parent
+    project_root = client_dir.parent
+    spec_file = client_dir / "client.spec"
     build_dir = project_root / "build"
     dist_dir = project_root / "dist"
 
@@ -218,7 +219,7 @@ def main():
         "uv",
         "run",
         "--directory",
-        str(project_root / "client"),
+        str(client_dir),
         "pyinstaller",
         "--clean",
         "--noconfirm",

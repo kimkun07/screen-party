@@ -2,9 +2,9 @@
 
 from typing import Optional
 
-from PyQt6.QtWidgets import QWidget, QVBoxLayout
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QApplication
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QPainter, QColor
+from PyQt6.QtGui import QPainter, QColor, QIcon
 
 from ..drawing.canvas import DrawingCanvas
 
@@ -32,6 +32,11 @@ class OverlayWindow(QWidget):
 
         if pen_color is None:
             pen_color = QColor(255, 182, 193)  # Default: 파스텔 핑크 (첫 번째 프리셋)
+
+        # QApplication의 아이콘 가져오기 (설정되어 있으면)
+        app_icon = QApplication.instance().windowIcon()
+        if app_icon and not app_icon.isNull():
+            self.setWindowIcon(app_icon)
 
         self.init_ui(pen_color)
 
