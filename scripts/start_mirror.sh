@@ -69,5 +69,6 @@ watchexec \
     --exclude='.ruff_cache' \
     --exclude='.mypy_cache' \
     --exclude='node_modules' \
+    --exclude='client/dist' \
     "$PROJECT_ROOT/" \
     "$WINDOWS_TARGET/"
