@@ -49,4 +49,4 @@ USER appuser
 EXPOSE 8765
 
 # Run server
-CMD ["python", "/app/server/main.py"]
+CMD ["python", "-m", "screen_party_server"]
