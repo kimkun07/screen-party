@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import sys
 from typing import Optional
 
 from PyQt6.QtWidgets import (
@@ -18,6 +19,32 @@ from ..drawing import DrawingCanvas
 from .constants import PRESET_COLORS, get_default_pen_color
 
 logger = logging.getLogger(__name__)
+
+
+def get_version() -> str:
+    """실행 파일의 버전 정보를 가져옵니다.
+
+    PyInstaller로 빌드된 exe 파일의 Windows 버전 정보를 읽습니다.
+    개발 환경에서는 "-dev"를 반환합니다.
+    """
+    # PyInstaller로 빌드된 경우 (frozen 상태)
+    if getattr(sys, "frozen", False):
+        try:
+            import win32api
+
+            exe_path = sys.executable
+            info = win32api.GetFileVersionInfo(exe_path, "\\")
+            ms = info["FileVersionMS"]
+            ls = info["FileVersionLS"]
+            major = win32api.HIWORD(ms)
+            minor = win32api.LOWORD(ms)
+            patch = win32api.HIWORD(ls)
+            return f"{major}.{minor}.{patch}"
+        except Exception:
+            return "unknown"
+
+    # 개발 환경
+    return "-dev"
 
 
 class MainWindow(QMainWindow):
@@ -354,11 +381,19 @@ class MainWindow(QMainWindow):
         self.leave_session_button.clicked.connect(lambda: asyncio.create_task(self.disconnect()))
         info_layout.addWidget(self.leave_session_button)
 
-        # 사용법: 깃허브 링크
+        # 사용법 링크 + 버전 정보
+        footer_layout = QHBoxLayout()
+        footer_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
         github_label = QLabel('<a href="https://github.com/kimkun07/screen-party">사용법 (GitHub)</a>')
         github_label.setOpenExternalLinks(True)
-        github_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        info_layout.addWidget(github_label)
+        footer_layout.addWidget(github_label)
+
+        version_label = QLabel(f"v{get_version()}")
+        version_label.setStyleSheet("color: gray;")
+        footer_layout.addWidget(version_label)
+
+        info_layout.addLayout(footer_layout)
 
         main_screen_layout.addWidget(info_group)
 
