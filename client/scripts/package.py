@@ -18,6 +18,84 @@ from pathlib import Path
 from datetime import datetime
 
 
+def parse_version(version: str) -> tuple[int, int, int, int]:
+    """버전 문자열을 튜플로 변환 (예: v0.1.0 -> (0, 1, 0, 0))"""
+    # v 접두사 제거
+    ver = version.lstrip('v')
+    parts = ver.split('.')
+
+    # 최대 4개의 숫자로 분리 (major, minor, patch, build)
+    nums = []
+    for part in parts[:4]:
+        try:
+            nums.append(int(part))
+        except ValueError:
+            nums.append(0)
+
+    # 4개로 맞추기
+    while len(nums) < 4:
+        nums.append(0)
+
+    return tuple(nums[:4])
+
+
+def create_version_info(version: str, output_path: Path):
+    """Windows 버전 정보 파일 생성 (version_info.txt)"""
+    ver_tuple = parse_version(version)
+    ver_str = version.lstrip('v')
+
+    content = f'''# UTF-8
+#
+# For more details about fixed file info 'ffi' see:
+# http://msdn.microsoft.com/en-us/library/ms646997.aspx
+VSVersionInfo(
+  ffi=FixedFileInfo(
+    # filevers and prodvers should be always a tuple with four items: (1, 2, 3, 4)
+    filevers={ver_tuple},
+    prodvers={ver_tuple},
+    # Contains a bitmask that specifies the valid bits 'flags'r
+    mask=0x3f,
+    # Contains a bitmask that specifies the Boolean attributes of the file.
+    flags=0x0,
+    # The operating system for which this file was designed.
+    # 0x4 - NT and there is no need to change it.
+    OS=0x40004,
+    # The general type of file.
+    # 0x1 - the file is an application.
+    fileType=0x1,
+    # The function of the file.
+    # 0x0 - the function is not defined for this fileType
+    subtype=0x0,
+    # Creation date and time stamp.
+    date=(0, 0)
+  ),
+  kids=[
+    StringFileInfo(
+      [
+        StringTable(
+          u'040904B0',
+          [
+            StringStruct(u'CompanyName', u'Screen Party'),
+            StringStruct(u'FileDescription', u'Screen Party - Real-time Drawing Overlay'),
+            StringStruct(u'FileVersion', u'{ver_str}'),
+            StringStruct(u'InternalName', u'ScreenParty'),
+            StringStruct(u'LegalCopyright', u'MIT License'),
+            StringStruct(u'OriginalFilename', u'ScreenParty.exe'),
+            StringStruct(u'ProductName', u'Screen Party'),
+            StringStruct(u'ProductVersion', u'{ver_str}'),
+          ]
+        )
+      ]
+    ),
+    VarFileInfo([VarStruct(u'Translation', [1033, 1200])])
+  ]
+)
+'''
+
+    output_path.write_text(content, encoding='utf-8')
+    print(f"✅ version_info.txt 생성 완료: {output_path}")
+
+
 def run_command(cmd: list[str], description: str, cwd=None):
     """명령어 실행 및 결과 출력"""
     print(f"\n{'='*60}")
@@ -140,10 +218,13 @@ def main():
 
 패키징 과정:
   1. 기존 빌드 정리 (build/, dist/)
-  2. PyInstaller 실행 (client.spec)
-  3. README.txt 생성
-  4. ZIP 압축 (ScreenParty-v0.1.0-windows.zip)
-  5. GitHub Release 안내
+  2. version_info.txt 생성 (버전 정보)
+  3. PyInstaller 실행 (client.spec)
+  4. 임시 version_info.txt 삭제
+  5. 결과물 확인
+  6. README.txt 생성
+  7. ZIP 압축 (ScreenParty-v0.1.0-windows.zip)
+  8. GitHub Release 안내
 
 주의:
   - Windows에서 실행해야 합니다
@@ -188,6 +269,7 @@ def main():
     spec_file = client_dir / "client.spec"
     build_dir = project_root / "build"
     dist_dir = project_root / "dist"
+    version_info_file = client_dir / "version_info.txt"
 
     print("\n" + "="*60)
     print("🚀 클라이언트 앱 패키징 시작 (PyInstaller)")
@@ -213,7 +295,13 @@ def main():
         else:
             print(f"\n[DRY RUN] 기존 빌드 정리")
 
-    # 2. PyInstaller 실행
+    # 2. version_info.txt 생성
+    if not args.dry_run:
+        create_version_info(version, version_info_file)
+    else:
+        print(f"\n[DRY RUN] version_info.txt 생성")
+
+    # 3. PyInstaller 실행
     # uv를 통해 client 환경에서 PyInstaller 실행 (dev 의존성 포함)
     pyinstaller_cmd = [
         "uv",
@@ -231,7 +319,12 @@ def main():
     else:
         print(f"\n[DRY RUN] {' '.join(pyinstaller_cmd)}")
 
-    # 3. 결과물 확인
+    # 4. 임시 version_info.txt 삭제
+    if not args.dry_run and version_info_file.exists():
+        version_info_file.unlink()
+        print("🗑️  임시 version_info.txt 삭제 완료")
+
+    # 5. 결과물 확인
     if not args.dry_run:
         exe_path = dist_dir / "ScreenParty.exe"
         if not exe_path.exists():
@@ -242,14 +335,14 @@ def main():
         print(f"\n✅ 실행 파일 생성 완료: {exe_path}")
         print(f"   크기: {size_mb:.2f} MB")
 
-    # 4. README.txt 생성
+    # 6. README.txt 생성
     if not args.dry_run:
         readme_path = dist_dir / "README.txt"
         create_readme(version, readme_path)
     else:
         print(f"\n[DRY RUN] README.txt 생성")
 
-    # 5. ZIP 압축
+    # 7. ZIP 압축
     if not args.dry_run:
         zip_path = create_zip(version, dist_dir, project_root)
     else:

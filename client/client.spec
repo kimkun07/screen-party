@@ -6,7 +6,11 @@ PyInstaller spec file for Screen Party Client
 """
 
 import sys
+import os
 from PyInstaller.utils.hooks import collect_all
+
+# version_info.txt가 존재하면 사용, 없으면 None (package.py가 자동 생성)
+version_file = 'version_info.txt' if os.path.exists('version_info.txt') else None
 
 block_cipher = None
 
@@ -90,4 +94,5 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
     icon='assets/ScreenParty-Logo.ico',  # 프로그램 아이콘
+    version=version_file,  # Windows 버전 정보 (package.py가 자동 생성, 없으면 None)
 )
