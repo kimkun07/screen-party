@@ -14,6 +14,7 @@ class OverlayWindow(QWidget):
 
     # Signals
     drawing_mode_changed = pyqtSignal(bool)
+    resize_mode_changed = pyqtSignal(bool)
 
     def __init__(
         self,
@@ -234,6 +235,9 @@ class OverlayWindow(QWidget):
         # Set focus when enabled
         if enabled:
             self.setFocus()
+
+        # Emit signal to notify MainWindow
+        self.resize_mode_changed.emit(enabled)
 
     # Mouse events are now handled by Windows native resize functionality
     # No need for custom resize logic

@@ -42,6 +42,8 @@ class OverlayManager:
             # 오버레이 시그널 연결
             overlay_window.drawing_mode_changed.connect(
                 self.on_drawing_mode_changed)
+            overlay_window.resize_mode_changed.connect(
+                self.on_resize_mode_changed)
 
             # State에 오버레이 설정 (이것만이 UI를 업데이트함)
             self.window.state.set_overlay(overlay_window)
@@ -84,18 +86,8 @@ class OverlayManager:
             new_mode = not current
 
             # overlay_window에 직접 설정
+            # This will emit resize_mode_changed signal, which will call on_resize_mode_changed
             self.window.state.overlay_window.set_resize_mode(new_mode)
-
-            # State 업데이트 (이것만이 UI를 업데이트함)
-            self.window.state.set_resize_mode(new_mode)
-
-            # 상태 메시지 업데이트
-            if new_mode:
-                self.window.state.set_status("크기 조정 모드: 창 테두리를 드래그하여 조정하세요 (Enter로 완료)")
-                logger.info("Resize mode enabled")
-            else:
-                self.window.state.set_status("그림 영역 준비 완료. 그리기 활성화 버튼을 누르세요")
-                logger.info("Resize mode disabled")
 
     def toggle_drawing_mode(self):
         """그리기 모드 토글 (비즈니스 로직만, UI 업데이트는 state를 통해)"""
@@ -105,6 +97,22 @@ class OverlayManager:
 
             # overlay_window에 직접 설정
             self.window.state.overlay_window.set_drawing_enabled(new_mode)
+
+    def on_resize_mode_changed(self, enabled: bool):
+        """리사이즈 모드 변경 핸들러 (overlay_window에서 시그널로 호출됨)
+
+        비즈니스 로직만 처리하고, UI 업데이트는 state를 통해 수행합니다.
+        """
+        # State 업데이트 (이것만이 UI를 업데이트함)
+        self.window.state.set_resize_mode(enabled)
+
+        # 상태 메시지 업데이트
+        if enabled:
+            self.window.state.set_status("크기 조정 모드: 창 테두리를 드래그하여 조정하세요 (Enter로 완료)")
+            logger.info("Resize mode enabled")
+        else:
+            self.window.state.set_status("그림 영역 준비 완료. 그리기 활성화 버튼을 누르세요")
+            logger.info("Resize mode disabled")
 
     def on_drawing_mode_changed(self, enabled: bool):
         """그리기 모드 변경 핸들러 (overlay_window에서 시그널로 호출됨)
