@@ -38,7 +38,7 @@ RUN useradd -m -u 1000 appuser && \
 
 # Set environment variables
 ENV PATH="/app/.venv/bin:$PATH"
-ENV PYTHONPATH="/app/server/src:/app/common/src"
+ENV PYTHONPATH="/app/server/src:/app/common/src:/app/server"
 ENV SERVER_HOST="0.0.0.0"
 ENV SERVER_PORT="8765"
 
@@ -48,5 +48,5 @@ USER appuser
 # Expose server port
 EXPOSE 8765
 
-# Run server
+# Run server using scripts/main.py (through __main__.py wrapper)
 CMD ["python", "-m", "screen_party_server"]

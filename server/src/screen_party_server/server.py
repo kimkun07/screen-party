@@ -384,16 +384,3 @@ class ScreenPartyServer:
         websocket = self.clients.pop(user_id, None)
         if websocket:
             self.websocket_to_user.pop(websocket, None)
-
-
-async def main():
-    """서버 진입점"""
-    host = os.getenv("SCREEN_PARTY_HOST", "0.0.0.0")
-    port = int(os.getenv("SCREEN_PARTY_PORT", "8765"))
-
-    server = ScreenPartyServer(host=host, port=port)
-    await server.start()
-
-
-if __name__ == "__main__":
-    asyncio.run(main())

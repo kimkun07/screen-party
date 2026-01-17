@@ -1,80 +1,106 @@
-# Scripts Reorganization ✅ COMPLETED
+# Scripts Reorganization - REVERTED & REFINED
 
 ## Goal
-Reorganize script files to follow the established pattern (like `run.py client` command), improving maintainability and consistency.
+Reorganize script files to follow the established client pattern:
+- Client: client/scripts/main.py, client/scripts/package.py
+- Server: server/scripts/main.py, server/scripts/dockerized_server.py, server/scripts/publish.py
+- Root: scripts/run.py (minimal wrapper to call package scripts)
 
 ## Summary
-Successfully consolidated all scripts into a single `run.py` file, reducing script count from 8 files to 1, while maintaining all functionality. All 120 tests pass.
+Ralph는 이전 통합 방식이 마음에 들지 않음. 클라이언트처럼 각 패키지가 자체 scripts 디렉토리를 가지는 방식으로 재구성.
+
+✅ **완료**: server/scripts 디렉토리 생성 및 3개 스크립트 분리
+- server/scripts/main.py (서버 실행)
+- server/scripts/dockerized_server.py (Docker Compose)
+- server/scripts/publish.py (Docker 빌드/배포)
+
+✅ **변경사항**:
+- server.py: main() 함수 제거 (ScreenPartyServer 클래스만 유지)
+- __main__.py: scripts.main.main() 호출하도록 변경
+- scripts/run.py: 각 서버 함수가 server/scripts의 스크립트 호출
+- Dockerfile: PYTHONPATH에 /app/server 추가
+
+✅ **테스트**: 120개 테스트 모두 통과
 
 ## Tasks
 
-### Phase 1: Move server scripts into run.py
-[x] Move run_server.py → server() function in run.py
-[x] Move publish_server.py → publish_server() function in run.py
-[x] Move docker_server.py → docker_server() function in run.py (rename)
-[x] Delete original script files after migration
-[x] Test server commands work correctly
+### Phase 1: Create server/scripts directory structure ✅
+[x] Create server/scripts/ directory
+[x] Create server/scripts/__init__.py
+[x] Create server/scripts/main.py (server execution logic)
+[x] Create server/scripts/dockerized_server.py (Docker Compose)
+[x] Create server/scripts/publish.py (Docker build & publish)
 
-### Phase 2: Move utility scripts into run.py
-[x] Move format_all.py → format() function in run.py
-[x] Move lint_all.py → lint() function in run.py
-[x] Move test_all.py → test() function in run.py
-[~] Add integration tests to test() function (already included)
-[x] Delete original script files after migration
-[x] Test utility commands work correctly
+### Phase 2: Move server main logic to scripts/main.py ✅
+[x] Move __main__.py main() logic to server/scripts/main.py
+[x] Move server.py main() logic to server/scripts/main.py (existed)
+[x] Keep server.py as ScreenPartyServer class only (removed main())
+[x] Keep __main__.py minimal (imports scripts.main.main)
+[x] Update imports and references
 
-### Phase 3: Simplify package.py
-[x] Remove README.txt generation (unnecessary)
-[x] Remove ZIP file generation (unnecessary)
-[x] Keep only PyInstaller build logic
-[x] Test package command works correctly (dry-run tested)
+### Phase 3: Simplify root scripts/run.py ✅
+[x] Update server() to call server/scripts/main.py
+[x] Update docker_server() to call server/scripts/dockerized_server.py
+[x] Update publish_server() to call server/scripts/publish.py
+[x] Keep format/lint/test functions in run.py (workspace-level)
+[x] Remove unused imports (asyncio, os, argparse)
 
-### Phase 4: Clean up server entry points
-[x] Check if both server.py and __main__.py are needed
-[~] Both are needed: server.py has main(), __main__.py calls it
-[~] Dockerfile already uses python -m screen_party_server
-[~] No changes needed - already optimal
+### Phase 4: Update Dockerfile ✅
+[x] Keep CMD as "python -m screen_party_server" (works via __main__.py)
+[x] Update PYTHONPATH to include /app/server
+[x] Add comment explaining flow
 
-### Phase 5: Enhance integration tests
-[~] Create multiple test scenarios (deferred - needs domain knowledge)
-[~] Split into multiple files for different scenarios (deferred)
-[~] Add integration tests to test command (deferred)
-
-### Phase 6: Update pyproject.toml
-[x] Update all script entry points in pyproject.toml
-[x] Verify uv run commands work with new structure
-[x] Test all commands end-to-end
-
-### Phase 7: Update documentation
-[x] Update README.md with new command structure
-[x] Add comprehensive commands section (5단계)
-[x] Update package.py documentation (removed README/ZIP mentions)
-[x] All documentation updated
+### Phase 5: Testing ✅
+[x] Run all tests (uv run test) - 120 tests pass
+[x] Test server locally (uv run server --help) - works
+[x] Test python -m screen_party_server --help - works
+[x] Verify all commands work
 
 ## Current Structure
 ```
+client/
+└── scripts/
+    ├── main.py            # Client execution
+    └── package.py         # PyInstaller build
+
+server/
+├── src/screen_party_server/
+│   ├── __main__.py        # Entry point (calls server.main())
+│   └── server.py          # ScreenPartyServer class + main()
+└── Dockerfile             # Uses "python -m screen_party_server"
+
 scripts/
-├── run.py                 # Entry point wrapper
-├── run_server.py          # Server execution → Move to run.py
-├── publish_server.py      # Server Docker build/publish → Move to run.py
-├── docker_server.py       # Docker Compose server → Move to run.py
-├── format_all.py          # Code formatting → Move to run.py
-├── lint_all.py            # Linting → Move to run.py
-└── test_all.py            # Testing → Move to run.py
+└── run.py                 # All server logic embedded here
 ```
 
 ## Target Structure
 ```
+client/
+└── scripts/
+    ├── main.py            # Client execution ✅
+    └── package.py         # PyInstaller build ✅
+
+server/
+├── scripts/
+│   ├── __init__.py        # NEW
+│   ├── main.py            # NEW - server execution (from __main__.py + server.main())
+│   ├── dockerized_server.py  # NEW - Docker Compose
+│   └── publish.py         # NEW - Docker build & publish
+├── src/screen_party_server/
+│   ├── __main__.py        # Minimal (call scripts.main)
+│   └── server.py          # ScreenPartyServer class only (no main())
+└── Dockerfile             # Uses server/scripts/main.py
+
 scripts/
-└── run.py                 # All commands in one file
-    ├── client()           # Already exists
-    ├── package_client()   # Already exists
-    ├── server()           # NEW (from run_server.py)
-    ├── publish_server()   # NEW (from publish_server.py)
-    ├── docker_server()    # NEW (from docker_server.py)
-    ├── format()           # NEW (from format_all.py)
-    ├── lint()             # NEW (from lint_all.py)
-    └── test()             # NEW (from test_all.py) + integration tests
+└── run.py                 # Minimal wrapper (calls client/server scripts)
+    ├── client()           # → client/scripts/main.py
+    ├── package_client()   # → client/scripts/package.py
+    ├── server()           # → server/scripts/main.py
+    ├── docker_server()    # → server/scripts/dockerized_server.py
+    ├── publish_server()   # → server/scripts/publish.py
+    ├── format()           # Keep in run.py (workspace-level)
+    ├── lint()             # Keep in run.py (workspace-level)
+    └── test()             # Keep in run.py (workspace-level)
 ```
 
 ## Commands After Reorganization
