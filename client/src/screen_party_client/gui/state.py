@@ -3,6 +3,7 @@
 from typing import Optional, Dict, Callable, List
 from dataclasses import dataclass, field
 from PyQt6.QtGui import QColor
+from screen_party_common.models import DEFAULT_COLOR
 
 
 @dataclass
@@ -120,7 +121,7 @@ class AppState:
         """
         for participant in participants:
             user_id = participant.get("user_id")
-            color_str = participant.get("color", "#FF0000")
+            color_str = participant.get("color", DEFAULT_COLOR)
             if user_id:
                 color = QColor(color_str)
                 self.add_participant(user_id, color, alpha=1.0)

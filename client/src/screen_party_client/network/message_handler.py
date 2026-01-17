@@ -5,6 +5,7 @@ from typing import Dict, Any, Callable, Awaitable
 
 from PyQt6.QtGui import QColor
 from screen_party_common import MessageType
+from screen_party_common.models import DEFAULT_COLOR
 
 from ..gui.state import AppState
 from ..drawing.canvas_manager import CanvasManager
@@ -68,7 +69,7 @@ class MessageHandler:
         """Handle participant joined message"""
         participant_name = message.get("guest_name") or message.get("participant_name", "Participant")
         user_id = message.get("user_id")
-        color_str = message.get("color", "#FF0000")
+        color_str = message.get("color", DEFAULT_COLOR)
 
         if user_id:
             color = QColor(color_str)
@@ -137,7 +138,7 @@ class MessageHandler:
     async def _handle_color_change(self, message: Dict[str, Any]):
         """Handle color change message"""
         user_id = message.get("user_id")
-        color_str = message.get("color", "#FF0000")
+        color_str = message.get("color", DEFAULT_COLOR)
         alpha = message.get("alpha", 1.0)
 
         if user_id:

@@ -13,6 +13,7 @@ from websockets.exceptions import ConnectionClosed
 
 from .session import SessionManager
 from screen_party_common import MessageType, DRAWING_MESSAGE_TYPES
+from screen_party_common.models import DEFAULT_COLOR
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -243,7 +244,7 @@ class ScreenPartyServer:
             return
 
         # 색상 가져오기
-        color = data.get("color", "#FF0000")
+        color = data.get("color", DEFAULT_COLOR)
 
         # 세션에 색상 업데이트
         if user_id in session.participants:

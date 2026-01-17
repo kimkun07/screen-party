@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QTimer
 from PyQt6.QtGui import QColor
+from screen_party_common.models import DEFAULT_COLOR
 
 from ..network.client import WebSocketClient
 
@@ -70,7 +71,7 @@ class SessionManager:
                 self.window.state.initialize_participants(participants)
                 for participant in participants:
                     pid = participant.get("user_id")
-                    color_str = participant.get("color", "#FF0000")
+                    color_str = participant.get("color", DEFAULT_COLOR)
                     if pid:
                         self.window.canvas_manager.add_participant(pid, QColor(color_str), alpha=1.0)
                 logger.info(f"Initialized participants with {len(participants)} users")
@@ -159,7 +160,7 @@ class SessionManager:
                 self.window.state.initialize_participants(participants)
                 for participant in participants:
                     pid = participant.get("user_id")
-                    color_str = participant.get("color", "#FF0000")
+                    color_str = participant.get("color", DEFAULT_COLOR)
                     if pid:
                         self.window.canvas_manager.add_participant(pid, QColor(color_str), alpha=1.0)
                 logger.info(f"Initialized participants with {len(participants)} users")

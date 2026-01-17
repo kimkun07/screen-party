@@ -468,7 +468,7 @@ class DrawingCanvas(QWidget):
             return
 
         # 사용자별 색상 가져오기 (없으면 기본값)
-        color = self.user_colors.get(user_id, QColor("#FF0000"))
+        color = self.user_colors.get(user_id, _get_default_pen_color())
 
         # 사용자별 알파값 가져오기 (없으면 1.0)
         user_alpha = self.user_alphas.get(user_id, 1.0)
