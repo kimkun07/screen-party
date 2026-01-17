@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (
     QGroupBox, QSlider, QScrollArea
 )
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont, QColor
+from PyQt6.QtGui import QFont
 
 from .constants import PRESET_COLORS, get_default_pen_color
 from ..drawing import DrawingCanvas
