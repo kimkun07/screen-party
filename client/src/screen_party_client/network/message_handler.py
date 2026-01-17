@@ -67,7 +67,9 @@ class MessageHandler:
 
     async def _handle_participant_joined(self, message: Dict[str, Any]):
         """Handle participant joined message"""
-        participant_name = message.get("guest_name") or message.get("participant_name", "Participant")
+        participant_name = message.get("guest_name") or message.get(
+            "participant_name", "Participant"
+        )
         user_id = message.get("user_id")
         color_str = message.get("color", DEFAULT_COLOR)
 
@@ -83,7 +85,9 @@ class MessageHandler:
 
     async def _handle_participant_left(self, message: Dict[str, Any]):
         """Handle participant left message"""
-        participant_name = message.get("guest_name") or message.get("participant_name", "Participant")
+        participant_name = message.get("guest_name") or message.get(
+            "participant_name", "Participant"
+        )
         user_id = message.get("user_id")
 
         if user_id:

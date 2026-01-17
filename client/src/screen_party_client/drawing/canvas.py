@@ -334,9 +334,7 @@ class DrawingCanvas(QWidget):
             rel_segments.append(rel_seg.to_dict())
 
         # current_raw_points를 상대 좌표로 변환
-        rel_raw_points = [
-            self._to_relative_point(x, y) for x, y in packet["current_raw_points"]
-        ]
+        rel_raw_points = [self._to_relative_point(x, y) for x, y in packet["current_raw_points"]]
 
         # 메시지 생성 (상대 좌표)
         msg = DrawingUpdateMessage(
@@ -372,7 +370,9 @@ class DrawingCanvas(QWidget):
                     line_data.alpha = line_data.initial_alpha
                 elif elapsed_since_end < self.fade_hold_duration + self.fade_duration:
                     # 페이드아웃 단계 (초기 alpha → 0.0)
-                    fade_progress = (elapsed_since_end - self.fade_hold_duration) / self.fade_duration
+                    fade_progress = (
+                        elapsed_since_end - self.fade_hold_duration
+                    ) / self.fade_duration
                     line_data.alpha = max(0.0, line_data.initial_alpha * (1.0 - fade_progress))
                 else:
                     # 완전히 사라짐 - 삭제
@@ -423,7 +423,9 @@ class DrawingCanvas(QWidget):
         self.my_line_id = None
 
         # remote_lines에서 내 라인만 제거
-        my_lines = [lid for lid, ldata in self.remote_lines.items() if ldata.user_id == self.user_id]
+        my_lines = [
+            lid for lid, ldata in self.remote_lines.items() if ldata.user_id == self.user_id
+        ]
         for line_id in my_lines:
             del self.remote_lines[line_id]
 
@@ -532,8 +534,7 @@ class DrawingCanvas(QWidget):
         # current raw points 업데이트 (상대 좌표 → 절대 좌표)
         if "current_raw_points" in data:
             abs_raw_points = [
-                self._to_absolute_point(rel_x, rel_y)
-                for rel_x, rel_y in data["current_raw_points"]
+                self._to_absolute_point(rel_x, rel_y) for rel_x, rel_y in data["current_raw_points"]
             ]
             line_data.update_raw_points(abs_raw_points)
 
@@ -573,7 +574,9 @@ class DrawingCanvas(QWidget):
         Args:
             user_id: 사용자 ID
         """
-        lines_to_remove = [lid for lid, ldata in self.remote_lines.items() if ldata.user_id == user_id]
+        lines_to_remove = [
+            lid for lid, ldata in self.remote_lines.items() if ldata.user_id == user_id
+        ]
         for line_id in lines_to_remove:
             del self.remote_lines[line_id]
 

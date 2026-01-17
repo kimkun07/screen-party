@@ -10,16 +10,16 @@ dependencies = [
 ]
 
 [project.scripts]
-server = "scripts.run_server:main"
 client = "scripts.run:client"
-
-test = "scripts.test_all:main"
-format = "scripts.format_all:main"
-lint = "scripts.lint_all:main"
-
-docker-server = "scripts.docker_server:main"
-publish-server = "scripts.publish_server:main"
 package-client = "scripts.run:package_client"
+
+server = "scripts.run:server"
+publish-server = "scripts.run:publish_server"
+docker-server = "scripts.run:docker_server"
+
+format = "scripts.run:format"
+lint = "scripts.run:lint"
+test = "scripts.run:test"
 
 [tool.setuptools]
 packages = ["scripts"]

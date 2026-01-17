@@ -40,10 +40,8 @@ class OverlayManager:
             self.window.drawing_handler._connect_drawing_signals(canvas)
 
             # 오버레이 시그널 연결
-            overlay_window.drawing_mode_changed.connect(
-                self.on_drawing_mode_changed)
-            overlay_window.resize_mode_changed.connect(
-                self.on_resize_mode_changed)
+            overlay_window.drawing_mode_changed.connect(self.on_drawing_mode_changed)
+            overlay_window.resize_mode_changed.connect(self.on_resize_mode_changed)
 
             # State에 오버레이 설정 (이것만이 UI를 업데이트함)
             self.window.state.set_overlay(overlay_window)
@@ -108,7 +106,9 @@ class OverlayManager:
 
         # 상태 메시지 업데이트
         if enabled:
-            self.window.state.set_status("크기 조정 모드: 창 테두리를 드래그하여 조정하세요 (Enter로 완료)")
+            self.window.state.set_status(
+                "크기 조정 모드: 창 테두리를 드래그하여 조정하세요 (Enter로 완료)"
+            )
             logger.info("Resize mode enabled")
         else:
             self.window.state.set_status("그림 영역 준비 완료. 그리기 활성화 버튼을 누르세요")

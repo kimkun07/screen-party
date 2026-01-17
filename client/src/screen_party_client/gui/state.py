@@ -13,6 +13,7 @@ class AppState:
     This is the single source of truth for all application state.
     UI components should read from this state and update UI accordingly.
     """
+
     # Connection state
     session_id: Optional[str] = None
     user_id: Optional[str] = None

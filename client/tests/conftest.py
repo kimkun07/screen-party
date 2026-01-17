@@ -12,6 +12,6 @@ def pytest_configure(config):
     """
     # Linux headless 환경에서만 offscreen 사용
     # (DISPLAY 환경변수가 없거나 CI 환경)
-    if sys.platform.startswith('linux'):
-        if not os.environ.get('DISPLAY') or os.environ.get('CI'):
+    if sys.platform.startswith("linux"):
+        if not os.environ.get("DISPLAY") or os.environ.get("CI"):
             os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")

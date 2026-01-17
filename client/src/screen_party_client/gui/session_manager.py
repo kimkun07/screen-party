@@ -73,7 +73,9 @@ class SessionManager:
                     pid = participant.get("user_id")
                     color_str = participant.get("color", DEFAULT_COLOR)
                     if pid:
-                        self.window.canvas_manager.add_participant(pid, QColor(color_str), alpha=1.0)
+                        self.window.canvas_manager.add_participant(
+                            pid, QColor(color_str), alpha=1.0
+                        )
                 logger.info(f"Initialized participants with {len(participants)} users")
 
                 # 서버 주소 저장
@@ -162,7 +164,9 @@ class SessionManager:
                     pid = participant.get("user_id")
                     color_str = participant.get("color", DEFAULT_COLOR)
                     if pid:
-                        self.window.canvas_manager.add_participant(pid, QColor(color_str), alpha=1.0)
+                        self.window.canvas_manager.add_participant(
+                            pid, QColor(color_str), alpha=1.0
+                        )
                 logger.info(f"Initialized participants with {len(participants)} users")
 
                 # 서버 주소 저장

@@ -73,7 +73,11 @@ class TestScreenPartyServer:
 
         # 두 번째 참여자 참여
         second_ws = AsyncMock()
-        data = {"type": "join_session", "session_id": session.session_id, "guest_name": "SecondParticipant"}
+        data = {
+            "type": "join_session",
+            "session_id": session.session_id,
+            "guest_name": "SecondParticipant",
+        }
 
         user_id = await server.handle_join_session(second_ws, data)
 
@@ -141,8 +145,12 @@ class TestScreenPartyServer:
         server.websocket_to_user[first_ws] = first_participant.user_id
 
         # 참여자 2명 추가
-        participant2 = server.session_manager.add_participant(session.session_id, "SecondParticipant")
-        participant3 = server.session_manager.add_participant(session.session_id, "ThirdParticipant")
+        participant2 = server.session_manager.add_participant(
+            session.session_id, "SecondParticipant"
+        )
+        participant3 = server.session_manager.add_participant(
+            session.session_id, "ThirdParticipant"
+        )
 
         participant2_ws = AsyncMock()
         participant3_ws = AsyncMock()
@@ -177,7 +185,9 @@ class TestScreenPartyServer:
         server.clients[first_participant.user_id] = first_ws
 
         # 두 번째 참여자 추가
-        participant2 = server.session_manager.add_participant(session.session_id, "SecondParticipant")
+        participant2 = server.session_manager.add_participant(
+            session.session_id, "SecondParticipant"
+        )
         participant2_ws = AsyncMock()
         server.clients[participant2.user_id] = participant2_ws
 
@@ -196,7 +206,9 @@ class TestScreenPartyServer:
         session, first_participant = server.session_manager.create_session("FirstParticipant")
 
         # 두 번째 참여자 추가
-        participant2 = server.session_manager.add_participant(session.session_id, "SecondParticipant")
+        participant2 = server.session_manager.add_participant(
+            session.session_id, "SecondParticipant"
+        )
 
         # 첫 번째 참여자 세션 찾기
         assert server.find_user_session(first_participant.user_id) == session.session_id
@@ -212,8 +224,12 @@ class TestScreenPartyServer:
         """마지막 참여자 연결 종료 시 세션 만료 테스트"""
         # 세션 생성 (3명의 참여자)
         session, first_participant = server.session_manager.create_session("FirstParticipant")
-        participant2 = server.session_manager.add_participant(session.session_id, "SecondParticipant")
-        participant3 = server.session_manager.add_participant(session.session_id, "ThirdParticipant")
+        participant2 = server.session_manager.add_participant(
+            session.session_id, "SecondParticipant"
+        )
+        participant3 = server.session_manager.add_participant(
+            session.session_id, "ThirdParticipant"
+        )
 
         # WebSocket 등록
         first_ws = AsyncMock()
@@ -255,7 +271,9 @@ class TestScreenPartyServer:
         server.websocket_to_user[first_ws] = first_participant.user_id
 
         # 두 번째 참여자 추가
-        participant2 = server.session_manager.add_participant(session.session_id, "SecondParticipant")
+        participant2 = server.session_manager.add_participant(
+            session.session_id, "SecondParticipant"
+        )
         participant2_ws = AsyncMock()
         server.clients[participant2.user_id] = participant2_ws
         server.websocket_to_user[participant2_ws] = participant2.user_id
@@ -342,7 +360,9 @@ class TestScreenPartyServer:
         server.websocket_to_user[first_ws] = first_participant.user_id
 
         # 두 번째 참여자 추가
-        participant2 = server.session_manager.add_participant(session.session_id, "SecondParticipant")
+        participant2 = server.session_manager.add_participant(
+            session.session_id, "SecondParticipant"
+        )
         participant2_ws = AsyncMock()
         server.clients[participant2.user_id] = participant2_ws
         server.websocket_to_user[participant2_ws] = participant2.user_id
