@@ -58,8 +58,84 @@ Windows 호스트 (윈도우 앱 테스트)
 - [x] start_mirror.sh 스크립트 작성 및 개선
 - [x] 클라이언트 테스트 워크플로우 확립 (상대 경로 사용)
 - [x] .venv-linux → .venv 마이그레이션
+- [x] devcontainer 네트워크 문제 해결 (WSL Docker rootful 모드 전환)
+- [x] Windows 알림 브릿지 연결 환경 구성 완료
 
 ## 클로드 코드 일기
+
+### 2026-01-17 - devcontainer 네트워크 문제 해결 (Windows 알림 브릿지 목적)
+
+**상태**: 🟡 준비중 → 🟢 진행중 → ✅ 완료
+
+**목적**:
+- Windows 호스트에서 `npx dev-notify-bridge --port 6789` 실행
+- devcontainer에서 `localhost:6789`로 POST 요청
+- Windows 네이티브 알림 표시 (개발 피드백 개선)
+
+**문제**:
+- devcontainer에서 WSL의 `localhost:포트`에 접속 불가
+- devcontainer.json의 `"--network", "host"` 설정이 작동하지 않음
+
+**조사 과정**:
+
+1. **초기 진단**:
+   - WSL에서 `python3 -m http.server 9999` 실행
+   - WSL 내부에서 `curl localhost:9999` → ✅ 성공
+   - devcontainer에서 `curl localhost:9999` → ❌ 실패 (Connection refused)
+
+2. **네트워크 상태 확인**:
+   ```bash
+   # devcontainer 내부
+   $ ip addr show
+   tap0: inet 10.0.2.100/24   # ← 격리된 네트워크!
+
+   $ docker inspect <container> --format '{{.HostConfig.NetworkMode}}'
+   monoserver-private2_default  # ← host가 아님!
+   ```
+
+3. **시도한 해결책들 (모두 실패)**:
+   - ❌ Docker-outside-of-Docker feature 사용
+   - ❌ docker-compose.yml에서 `network_mode: host` 명시
+   - ❌ Docker feature 완전 제거 후 Docker CLI 수동 설치
+
+4. **근본 원인 발견**:
+   - **WSL Docker가 rootless 모드로 설치되어 있었음**
+   - Rootless Docker는 user namespace 사용 → 네트워크 격리 발생
+   - `network_mode: host` 설정이 제대로 작동하지 않음
+
+**최종 해결 방법**:
+
+WSL Docker를 default (rootful) 모드로 재설치
+
+**테스트 결과**:
+
+```bash
+# WSL에서 서버 실행
+python3 -m http.server 9999
+
+# devcontainer에서 접속
+curl localhost:9999  # ✅ 성공!
+```
+
+**주요 파일**:
+- 코드 변경 없음 (인프라 설정만 변경)
+
+**검증 완료**:
+- ✅ devcontainer → WSL localhost 접속 성공
+- ✅ `network_mode: host` 정상 작동
+- ✅ tap0 격리 네트워크 제거됨
+- ✅ Windows 알림 브릿지 연결 준비 완료
+
+**결론**:
+- Docker feature 설정 문제가 아니었음
+- Rootless Docker의 네트워크 격리가 근본 원인
+- WSL Docker를 rootful 모드로 변경하여 해결
+
+**다음 단계**:
+- Windows 호스트에서 `dev-notify-bridge` 실행 및 테스트
+- devcontainer에서 알림 전송 테스트
+
+---
 
 ### 2025-12-30 - Happy Coder 인증 영속성 및 pip 설치 문제 해결
 
@@ -325,6 +401,10 @@ uv run client
 > - ✅ `IS_SANDBOX=1` 자동 설정됨 (매번 입력 불필요)
 > - ✅ `.venv` 자동 생성 및 의존성 설치
 > - ✅ `CLAUDE_CONFIG_DIR=.claude/claude-config` (프로젝트 내부, 인증 영속성)
+> - ✅ **네트워크 문제 해결**: devcontainer에서 `localhost:포트`로 WSL 접속 가능
+>   - WSL Docker를 rootful 모드로 전환 (rootless 모드는 네트워크 격리 발생)
+>   - `network_mode: host` 정상 작동
+>   - Windows 알림 브릿지 (`dev-notify-bridge`) 연결 가능
 > - Python 인터프리터: `.venv/bin/python` 사용
 > - **중요**: `.claude/claude-config/`는 git에 포함되지 않음 (인증 정보)
 >
@@ -334,6 +414,7 @@ uv run client
 > - ✅ `--active` 옵션 불필요 (`uv run client`만으로 실행)
 >
 > **주의사항**:
-> - Docker는 WSL2 Docker Desktop 통합 사용
+> - Docker는 WSL2에 rootful 모드로 설치됨 (rootless 모드 사용 금지)
 > - /mnt 마운트 경로는 devcontainer 생성 시 문제 있음 → WSL 네이티브 경로 사용
 > - 동기화 스크립트는 백그라운드에서 계속 실행되어야 함
+> - devcontainer는 WSL의 localhost와 동일한 네트워크 공간을 사용함

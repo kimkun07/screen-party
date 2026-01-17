@@ -19,6 +19,7 @@
 	// Environment variables
 	"containerEnv": {
 		"TZ": "Asia/Seoul",
+		
 		"IS_SANDBOX": "1",
 		"CLAUDE_CONFIG_DIR": "/workspaces/screen-party/.claude/claude-config",
 		"HAPPY_HOME_DIR": "/workspaces/screen-party/.claude/happy-config"
@@ -26,7 +27,10 @@
 	},
 
 	// Load environment variables from .env.secret file (not committed to git)
-	"runArgs": ["--env-file", "${localWorkspaceFolder}/.devcontainer/.env.secret"],
+	"runArgs": [
+		"--network", "host",
+		"--env-file", "${localWorkspaceFolder}/.devcontainer/.env.secret"
+	],
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
