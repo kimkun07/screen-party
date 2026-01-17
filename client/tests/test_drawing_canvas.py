@@ -2,8 +2,7 @@
 DrawingCanvas GUI 테스트 (pytest-qt 사용)
 """
 
-import pytest
-from PyQt6.QtCore import Qt, QPoint, QPointF, QTimer
+from PyQt6.QtCore import Qt, QPoint
 from PyQt6.QtGui import QColor
 from pytestqt.qtbot import QtBot
 
@@ -397,7 +396,6 @@ class TestDrawingCanvasFadeAnimation:
 
     def test_fade_hold_phase(self, qtbot: QtBot):
         """페이드 유지 단계 (2초) 테스트"""
-        import time
 
         canvas = DrawingCanvas(
             fade_hold_duration=0.5,  # 테스트용 짧은 시간
@@ -421,7 +419,6 @@ class TestDrawingCanvasFadeAnimation:
 
     def test_fade_animation_phase(self, qtbot: QtBot):
         """페이드아웃 단계 (1초) 테스트"""
-        import time
 
         canvas = DrawingCanvas(
             fade_hold_duration=0.1,  # 매우 짧은 hold

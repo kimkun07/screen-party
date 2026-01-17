@@ -4,7 +4,6 @@ Incremental Fitter 연속성 테스트
 실제 사용 시나리오에서 세그먼트가 끊기지 않고 연속적으로 이어지는지 검증
 """
 
-import pytest
 from screen_party_client.drawing.incremental_fitter import IncrementalFitter
 
 
@@ -37,7 +36,7 @@ class TestIncrementalContinuity:
         segments = fitter.finalized_segments
 
         # 최소 1개 이상의 세그먼트가 생성되어야 함
-        assert len(segments) >= 1, f"세그먼트가 생성되지 않음"
+        assert len(segments) >= 1, "세그먼트가 생성되지 않음"
 
         # 1. 첫 세그먼트의 시작점이 첫 입력 점과 일치 (허용 오차 1.0)
         first_seg = segments[0]

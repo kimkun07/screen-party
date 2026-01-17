@@ -1,7 +1,7 @@
 """MainWindow GUI 테스트 (pytest-qt 사용)"""
 
 import pytest
-from PyQt6.QtCore import Qt, QPoint
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication
 
 from screen_party_client.gui.main_window import MainWindow
@@ -116,7 +116,7 @@ class TestMainScreen:
 
         # 서버 주소와 세션 번호가 표시되어야 함
         assert window.server_info_label.text() == f"서버 주소: {server_url}"
-        assert window.session_info_label.text() == f"세션 번호: ABC123"
+        assert window.session_info_label.text() == "세션 번호: ABC123"
 
     def test_copy_server_address(self, qtbot):
         """서버 주소 클립보드 복사 테스트"""
@@ -324,7 +324,6 @@ class TestColorSystem:
 
     def test_set_pen_color_red(self, qtbot):
         """핑크 색상 버튼 클릭 테스트 (파스텔 핑크)"""
-        from PyQt6.QtGui import QColor
 
         window = MainWindow()
         qtbot.addWidget(window)
@@ -345,7 +344,6 @@ class TestColorSystem:
 
     def test_set_pen_color_blue(self, qtbot):
         """블루 색상 버튼 클릭 테스트 (파스텔 블루)"""
-        from PyQt6.QtGui import QColor
 
         window = MainWindow()
         qtbot.addWidget(window)
@@ -409,7 +407,6 @@ class TestColorSystem:
 
     def test_multiple_color_changes(self, qtbot):
         """여러 번 색상 변경 테스트 (파스텔 톤)"""
-        from PyQt6.QtGui import QColor
 
         window = MainWindow()
         qtbot.addWidget(window)
