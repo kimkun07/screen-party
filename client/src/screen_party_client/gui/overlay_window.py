@@ -154,6 +154,12 @@ class OverlayWindow(QWidget):
                 print("[OverlayWindow] ESC pressed - disabling drawing mode")
                 self.set_drawing_enabled(False)
             event.accept()
+        elif event.key() == QtKey.Key.Key_Return or event.key() == QtKey.Key.Key_Enter:
+            # Enter key: Disable resize mode
+            if self._resize_mode:
+                print("[OverlayWindow] Enter pressed - disabling resize mode")
+                self.set_resize_mode(False)
+            event.accept()
         else:
             super().keyPressEvent(event)
 

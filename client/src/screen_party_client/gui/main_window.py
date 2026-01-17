@@ -923,7 +923,7 @@ class MainWindow(QMainWindow):
 
             # 즉시 리사이즈 모드 활성화
             self.overlay_window.set_resize_mode(True)
-            self.resize_overlay_button.setText("그림 영역 크기 조정 완료")
+            self.resize_overlay_button.setText("그림 영역 크기 조정 완료 (Enter)")
 
             logger.info("Overlay created and resize mode enabled")
 
@@ -964,8 +964,8 @@ class MainWindow(QMainWindow):
 
             # Update button text
             if not current:
-                self.resize_overlay_button.setText("그림 영역 크기 조정 완료")
-                self.set_status("크기 조정 모드: 창 테두리를 드래그하여 조정하세요")
+                self.resize_overlay_button.setText("그림 영역 크기 조정 완료 (Enter)")
+                self.set_status("크기 조정 모드: 창 테두리를 드래그하여 조정하세요 (Enter로 완료)")
                 logger.info("Resize mode enabled")
             else:
                 self.resize_overlay_button.setText("그림 영역 크기 조정")
