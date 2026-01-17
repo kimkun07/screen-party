@@ -16,7 +16,10 @@ from PyQt6.QtGui import QFont, QColor
 from screen_party_common import MessageType, DrawingEndMessage, ColorChangeMessage
 from ..network.client import WebSocketClient
 from ..drawing import DrawingCanvas
+from ..drawing.canvas_manager import CanvasManager
+from ..network.message_handler import MessageHandler
 from .constants import PRESET_COLORS, get_default_pen_color
+from .state import AppState
 
 logger = logging.getLogger(__name__)
 
@@ -61,23 +64,24 @@ class MainWindow(QMainWindow):
         # QSettings 초기화 (로컬 저장소)
         self.settings = QSettings("ScreenParty", "Client")
 
+        # Application state (single source of truth)
+        self.state = AppState()
+
+        # Network client
         self.client: Optional[WebSocketClient] = None
-        self.session_id: Optional[str] = None
-        self.user_id: Optional[str] = None
-        self.is_host = False  # Deprecated: kept for backward compatibility
         self.listen_task: Optional[asyncio.Task] = None
 
-        # UI 상태
-        self.is_connected = False
+        # Canvas manager (created after UI init)
+        self.canvas_manager: Optional[CanvasManager] = None
 
-        # 오버레이 상태
-        self.is_sharing = False
-        self.overlay_window = None
+        # Message handler (created after canvas manager)
+        self.message_handler: Optional[MessageHandler] = None
 
-        # 현재 알파값 추적 (0.0 ~ 1.0)
-        self.current_alpha = 1.0
-
+        # UI 초기화
         self.init_ui()
+
+        # State observer 등록 (UI 업데이트)
+        self.state.add_observer(self._on_state_changed)
 
     def init_ui(self):
         """UI 초기화"""
@@ -404,16 +408,54 @@ class MainWindow(QMainWindow):
         self.main_layout.addWidget(self.main_scroll)
 
         # Drawing Canvas 생성 (오버레이용으로만 사용)
-        self.drawing_canvas = DrawingCanvas(
+        main_canvas = DrawingCanvas(
             parent=self.main_widget,
             user_id=None,  # 세션 연결 시 설정
             pen_color=get_default_pen_color(),  # 첫 번째 프리셋 색상 (파스텔 핑크)
             pen_width=3,
         )
-        self.drawing_canvas.hide()  # 화면에 표시하지 않음
+        main_canvas.hide()  # 화면에 표시하지 않음
+
+        # Canvas Manager 생성
+        self.canvas_manager = CanvasManager(main_canvas)
 
         # Drawing Canvas 시그널 연결
-        self._connect_drawing_signals()
+        self._connect_drawing_signals(main_canvas)
+
+        # Message Handler 생성
+        self.message_handler = MessageHandler(
+            state=self.state,
+            canvas_manager=self.canvas_manager,
+            disconnect_callback=self.disconnect,
+        )
+
+    def _connect_drawing_signals(self, canvas: DrawingCanvas):
+        """DrawingCanvas 시그널 연결
+
+        Args:
+            canvas: 연결할 캔버스
+        """
+        canvas.drawing_started.connect(self._on_drawing_started)
+        canvas.drawing_updated.connect(self._on_drawing_updated)
+        canvas.drawing_ended.connect(self._on_drawing_ended)
+
+    def _on_state_changed(self):
+        """State 변경 시 호출되는 Observer 메서드
+
+        이 메서드는 state가 변경될 때마다 호출되어 UI를 업데이트합니다.
+        """
+        # 상태 메시지 업데이트
+        if self.state.is_connected:
+            self.status_label.setText(self.state.status_message)
+
+        # 참여자 색상 정보 업데이트
+        self.update_users_colors_display()
+
+        # 화면 전환
+        if self.state.current_screen == "main" and not self.main_scroll.isVisible():
+            self._show_main_screen_ui()
+        elif self.state.current_screen == "start" and not self.start_scroll.isVisible():
+            self.show_start_screen()
 
     def show_start_screen(self):
         """시작 화면 표시"""
@@ -421,14 +463,17 @@ class MainWindow(QMainWindow):
         self.main_scroll.hide()
 
     def show_main_screen(self):
-        """메인 화면 표시"""
+        """메인 화면 표시 (상태 업데이트)"""
+        self.state.set_screen("main")
+
+    def _show_main_screen_ui(self):
+        """메인 화면 UI 표시 (실제 UI 업데이트)"""
         self.start_scroll.hide()
         self.main_scroll.show()
 
         # 서버 주소와 세션 번호 표시
-        server_url = self.server_input.text()
-        self.server_info_label.setText(f"서버 주소: {server_url}")
-        self.session_info_label.setText(f"세션 번호: {self.session_id}")
+        self.server_info_label.setText(f"서버 주소: {self.state.server_url}")
+        self.session_info_label.setText(f"세션 번호: {self.state.session_id}")
 
         # 참여자 색상 정보 표시
         self.update_users_colors_display()
@@ -442,13 +487,13 @@ class MainWindow(QMainWindow):
         clipboard = QApplication.clipboard()
         server_url = self.server_input.text()
         clipboard.setText(server_url)
-        self.set_status("서버 주소가 클립보드에 복사되었습니다")
+        self.state.set_status("서버 주소가 클립보드에 복사되었습니다")
 
     def copy_session_id(self):
         """세션 번호를 클립보드에 복사"""
         clipboard = QApplication.clipboard()
-        clipboard.setText(self.session_id)
-        self.set_status("세션 번호가 클립보드에 복사되었습니다")
+        clipboard.setText(self.state.session_id)
+        self.state.set_status("세션 번호가 클립보드에 복사되었습니다")
 
     async def on_create_session(self):
         """세션 생성 (호스트)"""
@@ -482,34 +527,34 @@ class MainWindow(QMainWindow):
             logger.info(f"Step 3: ✓ Received response: {response}")
 
             if response.get("type") == "session_created":
-                self.session_id = response["session_id"]
-                self.user_id = response["host_id"]
-                self.is_host = True
-                self.is_connected = True
+                session_id = response["session_id"]
+                user_id = response["host_id"]
 
                 logger.info(f"✓ Session created successfully!")
-                logger.info(f"  Session ID: {self.session_id}")
-                logger.info(f"  Host ID: {self.user_id}")
+                logger.info(f"  Session ID: {session_id}")
+                logger.info(f"  Host ID: {user_id}")
 
-                # DrawingCanvas에 user_id 설정
-                self.drawing_canvas.set_user_id(self.user_id)
+                # State 업데이트
+                self.state.set_connected(session_id, user_id, server_url)
 
-                # 참여자 정보로 user_colors 초기화
+                # Canvas Manager에 user_id 설정
+                self.canvas_manager.set_user_id(user_id)
+
+                # 참여자 정보 초기화
                 participants = response.get("participants", [])
+                self.state.initialize_participants(participants)
                 for participant in participants:
-                    user_id = participant.get("user_id")
+                    pid = participant.get("user_id")
                     color_str = participant.get("color", "#FF0000")
-                    if user_id:
-                        color = QColor(color_str)
-                        self.drawing_canvas.user_colors[user_id] = color
-                        self.drawing_canvas.user_alphas[user_id] = 1.0
-                logger.info(f"Initialized user_colors with {len(participants)} participants")
+                    if pid:
+                        self.canvas_manager.add_participant(pid, QColor(color_str), alpha=1.0)
+                logger.info(f"Initialized participants with {len(participants)} users")
 
                 # 서버 주소 저장
                 self.settings.setValue("server_url", server_url)
                 logger.info(f"Server URL saved to settings: {server_url}")
 
-                self.session_created.emit(self.session_id, self.user_id)
+                self.session_created.emit(session_id, user_id)
 
                 # Listen 태스크 시작 (QTimer로 지연시켜 이벤트 루프 블록 방지)
                 QTimer.singleShot(100, self._start_listen_task)
@@ -571,34 +616,34 @@ class MainWindow(QMainWindow):
             logger.info(f"Step 3: ✓ Received response: {response}")
 
             if response.get("type") == "session_joined":
-                self.session_id = response["session_id"]
-                self.user_id = response["user_id"]
-                self.is_host = False
-                self.is_connected = True
+                session_id = response["session_id"]
+                user_id = response["user_id"]
 
                 logger.info(f"✓ Successfully joined session!")
-                logger.info(f"  Session ID: {self.session_id}")
-                logger.info(f"  User ID: {self.user_id}")
+                logger.info(f"  Session ID: {session_id}")
+                logger.info(f"  User ID: {user_id}")
 
-                # DrawingCanvas에 user_id 설정
-                self.drawing_canvas.set_user_id(self.user_id)
+                # State 업데이트
+                self.state.set_connected(session_id, user_id, server_url)
 
-                # 참여자 정보로 user_colors 초기화
+                # Canvas Manager에 user_id 설정
+                self.canvas_manager.set_user_id(user_id)
+
+                # 참여자 정보 초기화
                 participants = response.get("participants", [])
+                self.state.initialize_participants(participants)
                 for participant in participants:
-                    user_id = participant.get("user_id")
+                    pid = participant.get("user_id")
                     color_str = participant.get("color", "#FF0000")
-                    if user_id:
-                        color = QColor(color_str)
-                        self.drawing_canvas.user_colors[user_id] = color
-                        self.drawing_canvas.user_alphas[user_id] = 1.0
-                logger.info(f"Initialized user_colors with {len(participants)} participants")
+                    if pid:
+                        self.canvas_manager.add_participant(pid, QColor(color_str), alpha=1.0)
+                logger.info(f"Initialized participants with {len(participants)} users")
 
                 # 서버 주소 저장
                 self.settings.setValue("server_url", server_url)
                 logger.info(f"Server URL saved to settings: {server_url}")
 
-                self.session_joined.emit(self.session_id, self.user_id)
+                self.session_joined.emit(session_id, user_id)
 
                 # Listen 태스크 시작 (QTimer로 지연시켜 이벤트 루프 블록 방지)
                 QTimer.singleShot(100, self._start_listen_task)
@@ -621,12 +666,6 @@ class MainWindow(QMainWindow):
                 await self.client.disconnect()
                 self.client = None
 
-    def _connect_drawing_signals(self):
-        """DrawingCanvas 시그널 연결"""
-        self.drawing_canvas.drawing_started.connect(self._on_drawing_started)
-        self.drawing_canvas.drawing_updated.connect(self._on_drawing_updated)
-        self.drawing_canvas.drawing_ended.connect(self._on_drawing_ended)
-
     def _on_drawing_started(self, line_id: str, user_id: str, data: dict):
         """드로잉 시작 시그널 처리"""
         asyncio.create_task(self._send_drawing_message(data))
@@ -645,7 +684,7 @@ class MainWindow(QMainWindow):
 
     async def _send_drawing_message(self, data: dict):
         """드로잉 메시지를 서버로 전송"""
-        if self.client and self.is_connected:
+        if self.client and self.state.is_connected:
             try:
                 await self.client.send_message(data)
             except Exception as e:
@@ -653,129 +692,20 @@ class MainWindow(QMainWindow):
 
     async def _send_color_change(self, data: dict):
         """색상 변경 메시지를 서버로 전송"""
-        if self.client and self.is_connected:
+        if self.client and self.state.is_connected:
             try:
                 await self.client.send_message(data)
             except Exception as e:
                 logger.error(f"Failed to send color change message: {e}")
 
     async def handle_message(self, message: dict):
-        """서버로부터 받은 메시지 처리
+        """서버로부터 받은 메시지 처리 (MessageHandler에 위임)
 
         Args:
             message: 수신한 메시지
         """
-        msg_type = message.get("type")
-        logger.info(f"Received message: {msg_type}")
-
-        if msg_type == "guest_joined" or msg_type == "participant_joined":
-            participant_name = message.get("guest_name") or message.get("participant_name", "Participant")
-            user_id = message.get("user_id")
-            color_str = message.get("color", "#FF0000")
-
-            # 참여자 색상 정보 추가
-            if user_id:
-                color = QColor(color_str)
-                self.drawing_canvas.user_colors[user_id] = color
-                self.drawing_canvas.user_alphas[user_id] = 1.0
-                # 오버레이가 있으면 오버레이에도 추가
-                if self.is_sharing and self.overlay_window:
-                    self.overlay_window.get_canvas().user_colors[user_id] = color
-                    self.overlay_window.get_canvas().user_alphas[user_id] = 1.0
-                logger.info(f"Added participant {user_id} with color {color_str}")
-                # UI 업데이트
-                self.update_users_colors_display()
-
-            self.set_status(f"{participant_name} joined the session")
-
-        elif msg_type == "guest_left" or msg_type == "participant_left":
-            participant_name = message.get("guest_name") or message.get("participant_name", "Participant")
-            user_id = message.get("user_id")
-
-            # 참여자 색상 정보 제거
-            if user_id:
-                if user_id in self.drawing_canvas.user_colors:
-                    del self.drawing_canvas.user_colors[user_id]
-                if user_id in self.drawing_canvas.user_alphas:
-                    del self.drawing_canvas.user_alphas[user_id]
-                # 오버레이가 있으면 오버레이에서도 제거
-                if self.is_sharing and self.overlay_window:
-                    if user_id in self.overlay_window.get_canvas().user_colors:
-                        del self.overlay_window.get_canvas().user_colors[user_id]
-                    if user_id in self.overlay_window.get_canvas().user_alphas:
-                        del self.overlay_window.get_canvas().user_alphas[user_id]
-                logger.info(f"Removed participant {user_id}")
-                # UI 업데이트
-                self.update_users_colors_display()
-
-            self.set_status(f"{participant_name} left the session")
-
-        elif msg_type == "session_expired":
-            reason = message.get("message", "Session expired")
-            self.set_status(f"Session expired: {reason}")
-            await self.disconnect()
-
-        elif msg_type == "error":
-            error_msg = message.get("message", "Unknown error")
-            self.set_status(f"Error: {error_msg}")
-            logger.error(f"Server error: {error_msg}")
-
-        # 드로잉 메시지 처리
-        elif msg_type == MessageType.DRAWING_START.value:
-            line_id = message.get("line_id")
-            user_id = message.get("user_id")
-            if line_id and user_id and user_id != self.user_id:
-                self.drawing_canvas.handle_drawing_start(
-                    line_id, user_id, message)
-                # 오버레이가 있으면 오버레이에도 전달
-                if self.is_sharing and self.overlay_window:
-                    self.overlay_window.get_canvas().handle_drawing_start(line_id, user_id, message)
-
-        elif msg_type == MessageType.DRAWING_UPDATE.value:
-            line_id = message.get("line_id")
-            user_id = message.get("user_id")
-            if line_id and user_id and user_id != self.user_id:
-                self.drawing_canvas.handle_drawing_update(
-                    line_id, user_id, message)
-                # 오버레이가 있으면 오버레이에도 전달
-                if self.is_sharing and self.overlay_window:
-                    self.overlay_window.get_canvas().handle_drawing_update(line_id, user_id, message)
-
-        elif msg_type == MessageType.DRAWING_END.value:
-            line_id = message.get("line_id")
-            user_id = message.get("user_id")
-            if line_id and user_id and user_id != self.user_id:
-                self.drawing_canvas.handle_drawing_end(line_id, user_id)
-                # 오버레이가 있으면 오버레이에도 전달
-                if self.is_sharing and self.overlay_window:
-                    self.overlay_window.get_canvas().handle_drawing_end(line_id, user_id)
-
-        elif msg_type == MessageType.COLOR_CHANGE.value:
-            user_id = message.get("user_id")
-            color_str = message.get("color", "#FF0000")
-            alpha = message.get("alpha", 1.0)
-            if user_id:
-                # DrawingCanvas의 user_colors 및 user_alphas 업데이트
-                color = QColor(color_str)
-                self.drawing_canvas.user_colors[user_id] = color
-                self.drawing_canvas.user_alphas[user_id] = alpha
-                # 오버레이가 있으면 오버레이에도 업데이트
-                if self.is_sharing and self.overlay_window:
-                    self.overlay_window.get_canvas().user_colors[user_id] = color
-                    self.overlay_window.get_canvas().user_alphas[user_id] = alpha
-                # UI 업데이트
-                self.update_users_colors_display()
-                logger.info(f"User {user_id} changed color to {color_str}, alpha to {alpha:.2f}")
-
-    def set_status(self, status: str):
-        """메인 화면 상태 메시지 설정
-
-        Args:
-            status: 상태 메시지
-        """
-        if self.is_connected:
-            self.status_label.setText(status)
-        logger.info(f"Status: {status}")
+        if self.message_handler:
+            await self.message_handler.handle_message(message)
 
     def set_start_status(self, status: str):
         """시작 화면 상태 메시지 설정
@@ -808,19 +738,20 @@ class MainWindow(QMainWindow):
         Args:
             color: 새로운 펜 색상
         """
-        self.drawing_canvas.set_pen_color(color)
-        self.set_status(f"색상 변경: RGB({color.red()}, {color.green()}, {color.blue()})")
+        # Canvas 색상 변경
+        self.canvas_manager.main_canvas.set_pen_color(color)
+
+        # State 업데이트
+        self.state.set_pen_color(color)
+        self.state.set_status(f"색상 변경: RGB({color.red()}, {color.green()}, {color.blue()})")
         logger.info(f"Pen color changed to RGB({color.red()}, {color.green()}, {color.blue()})")
 
-        # UI 업데이트
-        self.update_users_colors_display()
-
         # 서버에 색상 변경 알림 (알파값 포함)
-        if self.client and self.is_connected and self.user_id:
+        if self.client and self.state.is_connected and self.state.user_id:
             msg = ColorChangeMessage(
-                user_id=self.user_id,
+                user_id=self.state.user_id,
                 color=color.name(),
-                alpha=self.current_alpha,
+                alpha=self.state.current_alpha,
             )
             asyncio.create_task(self._send_color_change(msg.to_dict()))
 
@@ -832,16 +763,20 @@ class MainWindow(QMainWindow):
             label: 업데이트할 라벨
         """
         alpha = value / 100.0
-        self.current_alpha = alpha
-        self.drawing_canvas.set_pen_alpha(alpha)
+
+        # Canvas 알파 변경
+        self.canvas_manager.main_canvas.set_pen_alpha(alpha)
+
+        # State 업데이트
+        self.state.set_alpha(alpha)
         label.setText(f"투명도: {value}%")
         logger.info(f"Pen alpha changed to {alpha:.2f}")
 
         # 서버에 알파값 변경 알림 (현재 색상과 함께 전송)
-        if self.client and self.is_connected and self.user_id:
-            current_color = self.drawing_canvas.pen_color
+        if self.client and self.state.is_connected and self.state.user_id:
+            current_color = self.canvas_manager.main_canvas.pen_color
             msg = ColorChangeMessage(
-                user_id=self.user_id,
+                user_id=self.state.user_id,
                 color=current_color.name(),
                 alpha=alpha,
             )
@@ -849,12 +784,12 @@ class MainWindow(QMainWindow):
 
     def update_users_colors_display(self):
         """참여자별 색상 정보 UI 업데이트"""
-        if not self.is_connected or not self.drawing_canvas:
+        if not self.state.is_connected:
             self.users_colors_label.setText("")
             return
 
-        # DrawingCanvas의 user_colors에서 정보 가져오기
-        user_colors = self.drawing_canvas.user_colors
+        # State에서 user_colors 가져오기
+        user_colors = self.state.user_colors
 
         if not user_colors:
             self.users_colors_label.setText("")
@@ -864,7 +799,7 @@ class MainWindow(QMainWindow):
         color_indicators = []
         for user_id, color in user_colors.items():
             # 자신인 경우 "나 (ID)"로 표시, 다른 사람은 ID 앞 8자리만 표시
-            if user_id == self.user_id:
+            if user_id == self.state.user_id:
                 user_label = f"나 ({user_id[:8]})"
             else:
                 user_label = user_id[:8]
@@ -888,23 +823,23 @@ class MainWindow(QMainWindow):
 
         try:
             # 오버레이 윈도우 생성
-            self.overlay_window = OverlayWindow(
-                user_id=self.user_id,
+            overlay_window = OverlayWindow(
+                user_id=self.state.user_id,
                 pen_color=get_default_pen_color(),  # 첫 번째 프리셋 색상 (파스텔 핑크)
             )
 
-            # DrawingCanvas 시그널 연결
-            canvas = self.overlay_window.get_canvas()
-            canvas.drawing_started.connect(self._on_drawing_started)
-            canvas.drawing_updated.connect(self._on_drawing_updated)
-            canvas.drawing_ended.connect(self._on_drawing_ended)
+            # State에 오버레이 설정
+            self.state.set_overlay(overlay_window)
 
-            # 메인 캔버스의 user_colors를 오버레이 캔버스에 복사
-            canvas.user_colors = self.drawing_canvas.user_colors.copy()
-            canvas.user_alphas = self.drawing_canvas.user_alphas.copy()
+            # Canvas Manager에 오버레이 캔버스 등록
+            canvas = overlay_window.get_canvas()
+            self.canvas_manager.set_overlay_canvas(canvas)
+
+            # DrawingCanvas 시그널 연결
+            self._connect_drawing_signals(canvas)
 
             # 오버레이 시그널 연결
-            self.overlay_window.drawing_mode_changed.connect(
+            overlay_window.drawing_mode_changed.connect(
                 self.on_drawing_mode_changed)
 
             # UI 상태 전환: 생성 버튼 숨기고 컨트롤 위젯 표시
@@ -913,70 +848,71 @@ class MainWindow(QMainWindow):
             self.toggle_drawing_button.setEnabled(True)
             self.clear_drawings_button.setEnabled(True)
 
-            self.set_status("그림 영역이 생성되었습니다. 크기를 조정하세요.")
+            self.state.set_status("그림 영역이 생성되었습니다. 크기를 조정하세요.")
 
             # 창 표시
-            self.overlay_window.show()
-
-            # 상태 업데이트
-            self.is_sharing = True
+            overlay_window.show()
 
             # 즉시 리사이즈 모드 활성화
-            self.overlay_window.set_resize_mode(True)
+            overlay_window.set_resize_mode(True)
             self.resize_overlay_button.setText("그림 영역 크기 조정 완료 (Enter)")
 
             logger.info("Overlay created and resize mode enabled")
 
         except Exception as e:
             logger.error(f"Failed to create overlay: {e}", exc_info=True)
-            self.set_status(f"오류: 그림 영역 생성 실패: {e}")
+            self.state.set_status(f"오류: 그림 영역 생성 실패: {e}")
             self.stop_overlay()
 
     def stop_overlay(self):
         """그림 영역 삭제"""
-        if self.overlay_window:
+        if self.state.overlay_window:
             try:
-                self.overlay_window.close()
+                self.state.overlay_window.close()
             except Exception as e:
                 logger.error(f"Error closing overlay: {e}")
-            self.overlay_window = None
+
+        # Canvas Manager에서 오버레이 제거
+        self.canvas_manager.set_overlay_canvas(None)
+
+        # State에서 오버레이 제거
+        self.state.clear_overlay()
 
         # UI 상태 전환: 컨트롤 위젯 숨기고 생성 버튼 표시
         self.overlay_control_widget.hide()
         self.setup_overlay_button.show()
 
         # 버튼 상태 리셋
-        self.is_sharing = False
         self.resize_overlay_button.setText("그림 영역 크기 조정")
         self.toggle_drawing_button.setEnabled(False)
         self.toggle_drawing_button.setText("그리기 활성화")
         self.clear_drawings_button.setEnabled(False)
 
-        self.set_status("그림 영역이 삭제되었습니다")
+        self.state.set_status("그림 영역이 삭제되었습니다")
 
         logger.info("Overlay stopped")
 
     def toggle_resize_mode(self):
         """그림 영역 크기 조정 토글"""
-        if self.overlay_window:
-            current = self.overlay_window.is_resize_mode()
-            self.overlay_window.set_resize_mode(not current)
+        if self.state.overlay_window:
+            current = self.state.overlay_window.is_resize_mode()
+            self.state.overlay_window.set_resize_mode(not current)
 
             # Update button text
             if not current:
                 self.resize_overlay_button.setText("그림 영역 크기 조정 완료 (Enter)")
-                self.set_status("크기 조정 모드: 창 테두리를 드래그하여 조정하세요 (Enter로 완료)")
+                self.state.set_status("크기 조정 모드: 창 테두리를 드래그하여 조정하세요 (Enter로 완료)")
                 logger.info("Resize mode enabled")
             else:
                 self.resize_overlay_button.setText("그림 영역 크기 조정")
-                self.set_status("그림 영역 준비 완료. 그리기 활성화 버튼을 누르세요")
+                self.state.set_status("그림 영역 준비 완료. 그리기 활성화 버튼을 누르세요")
                 logger.info("Resize mode disabled")
 
     def toggle_drawing_mode(self):
         """그리기 모드 토글"""
-        if self.overlay_window:
-            current = self.overlay_window.is_drawing_enabled()
-            self.overlay_window.set_drawing_enabled(not current)
+        if self.state.overlay_window:
+            current = self.state.overlay_window.is_drawing_enabled()
+            self.state.overlay_window.set_drawing_enabled(not current)
 
     def on_drawing_mode_changed(self, enabled: bool):
         """그리기 모드 변경 핸들러"""
@@ -991,20 +927,20 @@ class MainWindow(QMainWindow):
                 }
                 """
             )
-            self.set_status("그리기 활성화됨 (ESC 키로 비활성화 가능)")
+            self.state.set_status("그리기 활성화됨 (ESC 키로 비활성화 가능)")
             logger.info("Drawing mode enabled")
         else:
             self.toggle_drawing_button.setText("그리기 활성화")
             # 일반 스타일로 되돌리기
             self.toggle_drawing_button.setStyleSheet("")
-            self.set_status("그리기 비활성화됨 (클릭이 아래로 전달됨)")
+            self.state.set_status("그리기 비활성화됨 (클릭이 아래로 전달됨)")
             logger.info("Drawing mode disabled")
 
     def clear_overlay_drawings(self):
         """그림 모두 지우기"""
-        if self.overlay_window:
-            self.overlay_window.get_canvas().clear_all_drawings()
-            self.set_status("모든 그림이 지워졌습니다")
+        if self.state.overlay_window:
+            self.canvas_manager.clear_all_drawings()
+            self.state.set_status("모든 그림이 지워졌습니다")
             logger.info("All drawings cleared")
 
     # ================================================================
@@ -1012,7 +948,7 @@ class MainWindow(QMainWindow):
     async def disconnect(self):
         """서버 연결 종료"""
         # 오버레이가 활성화되어 있으면 종료
-        if self.is_sharing:
+        if self.state.is_sharing:
             self.stop_overlay()
 
         if self.listen_task:
@@ -1027,11 +963,10 @@ class MainWindow(QMainWindow):
             await self.client.disconnect()
             self.client = None
 
-        self.session_id = None
-        self.user_id = None
-        self.is_host = False
-        self.is_connected = False
-        self.show_start_screen()
+        # State 초기화
+        self.state.set_disconnected()
+        self.state.set_screen("start")
+
         self.enable_start_buttons()
 
     def _start_listen_task(self):
