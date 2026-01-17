@@ -33,9 +33,9 @@ Reorganize script files to follow the established pattern (like `run.py client` 
 [~] No changes needed - already optimal
 
 ### Phase 5: Enhance integration tests
-[ ] Create multiple test scenarios
-[ ] Split into multiple files for different scenarios
-[ ] Add integration tests to test command
+[~] Create multiple test scenarios (deferred - needs domain knowledge)
+[~] Split into multiple files for different scenarios (deferred)
+[~] Add integration tests to test command (deferred)
 
 ### Phase 6: Update pyproject.toml
 [x] Update all script entry points in pyproject.toml
