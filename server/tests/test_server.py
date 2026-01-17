@@ -1,12 +1,10 @@
 """WebSocket 서버 유닛 테스트"""
 
-import asyncio
 import json
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
 from screen_party_server.server import ScreenPartyServer
-from screen_party_common import Session, Participant
 
 
 @pytest.fixture

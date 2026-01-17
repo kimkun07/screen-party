@@ -4,7 +4,7 @@ import asyncio
 import json
 import logging
 import os
-from typing import Dict, Optional, Set
+from typing import Dict, Optional
 from datetime import datetime
 
 import websockets
@@ -12,7 +12,8 @@ from websockets.asyncio.server import ServerConnection
 from websockets.exceptions import ConnectionClosed
 
 from .session import SessionManager
-from screen_party_common import Participant, MessageType, DRAWING_MESSAGE_TYPES, PUBLIC_MESSAGE_TYPES
+from screen_party_common import MessageType, DRAWING_MESSAGE_TYPES
+from screen_party_common.models import DEFAULT_COLOR
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -35,7 +36,7 @@ class ScreenPartyServer:
     async def start(self):
         """서버 시작"""
         # 백그라운드 cleanup 태스크 시작
-        cleanup_task = asyncio.create_task(
+        _ = asyncio.create_task(
             self.session_manager.start_cleanup_task(interval_minutes=5)
         )
 
@@ -243,7 +244,7 @@ class ScreenPartyServer:
             return
 
         # 색상 가져오기
-        color = data.get("color", "#FF0000")
+        color = data.get("color", DEFAULT_COLOR)
 
         # 세션에 색상 업데이트
         if user_id in session.participants:

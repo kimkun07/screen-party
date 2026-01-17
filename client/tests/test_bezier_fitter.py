@@ -2,7 +2,6 @@
 BezierFitter (Schneider 알고리즘) 테스트
 """
 
-import pytest
 from screen_party_client.drawing.bezier_fitter import BezierFitter, BezierSegment
 
 

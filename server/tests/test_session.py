@@ -85,9 +85,9 @@ def test_add_multiple_participants():
     session, first_participant = manager.create_session("FirstParticipant")
 
     # 여러 참여자 추가
-    participant2 = manager.add_participant(session.session_id, "SecondParticipant")
-    participant3 = manager.add_participant(session.session_id, "ThirdParticipant")
-    participant4 = manager.add_participant(session.session_id, "FourthParticipant")
+    _ = manager.add_participant(session.session_id, "SecondParticipant")
+    _ = manager.add_participant(session.session_id, "ThirdParticipant")
+    _ = manager.add_participant(session.session_id, "FourthParticipant")
 
     retrieved_session = manager.get_session(session.session_id)
     assert len(retrieved_session.participants) == 4

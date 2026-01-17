@@ -20,10 +20,10 @@ from pathlib import Path
 client_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(client_dir / "src"))
 
-from PyQt6.QtWidgets import QApplication
-from PyQt6.QtGui import QIcon
-from qasync import QEventLoop
-from screen_party_client.gui.main_window import MainWindow
+from PyQt6.QtWidgets import QApplication  # noqa: E402
+from PyQt6.QtGui import QIcon  # noqa: E402
+from qasync import QEventLoop  # noqa: E402
+from screen_party_client.gui.main_window import MainWindow  # noqa: E402
 
 # 로깅 설정
 logging.basicConfig(

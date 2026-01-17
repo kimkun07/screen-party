@@ -2,9 +2,7 @@
 IncrementalFitter 테스트
 """
 
-import pytest
 from screen_party_client.drawing.incremental_fitter import IncrementalFitter
-from screen_party_client.drawing.bezier_fitter import BezierSegment
 
 
 class TestIncrementalFitter:
@@ -136,7 +134,7 @@ class TestIncrementalFitterNetworking:
         # 첫 번째 패킷
         for i in range(1, 4):
             fitter.add_point((float(i * 10), float(i * 10)))
-        packet1 = fitter.get_delta_packet()
+        fitter.get_delta_packet()  # 첫 번째 패킷 (무시)
 
         # 더 많은 점 추가
         for i in range(4, 8):

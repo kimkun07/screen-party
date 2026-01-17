@@ -35,7 +35,7 @@ async def test_host_creates_session_and_two_guests_join():
         assert response["host_name"] == "Host_Player"
 
         session_id = response["session_id"]
-        host_id = response["host_id"]
+        _ = response["host_id"]  # host_id 사용하지 않지만 응답 검증
 
         print(f"✓ 호스트 세션 생성 성공: {session_id}")
 

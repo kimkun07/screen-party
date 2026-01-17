@@ -188,16 +188,16 @@ def create_zip(version: str, dist_dir: Path, output_dir: Path):
         exe_path = dist_dir / "ScreenParty.exe"
         if exe_path.exists():
             zipf.write(exe_path, "ScreenParty.exe")
-            print(f"  ✅ ScreenParty.exe")
+            print("  ✅ ScreenParty.exe")
         else:
-            print(f"  ❌ ScreenParty.exe not found!")
+            print("  ❌ ScreenParty.exe not found!")
             sys.exit(1)
 
         # README.txt 추가
         readme_path = dist_dir / "README.txt"
         if readme_path.exists():
             zipf.write(readme_path, "README.txt")
-            print(f"  ✅ README.txt")
+            print("  ✅ README.txt")
 
     # 파일 크기 확인
     size_mb = zip_path.stat().st_size / (1024 * 1024)
@@ -286,20 +286,20 @@ def main():
     if not args.skip_clean:
         if not args.dry_run:
             if build_dir.exists():
-                print(f"\n🗑️  기존 build/ 디렉토리 삭제...")
+                print("\n🗑️  기존 build/ 디렉토리 삭제...")
                 shutil.rmtree(build_dir)
             if dist_dir.exists():
-                print(f"🗑️  기존 dist/ 디렉토리 삭제...")
+                print("🗑️  기존 dist/ 디렉토리 삭제...")
                 shutil.rmtree(dist_dir)
             print("✅ 빌드 정리 완료")
         else:
-            print(f"\n[DRY RUN] 기존 빌드 정리")
+            print("\n[DRY RUN] 기존 빌드 정리")
 
     # 2. version_info.txt 생성
     if not args.dry_run:
         create_version_info(version, version_info_file)
     else:
-        print(f"\n[DRY RUN] version_info.txt 생성")
+        print("\n[DRY RUN] version_info.txt 생성")
 
     # 3. PyInstaller 실행
     # uv를 통해 client 환경에서 PyInstaller 실행 (dev 의존성 포함)
@@ -340,7 +340,7 @@ def main():
         readme_path = dist_dir / "README.txt"
         create_readme(version, readme_path)
     else:
-        print(f"\n[DRY RUN] README.txt 생성")
+        print("\n[DRY RUN] README.txt 생성")
 
     # 7. ZIP 압축
     if not args.dry_run:
@@ -355,12 +355,12 @@ def main():
     if not args.dry_run:
         print(f"✅ 실행 파일: {dist_dir / 'ScreenParty.exe'}")
         print(f"✅ ZIP 파일: {zip_path}")
-        print(f"\n📤 GitHub Release 배포 방법:")
-        print(f"   1. GitHub 레포지토리 → Releases → Create a new release")
+        print("\n📤 GitHub Release 배포 방법:")
+        print("   1. GitHub 레포지토리 → Releases → Create a new release")
         print(f"   2. Tag: {version}")
         print(f"   3. Title: Screen Party {version}")
         print(f"   4. {zip_path.name} 파일 업로드")
-        print(f"\n또는 GitHub CLI 사용:")
+        print("\n또는 GitHub CLI 사용:")
         print(f"   gh release create {version} {zip_path.name} --title \"Screen Party {version}\"")
     print("="*60)
 

@@ -65,6 +65,29 @@
 
 ## 최근 업데이트
 
+### 2026-01-17 - UI State Management 리팩토링 완료
+
+**완료된 작업**:
+- ✅ Declarative UI: AppState 클래스로 중앙화된 상태 관리
+- ✅ CanvasManager: 듀얼 캔버스 동기화 로직 통합
+- ✅ MessageHandler: 네트워크 메시지 처리 분리
+- ✅ MainWindow 단순화 (1,050 → 984 lines)
+- ✅ 코드 중복 제거 (참여자 초기화, 캔버스 업데이트)
+- ✅ 미사용 파일 삭제 (floating_menu.py, window_selector.py, test_clickthrough.py)
+- ✅ 모든 테스트 통과 (91/91)
+- ✅ 린팅 에러 수정 (ruff clean)
+
+**아키텍처 개선**:
+1. **State Management**: AppState 클래스에서 모든 상태 관리 (session, overlay, drawing, participants)
+2. **Observer Pattern**: 상태 변경 시 UI 자동 업데이트
+3. **Separation of Concerns**: UI, 상태, 캔버스, 네트워크 계층 분리
+4. **코드 감소**: 총 -172 lines (미사용 코드 제거 + 구조 개선)
+
+**파일 구조**:
+- `client/src/screen_party_client/gui/state.py` (201 lines) - 새로 생성
+- `client/src/screen_party_client/drawing/canvas_manager.py` (117 lines) - 새로 생성
+- `client/src/screen_party_client/network/message_handler.py` (165 lines) - 새로 생성
+
 ### 2026-01-13 - 참여자 기반 세션 관리로 전환
 
 **완료된 작업**:

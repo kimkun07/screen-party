@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import QWidget
 from PyQt6.QtCore import Qt, QTimer, QPointF, pyqtSignal
 from PyQt6.QtGui import QPainter, QPen, QPainterPath, QMouseEvent, QPaintEvent, QColor
 
-from screen_party_common import MessageType, DrawingStartMessage, DrawingUpdateMessage, DrawingEndMessage
+from screen_party_common import DrawingStartMessage, DrawingUpdateMessage
 from .incremental_fitter import IncrementalFitter
 from .bezier_fitter import BezierSegment
 from .line_data import LineData
@@ -271,6 +271,9 @@ class DrawingCanvas(QWidget):
         if self.my_fitter.is_drawing or len(self.my_fitter.finalized_segments) > 0:
             # user_colors에서 내 색상 참조 (색상 변경 시 즉시 반영됨)
             my_color = self.user_colors.get(self.user_id, self.pen_color)
+            # None 체크 (만약 user_colors와 pen_color 모두 None이면 기본값 사용)
+            if my_color is None:
+                my_color = _get_default_pen_color()
             pen = QPen(my_color, self.pen_width)
             pen.setCapStyle(Qt.PenCapStyle.RoundCap)
             pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
@@ -465,7 +468,7 @@ class DrawingCanvas(QWidget):
             return
 
         # 사용자별 색상 가져오기 (없으면 기본값)
-        color = self.user_colors.get(user_id, QColor("#FF0000"))
+        color = self.user_colors.get(user_id, _get_default_pen_color())
 
         # 사용자별 알파값 가져오기 (없으면 1.0)
         user_alpha = self.user_alphas.get(user_id, 1.0)
