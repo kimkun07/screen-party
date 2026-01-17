@@ -6,7 +6,9 @@ echo "▶ postCreate start"
 # Install happy-coder (should be first on postCreate script)
 if command -v npm &> /dev/null; then
     echo "▶ Installing happy-coder..."
-    npm install -g happy-coder
+    npm install -g happy-coder@0.13.0
+    # Playstore version 1.5.0
+    # happy-server version kimkun07/happy-server-selfhost:v0.2.0
 fi
 
 # Install PyQt6 system dependencies for headless testing
