@@ -38,14 +38,15 @@ Reorganize script files to follow the established pattern (like `run.py client` 
 [ ] Add integration tests to test command
 
 ### Phase 6: Update pyproject.toml
-[ ] Update all script entry points in pyproject.toml
-[ ] Verify uv run commands work with new structure
-[ ] Test all commands end-to-end
+[x] Update all script entry points in pyproject.toml
+[x] Verify uv run commands work with new structure
+[x] Test all commands end-to-end
 
 ### Phase 7: Update documentation
-[ ] Update README.md with new command structure
-[ ] Add examples of new commands
-[ ] Update any other documentation
+[x] Update README.md with new command structure
+[x] Add comprehensive commands section (5단계)
+[x] Update package.py documentation (removed README/ZIP mentions)
+[x] All documentation updated
 
 ## Current Structure
 ```
