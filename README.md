@@ -214,7 +214,36 @@ uv run black server/ client/ common/
 uv run ruff check server/ client/ common/
 ```
 
-#### 6단계: 배포 워크플로우
+#### 6단계: Claude Code 개발 알림 시스템
+
+이 프로젝트는 **Windows 네이티브 알림**을 통해 Claude Code의 작업 상태를 실시간으로 전달합니다.
+
+**작동 방식**:
+
+1. **dev-notify-bridge** (Windows 알림 브릿지):
+   - Windows에서 `npx dev-notify-bridge --port 6789`를 실행해야 함
+   - devcontainer의 `localhost:6789`에서 POST 요청을 받아 Windows 알림 표시
+
+2. **Claude Code Hooks** (`.claude/claude-config/settings.json`):
+
+3. **notify-to-windows.sh 스크립트** (`.claude/notify-to-windows.sh`):
+   - Claude Code hooks에서 호출됨
+   - WSL의 기본 게이트웨이 IP를 동적으로 가져와서 Windows 호스트에 연결
+   - `http://<WINDOWS_HOST_IP>:6789/notify`로 POST 요청 전송
+   - Windows에서 네이티브 알림 표시
+
+**환경 구성**:
+- WSL Docker가 **rootful 모드**로 설치되어야 함 (rootless 모드는 네트워크 격리 발생)
+- devcontainer의 `network_mode: host` 설정으로 WSL의 localhost와 네트워크 공유
+- 자세한 내용은 `.claude/devlog/dev-environment.md` 참조
+  
+**수동 테스트**:
+```bash
+# devcontainer 또는 WSL에서
+./.claude/notify-to-windows.sh --title "Test" --message "This is a test notification" --sound true
+```
+
+#### 7단계: 배포 워크플로우
 
 **서버 Docker 배포**
 

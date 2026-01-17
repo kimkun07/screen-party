@@ -1,0 +1,26 @@
+{
+  "model": "sonnet",
+  "hooks": {
+    "Notification": [
+      {
+        "matcher": "permission_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.claude/notify-to-windows.sh --title 'Claude Code' --message '유저 입력이 필요합니다' --sound false"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.claude/notify-to-windows.sh --title 'Claude Code' --message '작업이 완료되었습니다' --sound false"
+          }
+        ]
+      }
+    ]
+  }
+}

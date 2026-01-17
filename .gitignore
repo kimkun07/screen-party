@@ -1,8 +1,9 @@
 # 개발자용 임시 노트
 temp-notes
 
-# Claude Code config (authentication)
-.claude/claude-config/
+# Claude Code config (authentication, but keep settings.json)
+.claude/claude-config/*
+!.claude/claude-config/settings.json
 
 # Happy Coder config (authentication)
 .claude/happy-config/
