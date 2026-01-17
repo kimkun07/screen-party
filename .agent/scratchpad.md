@@ -35,9 +35,9 @@
 
 ### Phase 3: Refactor MainWindow
 [x] Extract message handling to `MessageHandler` class
-[ ] Simplify MainWindow to use State + CanvasManager (in progress)
-[ ] Make UI updates declarative (read state, update UI)
-[ ] Remove direct state mutation from UI components
+[x] Simplify MainWindow to use State + CanvasManager
+[x] Make UI updates declarative (read state, update UI)
+[x] Remove direct state mutation from UI components
 
 ### Phase 4: Remove Code Duplication
 [x] Extract participant initialization to single method (done via AppState)
