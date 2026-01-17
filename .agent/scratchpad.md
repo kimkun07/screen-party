@@ -67,6 +67,75 @@
   - Removed extraneous f-string prefixes (auto-fixed)
   - Removed unused local variable in test_incremental_fitter.py
 
+## Phase 7: Complete Declarative UI Refactoring ✅
+
+**Problem**: UI updates were still scattered throughout the code, not fully declarative.
+- Direct UI modifications in methods like `create_overlay()` (lines 846-849)
+- Button state changes in `stop_overlay()` (lines 882-889)
+- Text updates in `toggle_resize_mode()` (lines 903, 907)
+- Style changes in `on_drawing_mode_changed()` (lines 920-935)
+
+**Goal**: All UI updates should happen in ONE centralized location that reads from state.
+
+### Tasks Completed
+
+[x] Extend AppState with missing UI state
+  - overlay_created: bool
+  - resize_mode_active: bool
+  - drawing_mode_active: bool
+  - start_buttons_enabled: bool
+
+[x] Create `update_ui_from_state()` method
+  - Read all state
+  - Update ALL UI elements based on state
+  - Called by _on_state_changed()
+
+[x] Remove imperative UI updates from business logic
+  - create_overlay(): only update state, not UI ✓
+  - stop_overlay(): only update state, not UI ✓
+  - toggle_resize_mode(): only update state, not UI ✓
+  - toggle_drawing_mode(): only update state, not UI ✓
+  - on_drawing_mode_changed(): only update state, not UI ✓
+  - disable_start_buttons() / enable_start_buttons(): removed, use state ✓
+
+[x] Test all UI flows still work
+  - Session creation/join ✓
+  - Overlay creation/deletion ✓
+  - Resize mode toggle ✓
+  - Drawing mode toggle ✓
+  - Button enable/disable states ✓
+
+[x] Run tests and linting
+  - All 91 tests passing ✓
+  - Ruff linting passed ✓
+
+### Summary of Changes
+
+**Files Modified:**
+- `client/src/screen_party_client/gui/state.py`
+  - Added overlay_created, resize_mode_active, drawing_mode_active, start_buttons_enabled fields
+  - Added set_resize_mode(), set_drawing_mode(), set_start_buttons_enabled() methods
+
+- `client/src/screen_party_client/gui/main_window.py`
+  - Created centralized `update_ui_from_state()` method (58 lines)
+  - Removed imperative UI updates from business logic methods
+  - Removed disable_start_buttons() and enable_start_buttons() methods
+  - Added main_scroll.hide() in initialization to fix initial state
+
+- `client/tests/test_main_window_gui.py`
+  - Updated tests to use state-based approach
+  - Added QApplication.processEvents() calls where needed
+  - Fixed widget assertions to use scroll areas instead of widgets
+
+**Key Improvements:**
+1. **100% Declarative UI**: ALL UI updates now happen in update_ui_from_state()
+2. **Single Source of Truth**: Business logic only modifies state, UI reacts to state changes
+3. **No Scattered UI Code**: Removed 6+ locations with direct UI manipulation
+4. **Better Testability**: Tests can verify UI by checking state, not poking at widgets
+5. **Maintainability**: Adding new UI elements requires changes in only 2 places (state + update_ui_from_state)
+
+---
+
 ## Refactoring Complete! ✅
 
 ### Summary of Changes

@@ -406,6 +406,7 @@ class MainWindow(QMainWindow):
         # 스크롤 영역에 위젯 설정
         self.main_scroll.setWidget(self.main_widget)
         self.main_layout.addWidget(self.main_scroll)
+        self.main_scroll.hide()  # 초기에는 시작 화면만 표시
 
         # Drawing Canvas 생성 (오버레이용으로만 사용)
         main_canvas = DrawingCanvas(
@@ -443,22 +444,76 @@ class MainWindow(QMainWindow):
         """State 변경 시 호출되는 Observer 메서드
 
         이 메서드는 state가 변경될 때마다 호출되어 UI를 업데이트합니다.
+        모든 UI 업데이트는 이 메서드에서 state를 읽어서 declarative하게 처리합니다.
         """
-        # 상태 메시지 업데이트
-        if self.state.is_connected:
-            self.status_label.setText(self.state.status_message)
+        self.update_ui_from_state()
 
-        # 참여자 색상 정보 업데이트
-        self.update_users_colors_display()
+    def update_ui_from_state(self):
+        """State를 읽어서 모든 UI 요소를 업데이트
 
-        # 화면 전환
+        이 메서드는 state를 읽어서 UI를 업데이트하는 유일한 장소입니다.
+        비즈니스 로직에서는 state만 변경하고, UI는 이 메서드에서만 업데이트합니다.
+        """
+        # === 화면 전환 ===
         if self.state.current_screen == "main" and not self.main_scroll.isVisible():
             self._show_main_screen_ui()
         elif self.state.current_screen == "start" and not self.start_scroll.isVisible():
-            self.show_start_screen()
+            self._show_start_screen_ui()
+
+        # === 상태 메시지 ===
+        if self.state.is_connected:
+            self.status_label.setText(self.state.status_message)
+
+        # === 참여자 정보 ===
+        self.update_users_colors_display()
+
+        # === 시작 화면 버튼 상태 ===
+        self.create_button.setEnabled(self.state.start_buttons_enabled)
+        self.join_button.setEnabled(
+            self.state.start_buttons_enabled and len(self.session_input.text().strip()) > 0
+        )
+        self.server_input.setEnabled(self.state.start_buttons_enabled)
+        self.session_input.setEnabled(self.state.start_buttons_enabled)
+
+        # === 오버레이 생성/삭제 버튼 ===
+        if self.state.overlay_created:
+            self.setup_overlay_button.hide()
+            self.overlay_control_widget.show()
+            self.toggle_drawing_button.setEnabled(True)
+            self.clear_drawings_button.setEnabled(True)
+        else:
+            self.overlay_control_widget.hide()
+            self.setup_overlay_button.show()
+            self.toggle_drawing_button.setEnabled(False)
+            self.clear_drawings_button.setEnabled(False)
+
+        # === 리사이즈 모드 버튼 ===
+        if self.state.resize_mode_active:
+            self.resize_overlay_button.setText("그림 영역 크기 조정 완료 (Enter)")
+        else:
+            self.resize_overlay_button.setText("그림 영역 크기 조정")
+
+        # === 그리기 모드 버튼 ===
+        if self.state.drawing_mode_active:
+            self.toggle_drawing_button.setText("그리기 비활성화 (ESC로 비활성화)")
+            self.toggle_drawing_button.setStyleSheet(
+                """
+                QPushButton {
+                    border: 3px solid #4CAF50;
+                    border-radius: 4px;
+                }
+                """
+            )
+        else:
+            self.toggle_drawing_button.setText("그리기 활성화")
+            self.toggle_drawing_button.setStyleSheet("")
 
     def show_start_screen(self):
-        """시작 화면 표시"""
+        """시작 화면 표시 (상태 업데이트)"""
+        self.state.set_screen("start")
+
+    def _show_start_screen_ui(self):
+        """시작 화면 UI 표시 (실제 UI 업데이트)"""
         self.start_scroll.show()
         self.main_scroll.hide()
 
@@ -509,7 +564,7 @@ class MainWindow(QMainWindow):
             logger.info("=" * 60)
 
             self.set_start_status("서버에 연결 중...")
-            self.disable_start_buttons()
+            self.state.set_start_buttons_enabled(False)
 
             # WebSocket 클라이언트 생성 및 연결
             logger.info("Step 1: Creating WebSocket client...")
@@ -572,7 +627,7 @@ class MainWindow(QMainWindow):
             logger.error(f"Session creation failed: {e}", exc_info=True)
             self.set_start_status(f"오류: {e}")
             self.error_occurred.emit(str(e))
-            self.enable_start_buttons()
+            self.state.set_start_buttons_enabled(True)
             if self.client:
                 await self.client.disconnect()
                 self.client = None
@@ -598,7 +653,7 @@ class MainWindow(QMainWindow):
             logger.info("=" * 60)
 
             self.set_start_status("서버에 연결 중...")
-            self.disable_start_buttons()
+            self.state.set_start_buttons_enabled(False)
 
             # WebSocket 클라이언트 생성 및 연결
             logger.info("Step 1: Creating WebSocket client...")
@@ -661,7 +716,7 @@ class MainWindow(QMainWindow):
             logger.error(f"Session join failed: {e}", exc_info=True)
             self.set_start_status(f"오류: {e}")
             self.error_occurred.emit(str(e))
-            self.enable_start_buttons()
+            self.state.set_start_buttons_enabled(True)
             if self.client:
                 await self.client.disconnect()
                 self.client = None
@@ -715,20 +770,6 @@ class MainWindow(QMainWindow):
         """
         self.start_status_label.setText(status)
         logger.info(f"Start Status: {status}")
-
-    def disable_start_buttons(self):
-        """시작 화면 버튼 비활성화"""
-        self.create_button.setEnabled(False)
-        self.join_button.setEnabled(False)
-        self.server_input.setEnabled(False)
-        self.session_input.setEnabled(False)
-
-    def enable_start_buttons(self):
-        """시작 화면 버튼 활성화"""
-        self.create_button.setEnabled(True)
-        self.join_button.setEnabled(len(self.session_input.text().strip()) > 0)
-        self.server_input.setEnabled(True)
-        self.session_input.setEnabled(True)
 
     # ========== 색상 설정 메서드 ==========
 
@@ -818,7 +859,7 @@ class MainWindow(QMainWindow):
         self.create_overlay()
 
     def create_overlay(self):
-        """그림 영역 생성"""
+        """그림 영역 생성 (비즈니스 로직만, UI 업데이트는 state를 통해)"""
         from .overlay_window import OverlayWindow
 
         try:
@@ -827,9 +868,6 @@ class MainWindow(QMainWindow):
                 user_id=self.state.user_id,
                 pen_color=get_default_pen_color(),  # 첫 번째 프리셋 색상 (파스텔 핑크)
             )
-
-            # State에 오버레이 설정
-            self.state.set_overlay(overlay_window)
 
             # Canvas Manager에 오버레이 캔버스 등록
             canvas = overlay_window.get_canvas()
@@ -842,20 +880,15 @@ class MainWindow(QMainWindow):
             overlay_window.drawing_mode_changed.connect(
                 self.on_drawing_mode_changed)
 
-            # UI 상태 전환: 생성 버튼 숨기고 컨트롤 위젯 표시
-            self.setup_overlay_button.hide()
-            self.overlay_control_widget.show()
-            self.toggle_drawing_button.setEnabled(True)
-            self.clear_drawings_button.setEnabled(True)
-
+            # State에 오버레이 설정 (이것만이 UI를 업데이트함)
+            self.state.set_overlay(overlay_window)
             self.state.set_status("그림 영역이 생성되었습니다. 크기를 조정하세요.")
 
             # 창 표시
             overlay_window.show()
 
-            # 즉시 리사이즈 모드 활성화
+            # 리사이즈 모드 활성화 (overlay_window에 직접 설정)
             overlay_window.set_resize_mode(True)
-            self.resize_overlay_button.setText("그림 영역 크기 조정 완료 (Enter)")
 
             logger.info("Overlay created and resize mode enabled")
 
@@ -865,7 +898,7 @@ class MainWindow(QMainWindow):
             self.stop_overlay()
 
     def stop_overlay(self):
-        """그림 영역 삭제"""
+        """그림 영역 삭제 (비즈니스 로직만, UI 업데이트는 state를 통해)"""
         if self.state.overlay_window:
             try:
                 self.state.overlay_window.close()
@@ -875,64 +908,54 @@ class MainWindow(QMainWindow):
         # Canvas Manager에서 오버레이 제거
         self.canvas_manager.set_overlay_canvas(None)
 
-        # State에서 오버레이 제거
+        # State에서 오버레이 제거 (이것만이 UI를 업데이트함)
         self.state.clear_overlay()
-
-        # UI 상태 전환: 컨트롤 위젯 숨기고 생성 버튼 표시
-        self.overlay_control_widget.hide()
-        self.setup_overlay_button.show()
-
-        # 버튼 상태 리셋
-        self.resize_overlay_button.setText("그림 영역 크기 조정")
-        self.toggle_drawing_button.setEnabled(False)
-        self.toggle_drawing_button.setText("그리기 활성화")
-        self.clear_drawings_button.setEnabled(False)
-
         self.state.set_status("그림 영역이 삭제되었습니다")
 
         logger.info("Overlay stopped")
 
     def toggle_resize_mode(self):
-        """그림 영역 크기 조정 토글"""
+        """그림 영역 크기 조정 토글 (비즈니스 로직만, UI 업데이트는 state를 통해)"""
         if self.state.overlay_window:
             current = self.state.overlay_window.is_resize_mode()
-            self.state.overlay_window.set_resize_mode(not current)
+            new_mode = not current
 
-            # Update button text
-            if not current:
-                self.resize_overlay_button.setText("그림 영역 크기 조정 완료 (Enter)")
+            # overlay_window에 직접 설정
+            self.state.overlay_window.set_resize_mode(new_mode)
+
+            # State 업데이트 (이것만이 UI를 업데이트함)
+            self.state.set_resize_mode(new_mode)
+
+            # 상태 메시지 업데이트
+            if new_mode:
                 self.state.set_status("크기 조정 모드: 창 테두리를 드래그하여 조정하세요 (Enter로 완료)")
                 logger.info("Resize mode enabled")
             else:
-                self.resize_overlay_button.setText("그림 영역 크기 조정")
                 self.state.set_status("그림 영역 준비 완료. 그리기 활성화 버튼을 누르세요")
                 logger.info("Resize mode disabled")
 
     def toggle_drawing_mode(self):
-        """그리기 모드 토글"""
+        """그리기 모드 토글 (비즈니스 로직만, UI 업데이트는 state를 통해)"""
         if self.state.overlay_window:
             current = self.state.overlay_window.is_drawing_enabled()
-            self.state.overlay_window.set_drawing_enabled(not current)
+            new_mode = not current
+
+            # overlay_window에 직접 설정
+            self.state.overlay_window.set_drawing_enabled(new_mode)
 
     def on_drawing_mode_changed(self, enabled: bool):
-        """그리기 모드 변경 핸들러"""
+        """그리기 모드 변경 핸들러 (overlay_window에서 시그널로 호출됨)
+
+        비즈니스 로직만 처리하고, UI 업데이트는 state를 통해 수행합니다.
+        """
+        # State 업데이트 (이것만이 UI를 업데이트함)
+        self.state.set_drawing_mode(enabled)
+
+        # 상태 메시지 업데이트
         if enabled:
-            self.toggle_drawing_button.setText("그리기 비활성화 (ESC로 비활성화)")
-            # 테두리에 불빛 효과 추가 (배경색 없음)
-            self.toggle_drawing_button.setStyleSheet(
-                """
-                QPushButton {
-                    border: 3px solid #4CAF50;
-                    border-radius: 4px;
-                }
-                """
-            )
             self.state.set_status("그리기 활성화됨 (ESC 키로 비활성화 가능)")
             logger.info("Drawing mode enabled")
         else:
-            self.toggle_drawing_button.setText("그리기 활성화")
-            # 일반 스타일로 되돌리기
-            self.toggle_drawing_button.setStyleSheet("")
             self.state.set_status("그리기 비활성화됨 (클릭이 아래로 전달됨)")
             logger.info("Drawing mode disabled")
 
@@ -966,8 +989,7 @@ class MainWindow(QMainWindow):
         # State 초기화
         self.state.set_disconnected()
         self.state.set_screen("start")
-
-        self.enable_start_buttons()
+        self.state.set_start_buttons_enabled(True)
 
     def _start_listen_task(self):
         """Listen 태스크 시작 (QTimer 콜백용)"""

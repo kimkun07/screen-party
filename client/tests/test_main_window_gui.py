@@ -26,8 +26,9 @@ class TestStartScreen:
         window.show()  # 윈도우 표시
 
         # 시작 화면이 표시되고 메인 화면은 숨겨져 있어야 함
-        assert window.start_widget.isVisible()
-        assert not window.main_widget.isVisible()
+        # 스크롤 영역으로 확인 (위젯 대신)
+        assert window.start_scroll.isVisible()
+        assert not window.main_scroll.isVisible()
 
         # 연결 상태 확인 (AppState 사용)
         assert not window.state.is_connected
@@ -110,6 +111,9 @@ class TestMainScreen:
         # 메인 화면 표시
         window.show_main_screen()
 
+        # UI 업데이트가 observer를 통해 비동기적으로 일어나므로 Qt 이벤트 루프 처리
+        QApplication.processEvents()
+
         # 메인 화면이 표시되고 시작 화면은 숨겨져 있어야 함
         assert window.main_scroll.isVisible()
         assert not window.start_scroll.isVisible()
@@ -172,8 +176,9 @@ class TestUIState:
         qtbot.keyClicks(window.session_input, "ABC123")
         assert window.join_button.isEnabled()
 
-        # 버튼 비활성화
-        window.disable_start_buttons()
+        # 버튼 비활성화 (state를 통해)
+        window.state.set_start_buttons_enabled(False)
+        QApplication.processEvents()
 
         # 모든 버튼과 입력 필드가 비활성화되어야 함
         assert not window.create_button.isEnabled()
@@ -186,14 +191,16 @@ class TestUIState:
         window = MainWindow()
         qtbot.addWidget(window)
 
-        # 버튼 비활성화
-        window.disable_start_buttons()
+        # 버튼 비활성화 (state를 통해)
+        window.state.set_start_buttons_enabled(False)
+        QApplication.processEvents()
 
         # 세션 번호 입력 (비활성화 상태에서는 입력 불가능하지만 프로그래밍 방식으로 설정)
         window.session_input.setText("ABC123")
 
-        # 버튼 활성화
-        window.enable_start_buttons()
+        # 버튼 활성화 (state를 통해)
+        window.state.set_start_buttons_enabled(True)
+        QApplication.processEvents()
 
         # 버튼과 입력 필드가 활성화되어야 함
         assert window.create_button.isEnabled()
@@ -206,11 +213,13 @@ class TestUIState:
         window = MainWindow()
         qtbot.addWidget(window)
 
-        # 버튼 비활성화
-        window.disable_start_buttons()
+        # 버튼 비활성화 (state를 통해)
+        window.state.set_start_buttons_enabled(False)
+        QApplication.processEvents()
 
-        # 버튼 활성화 (세션 번호 없음)
-        window.enable_start_buttons()
+        # 버튼 활성화 (세션 번호 없음, state를 통해)
+        window.state.set_start_buttons_enabled(True)
+        QApplication.processEvents()
 
         # 세션 생성 버튼은 활성화, 접속 버튼은 비활성화
         assert window.create_button.isEnabled()
@@ -271,17 +280,19 @@ class TestScreenTransition:
         window.show()  # 윈도우 표시
 
         # Mock 데이터 설정
-        window.state.session_id = "TEST01"
+        window.state.set_connected("TEST01", "user-001", "ws://test:8765")
 
         # 메인 화면을 먼저 표시
         window.show_main_screen()
-        assert window.main_widget.isVisible()
+        QApplication.processEvents()
+        assert window.main_scroll.isVisible()
 
         # 다시 시작 화면으로 전환
         window.show_start_screen()
+        QApplication.processEvents()
 
-        assert window.start_widget.isVisible()
-        assert not window.main_widget.isVisible()
+        assert window.start_scroll.isVisible()
+        assert not window.main_scroll.isVisible()
 
     def test_show_main_screen_updates_labels(self, qtbot):
         """메인 화면 표시 시 레이블 업데이트 테스트"""

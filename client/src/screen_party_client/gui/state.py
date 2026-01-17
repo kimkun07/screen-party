@@ -33,10 +33,12 @@ class AppState:
     # UI state
     current_screen: str = "start"  # "start" or "main"
     status_message: str = ""
+    start_buttons_enabled: bool = True
 
-    # Resize/drawing mode state
-    is_resize_mode: bool = False
-    is_drawing_enabled: bool = False
+    # Overlay UI state
+    overlay_created: bool = False
+    resize_mode_active: bool = False
+    drawing_mode_active: bool = False
 
     # Observers (callbacks when state changes)
     _observers: List[Callable[[], None]] = field(default_factory=list, repr=False)
@@ -158,14 +160,36 @@ class AppState:
         """
         self.overlay_window = overlay_window
         self.is_sharing = True
+        self.overlay_created = True
+        self.resize_mode_active = True  # Start in resize mode
+        self.drawing_mode_active = False
         self.notify_observers()
 
     def clear_overlay(self):
         """Clear overlay window"""
         self.overlay_window = None
         self.is_sharing = False
-        self.is_resize_mode = False
-        self.is_drawing_enabled = False
+        self.overlay_created = False
+        self.resize_mode_active = False
+        self.drawing_mode_active = False
+        self.notify_observers()
+
+    def set_resize_mode(self, active: bool):
+        """Set resize mode state
+
+        Args:
+            active: True if resize mode is active
+        """
+        self.resize_mode_active = active
+        self.notify_observers()
+
+    def set_drawing_mode(self, active: bool):
+        """Set drawing mode state
+
+        Args:
+            active: True if drawing mode is active
+        """
+        self.drawing_mode_active = active
         self.notify_observers()
 
     # === Drawing State ===
@@ -208,4 +232,13 @@ class AppState:
             message: Status message
         """
         self.status_message = message
+        self.notify_observers()
+
+    def set_start_buttons_enabled(self, enabled: bool):
+        """Set start buttons enabled state
+
+        Args:
+            enabled: True to enable buttons, False to disable
+        """
+        self.start_buttons_enabled = enabled
         self.notify_observers()
