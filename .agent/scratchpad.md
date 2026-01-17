@@ -40,15 +40,15 @@
 [ ] Remove direct state mutation from UI components
 
 ### Phase 4: Remove Code Duplication
-[ ] Extract participant initialization to single method
-[ ] Use CanvasManager for all canvas updates
-[ ] Consolidate color/alpha update logic
+[x] Extract participant initialization to single method (done via AppState)
+[x] Use CanvasManager for all canvas updates
+[x] Consolidate color/alpha update logic (centralized in MessageHandler)
 
 ### Phase 5: Clean Up Unused Code
-[ ] Delete floating_menu.py (unused)
-[ ] Delete window_selector.py (unused)
-[ ] Remove test_clickthrough.py if not needed
-[ ] Clean up any other dead code
+[x] Delete floating_menu.py (unused)
+[x] Delete window_selector.py (unused)
+[x] Remove test_clickthrough.py if not needed
+[x] Clean up any other dead code
 
 ### Phase 6: Testing & Validation
 [ ] Test session creation flow

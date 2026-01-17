@@ -271,6 +271,9 @@ class DrawingCanvas(QWidget):
         if self.my_fitter.is_drawing or len(self.my_fitter.finalized_segments) > 0:
             # user_colors에서 내 색상 참조 (색상 변경 시 즉시 반영됨)
             my_color = self.user_colors.get(self.user_id, self.pen_color)
+            # None 체크 (만약 user_colors와 pen_color 모두 None이면 기본값 사용)
+            if my_color is None:
+                my_color = _get_default_pen_color()
             pen = QPen(my_color, self.pen_width)
             pen.setCapStyle(Qt.PenCapStyle.RoundCap)
             pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
