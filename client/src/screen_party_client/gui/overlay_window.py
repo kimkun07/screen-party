@@ -4,7 +4,7 @@ from typing import Optional
 
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QApplication
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QPainter, QColor, QIcon
+from PyQt6.QtGui import QPainter, QColor
 
 from ..drawing.canvas import DrawingCanvas
 

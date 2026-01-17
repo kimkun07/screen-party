@@ -3,11 +3,10 @@
 import json
 import logging
 from typing import Optional, Callable
-import asyncio
 
 import websockets
 from websockets.asyncio.client import ClientConnection
-from websockets.exceptions import ConnectionClosed, WebSocketException
+from websockets.exceptions import ConnectionClosed
 
 logger = logging.getLogger(__name__)
 

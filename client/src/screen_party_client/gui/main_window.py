@@ -7,13 +7,13 @@ from typing import Optional
 
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QPushButton,
-    QLabel, QInputDialog, QHBoxLayout, QLineEdit,
+    QLabel, QHBoxLayout, QLineEdit,
     QApplication, QGroupBox, QSlider, QScrollArea
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QSettings
 from PyQt6.QtGui import QFont, QColor
 
-from screen_party_common import MessageType, DrawingEndMessage, ColorChangeMessage
+from screen_party_common import DrawingEndMessage, ColorChangeMessage
 from ..network.client import WebSocketClient
 from ..drawing import DrawingCanvas
 from ..drawing.canvas_manager import CanvasManager
@@ -530,7 +530,7 @@ class MainWindow(QMainWindow):
                 session_id = response["session_id"]
                 user_id = response["host_id"]
 
-                logger.info(f"✓ Session created successfully!")
+                logger.info("✓ Session created successfully!")
                 logger.info(f"  Session ID: {session_id}")
                 logger.info(f"  Host ID: {user_id}")
 
@@ -619,7 +619,7 @@ class MainWindow(QMainWindow):
                 session_id = response["session_id"]
                 user_id = response["user_id"]
 
-                logger.info(f"✓ Successfully joined session!")
+                logger.info("✓ Successfully joined session!")
                 logger.info(f"  Session ID: {session_id}")
                 logger.info(f"  User ID: {user_id}")
 

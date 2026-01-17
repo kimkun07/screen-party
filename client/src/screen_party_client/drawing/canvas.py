@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import QWidget
 from PyQt6.QtCore import Qt, QTimer, QPointF, pyqtSignal
 from PyQt6.QtGui import QPainter, QPen, QPainterPath, QMouseEvent, QPaintEvent, QColor
 
-from screen_party_common import MessageType, DrawingStartMessage, DrawingUpdateMessage, DrawingEndMessage
+from screen_party_common import DrawingStartMessage, DrawingUpdateMessage
 from .incremental_fitter import IncrementalFitter
 from .bezier_fitter import BezierSegment
 from .line_data import LineData
