@@ -152,7 +152,138 @@
   - UI creation methods (create_start_screen, create_main_screen) → ui_builder.py
 [x] Refactor main_window.py to use the new modules
 [x] Update imports and ensure all tests pass (91/91 passing)
-[ ] Verify no linting errors
+[x] Verify no linting errors
+
+### Summary
+
+**Files Created:**
+- `ui_builder.py` (376 lines) - UI 생성 로직
+- `session_manager.py` (196 lines) - 세션 생성/참여 로직
+- `overlay_manager.py` (131 lines) - 오버레이 관리 로직
+- `drawing_handler.py` (121 lines) - 드로잉/캔버스 로직
+
+**Files Modified:**
+- `main_window.py` (1007 → 304 lines, -703 lines, -70%)
+
+**Key Improvements:**
+1. **Single Responsibility**: 각 헬퍼 클래스가 명확한 책임 한 가지만 담당
+2. **Improved Readability**: 파일이 짧아져 코드 탐색이 쉬워짐
+3. **Better Maintainability**: 관련 기능이 한 곳에 모여 있어 수정이 용이
+4. **Clear Structure**: TYPE_CHECKING을 사용하여 순환 import 방지
+5. **All Tests Pass**: 91/91 tests passing (no regressions)
+
+**Total Code:**
+- Before: 1007 lines (main_window.py only)
+- After: 304 + 376 + 196 + 131 + 121 = 1128 lines (distributed across 5 files)
+- Net: +121 lines (due to TYPE_CHECKING imports and docstrings)
+- But much better organized and readable!
+
+## Summary of Fixes (2026-01-17)
+
+### Issue 1: Resize Mode Button Text Not Updating ✅ FIXED
+**Problem**: After pressing Enter to complete resize mode, the button text remained "그림 영역 크기 조정 완료 (Enter)" instead of changing to "그림 영역 크기 조정".
+
+**Root Cause**: The overlay_window.py's keyPressEvent handler called `set_resize_mode(False)` directly, which only updated the window's internal state. It did NOT notify the main window state management system, so the declarative UI update never triggered.
+
+**Solution**: Added signal-based communication pattern (same as drawing mode):
+1. Added `resize_mode_changed = pyqtSignal(bool)` to OverlayWindow
+2. Modified `set_resize_mode()` to emit signal when state changes
+3. Added `on_resize_mode_changed()` handler in OverlayManager
+4. Connected signal in `create_overlay()` method
+5. Refactored `toggle_resize_mode()` to use signal instead of duplicate state update
+
+**Files Modified**:
+- `client/src/screen_party_client/gui/overlay_window.py` (+2 lines)
+- `client/src/screen_party_client/gui/overlay_manager.py` (+14 lines, -10 lines)
+
+**Result**: Now when Enter is pressed, the signal chain works correctly:
+```
+overlay_window.keyPressEvent (Enter)
+→ set_resize_mode(False)
+→ resize_mode_changed.emit(False)
+→ on_resize_mode_changed(False)
+→ state.set_resize_mode(False)
+→ state.notify_observers()
+→ update_ui_from_state()
+→ Button text updates to "그림 영역 크기 조정"
+```
+
+### Issue 2: Wrong Default Color Used (#FF0000 instead of #FFB6C1) ✅ FIXED
+**Problem**: Multiple files were using hardcoded "#FF0000" (red) as fallback instead of the correct DEFAULT_COLOR "#FFB6C1" (pastel pink).
+
+**Correct Default Color**: `#FFB6C1` defined in `common/src/screen_party_common/models.py:9`
+
+**Solution**: Imported DEFAULT_COLOR constant and replaced all hardcoded fallbacks.
+
+**Files Modified** (7 files):
+1. `server/src/screen_party_server/server.py` - Added import and replaced fallback
+2. `client/src/screen_party_client/drawing/canvas.py` - Used existing helper function
+3. `client/src/screen_party_client/network/message_handler.py` - Replaced 2 occurrences
+4. `client/src/screen_party_client/gui/state.py` - Replaced 1 occurrence
+5. `client/src/screen_party_client/gui/session_manager.py` - Replaced 2 occurrences
+6. `client/src/screen_party_client/gui/ui_builder.py` - Fixed unused import (linting)
+
+**Result**: All fallback colors now use the correct pastel pink (#FFB6C1) consistently.
+
+### Test Results ✅
+- All 91 tests passing
+- Ruff linting passed (1 auto-fixed unused import)
+- No regressions introduced
+
+---
+
+## Current Issues to Fix
+
+### Issue 1: Button Text Not Updating After Resize Completion
+**Problem**: When Enter is pressed to complete resize mode, the button text doesn't update from "그림 영역 크기 조정 완료 (Enter)" back to "그림 영역 크기 조정".
+
+**Root Cause**: In `overlay_window.py:161`, the `keyPressEvent` handler calls `self.set_resize_mode(False)` which only updates the overlay window's internal `_resize_mode` flag. It does NOT call `self.window.state.set_resize_mode(False)` which would trigger the observer pattern and update the UI.
+
+**Files with Same Problem**:
+- [ ] `overlay_window.py:161` - Enter key handler doesn't notify main window state
+- [ ] `overlay_window.py:155` - ESC key handler for drawing mode (same pattern, need to check)
+
+**Solution**:
+- Need to emit a signal from overlay_window when resize mode changes via keyboard
+- Main window should connect to this signal and update state
+
+### Issue 2: Using Wrong Default Color (#FF0000 instead of DEFAULT_COLOR)
+**Problem**: Multiple files are using hardcoded "#FF0000" (red) instead of the correct DEFAULT_COLOR "#FFB6C1" (pastel pink).
+
+**Correct Default Color**: `#FFB6C1` defined in `common/src/screen_party_common/models.py:9`
+
+**Files to Fix**:
+- [ ] `server/src/screen_party_server/server.py:246` - Uses "#FF0000" as fallback
+- [ ] `client/src/screen_party_client/drawing/canvas.py:471` - Uses "#FF0000" as fallback
+- [ ] `client/src/screen_party_client/network/message_handler.py:71` - Uses "#FF0000" as fallback
+- [ ] `client/src/screen_party_client/network/message_handler.py:140` - Uses "#FF0000" as fallback
+- [ ] `client/src/screen_party_client/gui/state.py:123` - Uses "#FF0000" as fallback
+- [ ] `client/src/screen_party_client/gui/session_manager.py:73` - Uses "#FF0000" as fallback
+- [ ] `client/src/screen_party_client/gui/session_manager.py:162` - Uses "#FF0000" as fallback
+
+**Solution**: Replace all `#FF0000` with the correct DEFAULT_COLOR constant
+
+## Tasks
+
+### Phase 1: Fix Resize Mode State Synchronization
+[x] Add resize_mode_changed signal to OverlayWindow
+[x] Connect signal to MainWindow state update (on_resize_mode_changed)
+[x] Emit signal in set_resize_mode method
+[x] Refactor toggle_resize_mode to use signal instead of direct state update
+[x] Code changes complete - ready for manual testing
+
+### Phase 2: Fix Drawing Mode State Synchronization (if needed)
+[x] Check if ESC key has same issue - NO, drawing mode already emits signal (line 145)
+[~] No fix needed - drawing mode works correctly
+
+### Phase 3: Replace Hardcoded Default Colors
+[x] Import DEFAULT_COLOR constant where needed
+[x] Replace all "#FF0000" fallbacks with DEFAULT_COLOR
+[x] Ensure server uses same constant
+[x] Run tests to verify no regressions (91/91 passing)
+[x] Fix linting errors (1 unused import auto-fixed)
+
+---
 
 ## Refactoring Complete! ✅
 
