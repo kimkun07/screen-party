@@ -136,6 +136,24 @@
 
 ---
 
+## Phase 8: Decompose main_window.py ✅
+
+**Problem**: main_window.py is still too long (1007 lines) with mixed responsibilities.
+
+**Goal**: Split related functions into separate files for better readability and maintainability.
+
+### Tasks
+
+[x] Analyze main_window.py structure and identify logical groupings
+[x] Create separate files for each logical group
+  - Session management methods (create/join session) → session_manager.py
+  - Overlay management methods (create/toggle/stop overlay) → overlay_manager.py
+  - Drawing/canvas methods (drawing signals, color/alpha changes) → drawing_handler.py
+  - UI creation methods (create_start_screen, create_main_screen) → ui_builder.py
+[x] Refactor main_window.py to use the new modules
+[x] Update imports and ensure all tests pass (91/91 passing)
+[ ] Verify no linting errors
+
 ## Refactoring Complete! ✅
 
 ### Summary of Changes
