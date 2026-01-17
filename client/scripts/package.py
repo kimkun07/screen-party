@@ -162,8 +162,8 @@ def main():
     client_dir = Path(__file__).parent.parent
     project_root = client_dir.parent
     spec_file = client_dir / "client.spec"
-    build_dir = project_root / "build"
-    dist_dir = project_root / "dist"
+    build_dir = client_dir / "build"
+    dist_dir = client_dir / "dist"
     version_info_file = client_dir / "version_info.txt"
 
     print("\n" + "=" * 60)
