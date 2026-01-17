@@ -21,16 +21,16 @@ Reorganize script files to follow the established pattern (like `run.py client` 
 [x] Test utility commands work correctly
 
 ### Phase 3: Simplify package.py
-[ ] Remove README.txt generation (unnecessary)
-[ ] Remove ZIP file generation (unnecessary)
-[ ] Keep only PyInstaller build logic
-[ ] Test package command works correctly
+[x] Remove README.txt generation (unnecessary)
+[x] Remove ZIP file generation (unnecessary)
+[x] Keep only PyInstaller build logic
+[x] Test package command works correctly (dry-run tested)
 
 ### Phase 4: Clean up server entry points
-[ ] Check if both server.py and __main__.py are needed
-[ ] Keep only __main__.py (cleaner pattern)
-[ ] Update Dockerfile to use python -m screen_party_server
-[ ] Test server starts correctly
+[x] Check if both server.py and __main__.py are needed
+[~] Both are needed: server.py has main(), __main__.py calls it
+[~] Dockerfile already uses python -m screen_party_server
+[~] No changes needed - already optimal
 
 ### Phase 5: Enhance integration tests
 [ ] Create multiple test scenarios
