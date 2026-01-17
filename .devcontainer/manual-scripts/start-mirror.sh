@@ -49,7 +49,7 @@ watchexec \
   --print-events \
   -w "$PROJECT_ROOT" \
   --debounce 500 \
-  --ignore '.agent' \
+  --ignore '.agent/**' \
   --ignore '.venv*' \
   --ignore '__pycache__' \
   --ignore '.git' \
