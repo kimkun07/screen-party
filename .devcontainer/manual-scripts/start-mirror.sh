@@ -1,26 +1,23 @@
 #!/bin/bash
 # WSL → Windows 실시간 동기화 스크립트
-# 사용법: ./scripts/start_mirror.sh [Windows 대상 경로]
-# 예시: ./scripts/start_mirror.sh /mnt/d/Data/Develop/screen-party-mirrored
+#
+# 복사해서 바로 실행 (WSL에서)
+# /home/simelvia/Develop-WSL/screen-party/.devcontainer/manual-scripts/start-mirror.sh /mnt/d/Data/Develop/screen-party-mirrored
 
 set -e
 
 # 프로젝트 루트 디렉토리 (이 스크립트 기준)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-# Windows 대상 경로 (인자로 받거나 환경 변수 사용)
-WINDOWS_TARGET="${1:-${WINDOWS_MIRROR_PATH:-}}"
+# Windows 대상 경로 (인자로 받기)
+WINDOWS_TARGET="$1"
 
 if [ -z "$WINDOWS_TARGET" ]; then
   echo "❌ 오류: Windows 대상 경로가 지정되지 않았습니다."
   echo ""
   echo "사용법:"
-  echo "  ./scripts/start_mirror.sh /mnt/d/Data/Develop/screen-party-mirrored"
-  echo ""
-  echo "또는 환경 변수 설정:"
-  echo "  export WINDOWS_MIRROR_PATH=/mnt/d/Data/Develop/screen-party-mirrored"
-  echo "  ./scripts/start_mirror.sh"
+  echo "  ./.devcontainer/manual-scripts/start-mirror.sh /mnt/d/Data/Develop/screen-party-mirrored"
   exit 1
 fi
 
@@ -45,8 +42,11 @@ echo ""
 echo "💡 팁: Ctrl + C로 종료"
 echo ""
 
+cd "$PROJECT_ROOT" # watchexec try to use .gitignore
+
 # watchexec + rsync로 실시간 동기화
 watchexec \
+  --print-events \
   -w "$PROJECT_ROOT" \
   --debounce 500 \
   --ignore '.venv*' \
