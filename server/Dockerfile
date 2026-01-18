@@ -39,8 +39,8 @@ RUN useradd -m -u 1000 appuser && \
 # Set environment variables
 ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONPATH="/app/server/src:/app/common/src:/app/server"
-ENV SERVER_HOST="0.0.0.0"
-ENV SERVER_PORT="8765"
+ENV SCREEN_PARTY_HOST="0.0.0.0"
+ENV SCREEN_PARTY_PORT="8765"
 
 # Switch to non-root user
 USER appuser
@@ -49,4 +49,4 @@ USER appuser
 EXPOSE 8765
 
 # Run server using uv run server
-CMD ["uv", "run", "--no-sync", "--directory", "/app/server", "server", "--port", "8765"]
+CMD ["uv", "run", "--no-sync", "--directory", "/app/server", "server", "--host", "0.0.0.0", "--port", "8765"]
