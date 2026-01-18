@@ -15,7 +15,7 @@ COPY common/ ./common/
 COPY server/ ./server/
 
 # Install dependencies (only server + common)
-RUN uv sync --frozen --no-dev --no-install-project --package screen-party-server
+RUN uv sync --frozen --no-dev --package screen-party-server
 
 # Production stage
 FROM python:3.13-slim
@@ -30,7 +30,7 @@ COPY --from=builder /bin/uvx /bin/uvx
 COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /app/common /app/common
 COPY --from=builder /app/server /app/server
-COPY --from=builder /app/pyproject.toml /app/pyproject.toml
+# Should not include /app/pyproject.toml - Tries to 'client' workspace
 
 # Create non-root user (UID 1000 for compatibility)
 RUN useradd -m -u 1000 appuser && \
@@ -49,4 +49,4 @@ USER appuser
 EXPOSE 8765
 
 # Run server using uv run server
-CMD ["uv", "run", "server"]
+CMD ["uv", "run", "--no-sync", "--directory", "/app/server", "server"]
