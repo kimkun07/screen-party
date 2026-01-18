@@ -15,7 +15,7 @@ package-client = "scripts.run:package_client"
 
 server = "scripts.run:server"
 publish-server = "scripts.run:publish_server"
-docker-server = "scripts.run:docker_server"
+dockerized-server = "scripts.run:dockerized_server"
 
 format = "scripts.run:format"
 lint = "scripts.run:lint"

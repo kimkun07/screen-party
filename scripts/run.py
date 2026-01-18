@@ -112,7 +112,7 @@ def publish_server():
     sys.exit(result.returncode)
 
 
-def docker_server():
+def dockerized_server():
     """로컬 테스트용 서버 실행 (server/scripts/dockerized_server.py)"""
     project_root = Path(__file__).parent.parent
     script_path = project_root / "server" / "scripts" / "dockerized_server.py"
