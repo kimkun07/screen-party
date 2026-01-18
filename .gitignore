@@ -90,9 +90,6 @@ client/build/
 server/dist/
 server/build/
 
-# Docker
-.dockerignore
-
 # Temporary files
 *.tmp
 *.swp
