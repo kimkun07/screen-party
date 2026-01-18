@@ -1,29 +1,32 @@
 # Screen Party
 
-실시간 화면 드로잉 공유 애플리케이션 - 게임 브리핑을 위한 협업 도구
-
-## 프로젝트 개요
-
-**Screen Party**는 참여자들이 게임 화면 위에 투명 오버레이를 띄우고, 디스코드 화면공유를 보면서 실시간으로 그림을 그려 전략을 공유할 수 있는 협업 도구입니다.
-
-### 주요 기능
+디스코드 화면공유와 함께 사용해서 실시간으로 그림을 그리는 도구
 
 TO WRITE - [스크린샷 첨부]
 
 ## 사용 시나리오
 
-TO WRITE - 설치 방법 (셀프 호스팅 필요)
-github release 참고해서 작성 필요 (https://github.com/kimkun07/screen-party/releases/tag/v0.2.0)
-서버 - docker file 안내, 클라이언트 설치
+### 1. 서버, 클라이언트 설치
 
-### 1. 세션 생성
+**서버 셀프 호스팅**
+```sh
+$ docker run --rm --network=host kimkun07/screen-party-server:v1.0.0
+2026-01-18 10:51:44,400 - screen_party_server.server - INFO - Starting Screen Party server on 0.0.0.0:8765
+2026-01-18 10:51:44,401 - websockets.server - INFO - server listening on 0.0.0.0:8765
+```
+
+**클라이언트 설치 (윈도우)**
+깃허브 릴리즈에서 exe 다운로드: https://github.com/kimkun07/screen-party/releases
+
+
+### 2. 세션 생성
 1. Screen Party 실행
 2. "새 세션" 선택
 3. 6자리 세션 번호 발급 (예: ABC123)
 4. 디스코드 채팅에 세션 번호 공유
 5. 게임 창 선택 → 투명 오버레이 생성
 
-### 2. 세션 참여
+### 3. 세션 참여
 1. Screen Party 실행
 2. "기존 세션 참여" 선택
 3. 세션 번호 입력 (예: ABC123)
