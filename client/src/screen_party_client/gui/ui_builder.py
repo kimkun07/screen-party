@@ -3,9 +3,15 @@
 from typing import TYPE_CHECKING
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QPushButton,
-    QLabel, QHBoxLayout, QLineEdit,
-    QGroupBox, QSlider, QScrollArea
+    QWidget,
+    QVBoxLayout,
+    QPushButton,
+    QLabel,
+    QHBoxLayout,
+    QLineEdit,
+    QGroupBox,
+    QSlider,
+    QScrollArea,
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
@@ -100,7 +106,8 @@ class UIBuilder:
         self.window.create_button = QPushButton("세션 생성")
         self.window.create_button.setMinimumHeight(50)
         self.window.create_button.clicked.connect(
-            lambda: asyncio.create_task(self.window.session_manager.on_create_session()))
+            lambda: asyncio.create_task(self.window.session_manager.on_create_session())
+        )
         create_column.addWidget(self.window.create_button)
         create_column.addStretch()  # 아래쪽 공간 채우기
 
@@ -134,7 +141,8 @@ class UIBuilder:
         self.window.join_button.setMinimumHeight(50)
         self.window.join_button.setEnabled(False)
         self.window.join_button.clicked.connect(
-            lambda: asyncio.create_task(self.window.session_manager.on_join_session()))
+            lambda: asyncio.create_task(self.window.session_manager.on_join_session())
+        )
         join_column.addWidget(self.window.join_button)
 
         columns_layout.addLayout(join_column, 1)  # stretch factor = 1
@@ -224,7 +232,9 @@ class UIBuilder:
         self.window.clear_drawings_button = QPushButton("그림 모두 지우기")
         self.window.clear_drawings_button.setMinimumHeight(40)
         self.window.clear_drawings_button.setEnabled(False)
-        self.window.clear_drawings_button.clicked.connect(self.window.overlay_manager.clear_overlay_drawings)
+        self.window.clear_drawings_button.clicked.connect(
+            self.window.overlay_manager.clear_overlay_drawings
+        )
         self.window.overlay_group_layout.addWidget(self.window.clear_drawings_button)
 
         layout.addWidget(overlay_group)
@@ -239,7 +249,9 @@ class UIBuilder:
 
         self.window.resize_overlay_button = QPushButton("그림 영역 크기 조정")
         self.window.resize_overlay_button.setMinimumHeight(40)
-        self.window.resize_overlay_button.clicked.connect(self.window.overlay_manager.toggle_resize_mode)
+        self.window.resize_overlay_button.clicked.connect(
+            self.window.overlay_manager.toggle_resize_mode
+        )
         overlay_control_layout.addWidget(self.window.resize_overlay_button, 8)  # 80%
 
         self.window.delete_overlay_button = QPushButton("삭제")
@@ -255,7 +267,9 @@ class UIBuilder:
         self.window.toggle_drawing_button = QPushButton("그리기 활성화")
         self.window.toggle_drawing_button.setMinimumHeight(40)
         self.window.toggle_drawing_button.setEnabled(False)
-        self.window.toggle_drawing_button.clicked.connect(self.window.overlay_manager.toggle_drawing_mode)
+        self.window.toggle_drawing_button.clicked.connect(
+            self.window.overlay_manager.toggle_drawing_mode
+        )
         self.window.overlay_group_layout.addWidget(self.window.toggle_drawing_button)
 
     def _create_color_palette(self):
@@ -292,7 +306,9 @@ class UIBuilder:
                 f"  border: 2px solid #666;"
                 f"}}"
             )
-            btn.clicked.connect(lambda checked, c=color: self.window.drawing_handler.set_pen_color(c))
+            btn.clicked.connect(
+                lambda checked, c=color: self.window.drawing_handler.set_pen_color(c)
+            )
             palette_layout.addWidget(btn)
             self.window.color_buttons.append(btn)
 
@@ -357,7 +373,9 @@ class UIBuilder:
         # 세션 나가기 버튼
         self.window.leave_session_button = QPushButton("세션 나가기")
         self.window.leave_session_button.setMinimumHeight(40)
-        self.window.leave_session_button.clicked.connect(lambda: asyncio.create_task(self.window.disconnect()))
+        self.window.leave_session_button.clicked.connect(
+            lambda: asyncio.create_task(self.window.disconnect())
+        )
         info_layout.addWidget(self.window.leave_session_button)
 
         # 사용법 링크 + 버전 정보
@@ -372,7 +390,9 @@ class UIBuilder:
         footer_layout = QHBoxLayout()
         footer_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        github_label = QLabel('<a href="https://github.com/kimkun07/screen-party">사용법 (GitHub)</a>')
+        github_label = QLabel(
+            '<a href="https://github.com/kimkun07/screen-party">사용법 (GitHub)</a>'
+        )
         github_label.setOpenExternalLinks(True)
         footer_layout.addWidget(github_label)
 

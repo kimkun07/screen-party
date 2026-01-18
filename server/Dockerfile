@@ -15,7 +15,7 @@ COPY common/ ./common/
 COPY server/ ./server/
 
 # Install dependencies (only server + common)
-RUN uv sync --frozen --no-dev --no-install-project --package screen-party-server
+RUN uv sync --frozen --no-dev --package screen-party-server
 
 # Production stage
 FROM python:3.13-slim
@@ -30,7 +30,7 @@ COPY --from=builder /bin/uvx /bin/uvx
 COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /app/common /app/common
 COPY --from=builder /app/server /app/server
-COPY --from=builder /app/pyproject.toml /app/pyproject.toml
+# Should not include /app/pyproject.toml - Tries to 'client' workspace
 
 # Create non-root user (UID 1000 for compatibility)
 RUN useradd -m -u 1000 appuser && \
@@ -38,9 +38,9 @@ RUN useradd -m -u 1000 appuser && \
 
 # Set environment variables
 ENV PATH="/app/.venv/bin:$PATH"
-ENV PYTHONPATH="/app/server/src:/app/common/src"
-ENV SERVER_HOST="0.0.0.0"
-ENV SERVER_PORT="8765"
+ENV PYTHONPATH="/app/server/src:/app/common/src:/app/server"
+ENV SCREEN_PARTY_HOST="0.0.0.0"
+ENV SCREEN_PARTY_PORT="8765"
 
 # Switch to non-root user
 USER appuser
@@ -48,5 +48,5 @@ USER appuser
 # Expose server port
 EXPOSE 8765
 
-# Run server
-CMD ["python", "-m", "screen_party_server"]
+# Run server using uv run server
+CMD ["uv", "run", "--no-sync", "--directory", "/app/server", "server", "--host", "0.0.0.0", "--port", "8765"]

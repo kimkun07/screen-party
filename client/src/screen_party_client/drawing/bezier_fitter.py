@@ -169,14 +169,10 @@ class BezierFitter:
         center_tangent = self._compute_center_tangent(points, split_point)
 
         # 왼쪽 부분 피팅
-        left_segments = self._fit_cubic(
-            points[: split_point + 1], left_tangent, center_tangent
-        )
+        left_segments = self._fit_cubic(points[: split_point + 1], left_tangent, center_tangent)
 
         # 오른쪽 부분 피팅
-        right_segments = self._fit_cubic(
-            points[split_point:], -center_tangent, right_tangent
-        )
+        right_segments = self._fit_cubic(points[split_point:], -center_tangent, right_tangent)
 
         return left_segments + right_segments
 
@@ -291,9 +287,7 @@ class BezierFitter:
             p3=tuple(p3),
         )
 
-    def _reparameterize(
-        self, points: NDArray, bezier: BezierSegment, u: NDArray
-    ) -> NDArray:
+    def _reparameterize(self, points: NDArray, bezier: BezierSegment, u: NDArray) -> NDArray:
         """
         Newton-Raphson으로 파라미터 재조정
 
@@ -384,12 +378,7 @@ class BezierFitter:
         p2 = np.array(bezier.p2)
         p3 = np.array(bezier.p3)
 
-        return (
-            self._b0(t) * p0
-            + self._b1(t) * p1
-            + self._b2(t) * p2
-            + self._b3(t) * p3
-        )
+        return self._b0(t) * p0 + self._b1(t) * p1 + self._b2(t) * p2 + self._b3(t) * p3
 
     def _bezier_derivative1(self, bezier: BezierSegment, t: float) -> NDArray:
         """베지어 커브의 1차 미분 Q'(t)"""

@@ -5,10 +5,7 @@ import logging
 import sys
 from typing import Optional
 
-from PyQt6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout,
-    QApplication
-)
+from PyQt6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QApplication
 from PyQt6.QtCore import Qt, pyqtSignal, QSettings
 
 from ..network.client import WebSocketClient

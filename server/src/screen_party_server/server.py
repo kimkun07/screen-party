@@ -3,7 +3,6 @@
 import asyncio
 import json
 import logging
-import os
 from typing import Dict, Optional
 from datetime import datetime
 
@@ -36,9 +35,7 @@ class ScreenPartyServer:
     async def start(self):
         """서버 시작"""
         # 백그라운드 cleanup 태스크 시작
-        _ = asyncio.create_task(
-            self.session_manager.start_cleanup_task(interval_minutes=5)
-        )
+        _ = asyncio.create_task(self.session_manager.start_cleanup_task(interval_minutes=5))
 
         logger.info(f"Starting Screen Party server on {self.host}:{self.port}")
 
@@ -113,17 +110,23 @@ class ScreenPartyServer:
 
     async def handle_create_session(self, websocket: ServerConnection, data: dict) -> str:
         """세션 생성 처리 (첫 참여자)"""
-        participant_name = data.get("host_name", "Participant")  # Keep "host_name" key for backward compat
+        participant_name = data.get(
+            "host_name", "Participant"
+        )  # Keep "host_name" key for backward compat
 
         # 세션 생성 및 첫 참여자 추가
-        session, participant = self.session_manager.create_session(participant_name=participant_name)
+        session, participant = self.session_manager.create_session(
+            participant_name=participant_name
+        )
         participant_id = participant.user_id
 
         # 클라이언트 등록
         self.clients[participant_id] = websocket
         self.websocket_to_user[websocket] = participant_id
 
-        logger.info(f"Session created: {session.session_id} by {participant_name} ({participant_id})")
+        logger.info(
+            f"Session created: {session.session_id} by {participant_name} ({participant_id})"
+        )
 
         # 모든 참여자 정보를 포함
         participants_info = [
@@ -153,7 +156,9 @@ class ScreenPartyServer:
     async def handle_join_session(self, websocket: ServerConnection, data: dict) -> str:
         """세션 참여 처리"""
         session_id = data.get("session_id")
-        participant_name = data.get("guest_name", "Participant")  # Keep "guest_name" key for backward compat
+        participant_name = data.get(
+            "guest_name", "Participant"
+        )  # Keep "guest_name" key for backward compat
 
         if not session_id:
             await self.send_error(websocket, "Missing session_id")
@@ -181,11 +186,15 @@ class ScreenPartyServer:
         self.clients[participant_id] = websocket
         self.websocket_to_user[websocket] = participant_id
 
-        logger.info(f"Participant {participant_name} ({participant_id}) joined session {session_id}")
+        logger.info(
+            f"Participant {participant_name} ({participant_id}) joined session {session_id}"
+        )
 
         # 참여자에게 응답 전송 (backward compat field names)
         # 첫 번째 참여자 이름 가져오기 (이전 "host" 개념)
-        first_participant = next(iter(session.participants.values())) if session.participants else None
+        first_participant = (
+            next(iter(session.participants.values())) if session.participants else None
+        )
 
         # 모든 참여자 정보를 포함
         participants_info = [
@@ -204,7 +213,9 @@ class ScreenPartyServer:
                     "session_id": session_id,
                     "user_id": participant_id,
                     "guest_name": participant_name,  # Keep for backward compat
-                    "host_name": first_participant.name if first_participant else "Unknown",  # Keep for backward compat
+                    "host_name": (
+                        first_participant.name if first_participant else "Unknown"
+                    ),  # Keep for backward compat
                     "participants": participants_info,  # 모든 참여자 정보
                 }
             )
@@ -361,23 +372,14 @@ class ScreenPartyServer:
                 # 세션 내 다른 클라이언트들에게 알림
                 await self.broadcast(
                     session_id,
-                    {"type": "participant_left", "user_id": user_id, "participant_name": participant_name},
+                    {
+                        "type": "participant_left",
+                        "user_id": user_id,
+                        "participant_name": participant_name,
+                    },
                 )
 
         # 클라이언트 제거
         websocket = self.clients.pop(user_id, None)
         if websocket:
             self.websocket_to_user.pop(websocket, None)
-
-
-async def main():
-    """서버 진입점"""
-    host = os.getenv("SCREEN_PARTY_HOST", "0.0.0.0")
-    port = int(os.getenv("SCREEN_PARTY_PORT", "8765"))
-
-    server = ScreenPartyServer(host=host, port=port)
-    await server.start()
-
-
-if __name__ == "__main__":
-    asyncio.run(main())

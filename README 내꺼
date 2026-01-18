@@ -144,35 +144,33 @@ uv sync --all-groups
 > **참고**:
 > - WSL의 `.venv`와 Windows의 `.venv`는 별도로 관리됩니다
 
-#### 5단계: 사용 가능한 명령어
+#### 5단계: 서버/클라이언트 실행
 
-모든 스크립트는 `uv run` 명령어로 실행합니다:
-
-**클라이언트 명령어**:
+**서버 실행** (devcontainer에서):
 ```bash
-uv run client                    # 클라이언트 실행
-uv run package-client <version>  # 클라이언트 패키징 (Windows만 가능)
-```
+# 기본 실행
+uv run server
 
-**서버 명령어**:
-```bash
-uv run server                    # 서버 실행 (로컬)
-uv run docker-server             # Docker Compose로 서버 실행
-uv run publish-server <version>  # Docker 이미지 빌드 및 Docker Hub 배포
-```
-
-**개발 도구**:
-```bash
-uv run format                    # 전체 코드베이스 포맷팅 (Black)
-uv run lint                      # 전체 코드베이스 린팅 (Ruff)
-uv run test                      # 전체 테스트 실행 (pytest)
-```
-
-모든 명령어는 `--help` 옵션으로 자세한 도움말을 볼 수 있습니다:
-```bash
+# 도움말 보기
 uv run server --help
-uv run publish-server --help
-uv run package-client --help
+
+# 커스텀 호스트/포트
+uv run server --host localhost --port 9000
+```
+
+**클라이언트 실행** (Windows에서):
+
+> **참고**: 동기화 스크립트(`start_mirror.sh`)가 실행 중이어야 WSL의 최신 변경사항이 반영됩니다.
+
+```powershell
+# PowerShell
+cd D:\Data\Develop\screen-party-mirrored
+
+# 1. 가상환경 활성화
+.venv\Scripts\activate.ps1
+
+# 2. 클라이언트 실행
+uv run client
 ```
 
 #### 6단계: 배포 워크플로우
@@ -222,26 +220,29 @@ uv run package-client --help
 uv run package-client v0.1.0 --dry-run
 ```
 
+TO-WRITE: 이제 readme / zip 사용하지 않을 것
+
 `package-client` 스크립트가 자동으로 다음 작업을 수행합니다:
 1. 기존 빌드 정리 (build/, dist/)
-2. version_info.txt 생성 (Windows 버전 정보)
-3. PyInstaller 실행 (client.spec 기반)
-4. 임시 파일 정리
+2. PyInstaller 실행 (client.spec 기반)
+3. README.txt 생성
+4. ZIP 압축 (ScreenParty-v0.1.0-windows.zip)
 
 결과물:
 - `dist/ScreenParty.exe` - 실행 파일 (단일 파일, ~100-200MB)
+- `ScreenParty-v0.1.0-windows.zip` - 배포용 ZIP 파일
 
 **GitHub Release 배포**:
 
 ```bash
 # GitHub CLI 사용
-gh release create v0.1.0 dist/ScreenParty.exe --title "Screen Party v0.1.0"
+gh release create v0.1.0 ScreenParty-v0.1.0-windows.zip --title "Screen Party v0.1.0"
 
 # 또는 수동으로:
 # 1. GitHub 레포지토리 → Releases → Create a new release
 # 2. Tag: v0.1.0
 # 3. Title: Screen Party v0.1.0
-# 4. dist/ScreenParty.exe 파일 업로드
+# 4. ZIP 파일 업로드
 ```
 
 ---

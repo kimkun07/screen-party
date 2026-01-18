@@ -1,27 +1,23 @@
-#!/usr/bin/env python3
 """Screen Party 서버 실행 스크립트
 
-Usage:
-    uv run server [options]
-
-Example:
-    uv run server
-    uv run server --host 0.0.0.0 --port 9000
+서버를 실행하는 메인 진입점입니다.
 """
 
-import sys
-import os
-import asyncio
 import argparse
+import asyncio
+import os
+import sys
+from pathlib import Path
 
-# server/src를 Python path에 추가
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "server", "src"))
 
-from screen_party_server.server import main as server_main
+def main():
+    """서버 실행"""
+    # Add server/src to Python path
+    project_root = Path(__file__).parent.parent.parent
+    sys.path.insert(0, str(project_root / "server" / "src"))
 
+    from screen_party_server.server import ScreenPartyServer
 
-def parse_args():
-    """명령줄 인자 파싱"""
     parser = argparse.ArgumentParser(
         description="Screen Party WebSocket 서버",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -35,35 +31,28 @@ def parse_args():
 환경 변수:
   SCREEN_PARTY_HOST    서버 호스트 주소 (기본값: 0.0.0.0)
   SCREEN_PARTY_PORT    서버 포트 번호 (기본값: 8765)
-        """
+        """,
     )
 
     parser.add_argument(
         "--host",
         type=str,
         default=os.getenv("SCREEN_PARTY_HOST", "0.0.0.0"),
-        help="서버 호스트 주소 (기본값: 0.0.0.0)"
+        help="서버 호스트 주소 (기본값: 0.0.0.0)",
     )
 
     parser.add_argument(
         "--port",
         type=int,
         default=int(os.getenv("SCREEN_PARTY_PORT", "8765")),
-        help="서버 포트 번호 (기본값: 8765)"
+        help="서버 포트 번호 (기본값: 8765)",
     )
 
     parser.add_argument(
-        "-v", "--verbose",
-        action="store_true",
-        help="자세한 로그 출력"
+        "-v", "--verbose", action="store_true", help="자세한 로그 출력"
     )
 
-    return parser.parse_args()
-
-
-def main():
-    """메인 진입점"""
-    args = parse_args()
+    args = parser.parse_args()
 
     # 환경 변수 설정
     os.environ["SCREEN_PARTY_HOST"] = args.host
@@ -82,7 +71,8 @@ def main():
     print()
 
     try:
-        asyncio.run(server_main())
+        server = ScreenPartyServer(host=args.host, port=args.port)
+        asyncio.run(server.start())
     except KeyboardInterrupt:
         print("\n서버 종료")
     except Exception as e:

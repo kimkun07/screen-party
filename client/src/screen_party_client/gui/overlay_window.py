@@ -183,12 +183,17 @@ class OverlayWindow(QWidget):
 
         # Log current geometry when entering resize mode
         import logging
+
         logger = logging.getLogger(__name__)
         g = self.geometry()
         if enabled:
-            logger.info(f"[OverlayWindow] Resize mode ENABLED. Current geometry: pos=({g.x()}, {g.y()}), size={g.width()}x{g.height()}")
+            logger.info(
+                f"[OverlayWindow] Resize mode ENABLED. Current geometry: pos=({g.x()}, {g.y()}), size={g.width()}x{g.height()}"
+            )
         else:
-            logger.info(f"[OverlayWindow] Resize mode DISABLED. Final geometry: pos=({g.x()}, {g.y()}), size={g.width()}x{g.height()}")
+            logger.info(
+                f"[OverlayWindow] Resize mode DISABLED. Final geometry: pos=({g.x()}, {g.y()}), size={g.width()}x{g.height()}"
+            )
 
         # Disable drawing mode when entering resize mode
         if enabled and self._drawing_enabled:

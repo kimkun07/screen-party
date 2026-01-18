@@ -75,7 +75,9 @@ class DrawingHandler:
 
         # State 업데이트
         self.window.state.set_pen_color(color)
-        self.window.state.set_status(f"색상 변경: RGB({color.red()}, {color.green()}, {color.blue()})")
+        self.window.state.set_status(
+            f"색상 변경: RGB({color.red()}, {color.green()}, {color.blue()})"
+        )
         logger.info(f"Pen color changed to RGB({color.red()}, {color.green()}, {color.blue()})")
 
         # 서버에 색상 변경 알림 (알파값 포함)

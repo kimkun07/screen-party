@@ -86,7 +86,9 @@ class TestDrawingCanvas:
         assert len(canvas.my_fitter.raw_buffer) == 0
         assert len(canvas.my_fitter.finalized_segments) == 0
         # 내 라인만 제거됨
-        my_lines = [lid for lid, ldata in canvas.remote_lines.items() if ldata.user_id == canvas.user_id]
+        my_lines = [
+            lid for lid, ldata in canvas.remote_lines.items() if ldata.user_id == canvas.user_id
+        ]
         assert len(my_lines) == 0
 
     def test_set_pen_color(self, qtbot: QtBot):
@@ -298,7 +300,9 @@ class TestDrawingCanvasIntegration:
 
         # 4. finalized segments가 생성되어야 함 (remote_lines에 저장됨)
         # 내 드로잉이 remote_lines에 저장되었는지 확인
-        my_lines = [lid for lid, ldata in canvas.remote_lines.items() if ldata.user_id == canvas.user_id]
+        my_lines = [
+            lid for lid, ldata in canvas.remote_lines.items() if ldata.user_id == canvas.user_id
+        ]
         assert len(my_lines) > 0
         # 해당 라인에 finalized segments가 있어야 함
         assert len(canvas.remote_lines[my_lines[0]].finalized_segments) > 0

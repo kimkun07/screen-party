@@ -12,6 +12,9 @@ dependencies = [
     "screen-party-common",
 ]
 
+[project.scripts]
+server = "scripts.main:main"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.3.0",
