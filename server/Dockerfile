@@ -49,4 +49,4 @@ USER appuser
 EXPOSE 8765
 
 # Run server using uv run server
-CMD ["uv", "run", "--no-sync", "--directory", "/app/server", "server"]
+CMD ["uv", "run", "--no-sync", "--directory", "/app/server", "server", "--port", "8765"]
