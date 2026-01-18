@@ -48,5 +48,5 @@ USER appuser
 # Expose server port
 EXPOSE 8765
 
-# Run server using scripts/main.py (through __main__.py wrapper)
-CMD ["python", "-m", "screen_party_server"]
+# Run server using uv run server
+CMD ["uv", "run", "server"]
