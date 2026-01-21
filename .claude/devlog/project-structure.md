@@ -112,7 +112,7 @@ screen-party/
 - ✅ server 코드에서 common import로 변경
 - ✅ Dockerfile 작성 (uv 기반 multi-stage build)
 - ✅ uv sync로 의존성 설치 (모든 workspace 멤버)
-- ✅ 기존 pip 파일 삭제 (requirements.txt, venv-windows)
+- ✅ 기존 pip 파일 삭제 (requirements.txt, venv)
 - ✅ pytest 29개 테스트 모두 통과
 
 **주요 결정사항**:

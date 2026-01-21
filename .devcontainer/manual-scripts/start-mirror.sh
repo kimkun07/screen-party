@@ -62,7 +62,7 @@ watchexec \
   rsync -av --delete \
     --exclude='.claude' \
     --exclude='.venv' \
-    --exclude='.venv-windows' \
+    --exclude='.venv' \
     --exclude='__pycache__' \
     --exclude='.git' \
     --exclude='*.pyc' \
