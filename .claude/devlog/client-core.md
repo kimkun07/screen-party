@@ -29,18 +29,22 @@ PyQt6 기반 클라이언트 GUI 및 WebSocket 연결 관리
 ```
 
 ### Host Mode 플로우
-1. "Host Mode" 버튼 클릭
-2. 서버 연결 (WebSocket)
-3. `create_session` 메시지 전송
-4. 세션 ID 받아서 표시
-5. "게임 창 선택" 버튼 활성화
+1. 서버 주소 입력
+2. "세션 생성" 버튼 클릭
+3. 서버 연결 (WebSocket)
+4. `create_session` 메시지 전송
+5. 메인 화면 진입
+6. 세션 ID 표시 및 복사 가능
+7. "그림 영역 생성" 버튼으로 오버레이 생성
 
 ### Guest Mode 플로우
-1. "Guest Mode" 버튼 클릭
-2. 세션 ID 입력 다이얼로그 표시
-3. 서버 연결 (WebSocket)
-4. `join_session` 메시지 전송
-5. 성공 시 "영역 설정" 버튼 활성화
+1. 서버 주소 입력
+2. 세션 ID 입력
+3. "세션 참여" 버튼 클릭
+4. 서버 연결 (WebSocket)
+5. `join_session` 메시지 전송
+6. 메인 화면 진입
+7. "그림 영역 생성" 버튼으로 영역 설정
 
 ### asyncio + PyQt6 통합
 - `qasync` 라이브러리 사용
