@@ -90,9 +90,10 @@ docker compose up -d
 
 이 프로젝트는 다음과 같은 **하이브리드 환경**에서 개발하고 있습니다:
 
+- **devcontainer (Linux)**: 개발 진행: 클로드 코드를 bypass permissions on 모드로 실행하기 위한 환경
 - **WSL (Ubuntu)**: 프로젝트 저장소 위치, docker engine 설치, devcontainer 실행
-- **devcontainer (Linux)**: 개발 진행: 클로드 코드를 --dangerously-skip-permissions 모드로 실행하기 위한 환경
 - **Windows**: 클라이언트 GUI (PyQt6) 테스트
+  - 윈도우에서 Docker Desktop을 이용해 devcontainer를 실행한다면 WSL이 필요없겠지만, 일단 이런 구조입니다
 
 ### 환경 구성 방법
 
@@ -100,8 +101,7 @@ docker compose up -d
 
 ```bash
 # WSL (Ubuntu) 터미널에서
-cd ~
-git clone https://github.com/your-username/screen-party.git
+git clone https://github.com/kimkun07/screen-party.git
 cd screen-party
 ```
 
@@ -124,49 +124,41 @@ devcontainer 내부에서 Github 레포지토리를 변경하지 못하도록 �
 
 #### 3단계: 개발 시작 전 스크립트 실행
 
-TO-WRITE 예전 스크립트라서 업데이트 필요. 이제 다른 manual-scripts 스크립트들도 추가하기
+개발에 필요한 스크립트들은 `.devcontainer/manual-scripts/`에 있습니다. 각 스크립트 파일 상단의 주석을 복사하여 실행하세요.
 
-**WSL 터미널에서 동기화 스크립트 실행**:
+**WSL 터미널에서 실행 (필수)**:
 
-Windows에서 클라이언트를 테스트하려면 WSL 프로젝트를 Windows로 동기화해야 합니다.
+**WSL → Windows 동기화** (`start-mirror.sh`)
+- WSL 파일 변경을 Windows로 자동 동기화
+- Windows에서 클라이언트 GUI 테스트 시 필요
+- 백그라운드에서 계속 실행되어야 하므로 별도 터미널 탭에서 실행
 ```bash
-# WSL (devcontainer 또는 Ubuntu 터미널)
-./scripts/start_mirror.sh /mnt/d/Data/Develop/screen-party-mirrored
+# 스크립트 파일의 주석 참조
+# 복사해서 바로 실행 (WSL에서)
+# /home/simelvia/Develop-WSL/screen-party/.devcontainer/manual-scripts/start-mirror.sh /mnt/d/Data/Develop/screen-party-mirrored
 ```
 
-> **팁**:
-> - 이 스크립트는 WSL의 파일 변경을 감지하여 자동으로 Windows로 복사합니다
-> - **백그라운드에서 계속 실행**되어야 하므로, 별도 터미널 탭에서 실행하세요
-> - Ctrl + C로 종료 가능
-> - 한 번 실행하면 모든 파일 변경이 자동으로 동기화됩니다
+**Windows PowerShell에서 실행 (선택사항)**:
 
+**알림 브릿지** (`start-notify-bridge.ps1`)
+- Claude Code 작업 완료를 Windows 알림으로 받기 위한 서버
+- Windows 호스트 머신에서 포트 6789로 알림 서버 운영
+- devcontainer의 Claude Code가 작업 완료 시 Windows 네이티브 알림 표시
+```powershell
+# 스크립트 파일의 주석 참조
+# 복사해서 바로 실행 (PowerShell에서):
+# & "D:\Data\Develop\screen-party-mirrored\.devcontainer\manual-scripts\start-notify-bridge.ps1"
+```
 
-TO-WRITE: 아래 내용 최신 내용 확인하고 간소화. 섹션 이름도 잘 짓기
-**윈도우 알림**:
+**WSL 터미널에서 실행 (개발자 개인용)**:
 
-이 프로젝트는 **Windows 네이티브 알림**을 통해 Claude Code의 작업 상태를 실시간으로 전달합니다.
-
-1. **dev-notify-bridge** (Windows 알림 브릿지):
-   - Windows에서 `npx dev-notify-bridge --port 6789`를 실행해야 함
-   - devcontainer의 `localhost:6789`에서 POST 요청을 받아 Windows 알림 표시
-
-2. **Claude Code Hooks** (`.claude/claude-config/settings.json`):
-
-3. **notify-to-windows.sh 스크립트** (`.claude/notify-to-windows.sh`):
-   - Claude Code hooks에서 호출됨
-   - WSL의 기본 게이트웨이 IP를 동적으로 가져와서 Windows 호스트에 연결
-   - `http://<WINDOWS_HOST_IP>:6789/notify`로 POST 요청 전송
-   - Windows에서 네이티브 알림 표시
-
-**환경 구성**:
-- WSL Docker가 **rootful 모드**로 설치되어야 함 (rootless 모드는 네트워크 격리 발생)
-- devcontainer의 `network_mode: host` 설정으로 WSL의 localhost와 네트워크 공유
-- 자세한 내용은 `.claude/devlog/dev-environment.md` 참조
-  
-**수동 테스트**:
+**개발 편의 서버 시작** (`start-dev-servers.sh`)
+- monoserver-private2의 개발 서버 시작 (Happy Server + Screen Party Server)
+- Happy Server는 Claude Code 휴대폰 사용을 위한 환경
 ```bash
-# devcontainer 또는 WSL에서
-./.claude/notify-to-windows.sh --title "Test" --message "This is a test notification" --sound true
+# 스크립트 파일의 주석 참조
+# 복사해서 바로 실행 (WSL에서)
+# /home/simelvia/Develop-WSL/screen-party/.devcontainer/manual-scripts/start-dev-servers.sh
 ```
 
 #### 4단계: Windows에 uv 및 가상환경 설치
@@ -205,7 +197,7 @@ uv run package-client <version>  # 클라이언트 패키징 (Windows만 가능)
 **서버 명령어**:
 ```bash
 uv run server                    # 서버 실행 (로컬)
-uv run docker-server             # Docker Compose로 서버 실행
+uv run dockerized-server         # Docker Compose로 서버 실행
 uv run publish-server <version>  # Docker 이미지 빌드 및 Docker Hub 배포
 ```
 
@@ -281,16 +273,11 @@ uv run package-client v0.1.0 --dry-run
 
 **GitHub Release 배포**:
 
-```bash
-# GitHub CLI 사용
-gh release create v0.1.0 dist/ScreenParty.exe --title "Screen Party v0.1.0"
-
-# 또는 수동으로:
-# 1. GitHub 레포지토리 → Releases → Create a new release
-# 2. Tag: v0.1.0
-# 3. Title: Screen Party v0.1.0
-# 4. dist/ScreenParty.exe 파일 업로드
-```
+1. GitHub 레포지토리 → Releases → Create a new release
+2. Tag: v0.1.0 입력 및 생성
+3. Title: Screen Party v0.1.0
+4. dist/ScreenParty.exe 파일 업로드
+5. 릴리즈 노트에 서버 버전 명시 (예: "Server: v0.1.0")
 
 ---
 
