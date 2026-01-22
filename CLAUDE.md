@@ -66,7 +66,7 @@ uv run python client/main.py --server $DEPLOYED_SERVER_URL
 
 ```powershell
 # 1. 가상환경 활성화
-.\.venv-windows\Scripts\activate.ps1
+.\.venv\Scripts\activate.ps1
 
 # 2. 클라이언트 실행
 uv run client

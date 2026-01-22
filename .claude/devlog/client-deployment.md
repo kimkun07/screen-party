@@ -242,7 +242,7 @@ jobs:
 ```powershell
 # Windows PowerShell
 cd D:\Data\Develop\screen-party-mirrored
-.\.venv-windows\Scripts\activate.ps1
+.\.venv\Scripts\activate.ps1
 
 # 패키징
 uv run package-client v0.1.0

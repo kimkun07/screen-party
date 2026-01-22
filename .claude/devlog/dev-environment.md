@@ -22,7 +22,7 @@ WSL2 (Ubuntu 24.04) - 원본 레포지토리
 
 Windows 호스트 (윈도우 앱 테스트)
   └── D:\Data\Develop\screen-party-mirrored (WSL에서 복제된 독립 디렉토리)
-      └── .venv-windows (Python 가상환경)
+      └── .venv (Python 가상환경)
 ```
 
 ### 파일 구조 설명
@@ -226,7 +226,7 @@ curl localhost:9999  # ✅ 성공!
 
 4. **.gitignore 업데이트** ✅
    - `.venv` 추가
-   - `.venv-windows` 추가
+   - `.venv` 추가
    - `.claude/claude-config/` 추가 (인증 정보 제외)
 
 **주요 파일 변경**:
@@ -239,7 +239,7 @@ curl localhost:9999  # ✅ 성공!
   - `.venv` 생성 로직 추가
   - 의존성 자동 설치 추가
 - `.gitignore`:
-  - 가상환경 패턴 추가 (.venv, .venv-windows)
+  - 가상환경 패턴 추가 (.venv, .venv)
   - Claude 인증 디렉토리 추가 (.claude/claude-config/)
 
 **테스트 필요**:
@@ -261,13 +261,13 @@ curl localhost:9999  # ✅ 성공!
 
 1. **Windows 호스트에서 가상환경 활성화** ✅ 성공
    ```powershell
-   D:\Data\Develop\screen-party-mirrored> .\.venv-windows\Scripts\Activate.ps1
+   D:\Data\Develop\screen-party-mirrored> .\.venv\Scripts\Activate.ps1
    ```
    - Windows에서 직접 venv 사용 가능 확인
 
 2. **WSL 경로에서 가상환경 활성화** ❌ 실패
    ```powershell
-   \\wsl.localhost\Ubuntu-24.04\home\simelvia\Develop-WSL\screen-party> .\.venv-windows\Scripts\Activate.ps1
+   \\wsl.localhost\Ubuntu-24.04\home\simelvia\Develop-WSL\screen-party> .\.venv\Scripts\Activate.ps1
    ```
    - WSL 파일시스템을 Windows에서 접근하는 경로에서 실패
 
@@ -286,7 +286,7 @@ curl localhost:9999  # ✅ 성공!
 
 2. **파일 접근 문제**:
    - Windows에서 WSL 파일시스템 접근 시 성능 및 권한 문제 가능성
-   - .venv-windows가 WSL 경로에서 작동하지 않음
+   - .venv가 WSL 경로에서 작동하지 않음
 
 **파일 구조 확인**:
 - ✅ 원본 레포지토리: `/home/simelvia/Develop-WSL/screen-party` (WSL)
@@ -301,14 +301,14 @@ curl localhost:9999  # ✅ 성공!
 
 2. **symlink 제약사항**:
    - Windows에서 symlink 접근 시 성능 이슈 가능성
-   - .venv-windows가 symlink 경로에서 정상 작동하는지 확인 필요
+   - .venv가 symlink 경로에서 정상 작동하는지 확인 필요
    - 일부 도구가 symlink를 정상적으로 처리하지 못할 수 있음
 
 **다음 단계**:
 
 1. Docker Desktop WSL2 통합 상태 확인
 2. devcontainer를 WSL 파일시스템에서만 사용하도록 제한
-3. Windows symlink에서 .venv-windows 정상 작동 확인
+3. Windows symlink에서 .venv 정상 작동 확인
 
 **블로커**:
 - Docker 경로 혼선 문제 해결 필요
@@ -330,14 +330,14 @@ curl localhost:9999  # ✅ 성공!
    - watchexec + rsync 조합으로 실시간 동기화
    - 프로젝트 루트 자동 감지
    - Windows 대상 경로를 인자 또는 환경 변수로 받기
-   - 제외 패턴 명시적 지정 (`.venv`, `.venv-windows`, `__pycache__` 등)
+   - 제외 패턴 명시적 지정 (`.venv`, `.venv`, `__pycache__` 등)
    - 에러 처리 및 사용자 안내 메시지 추가
 
 2. **README.md 업데이트** ✅
    - "3단계: Windows에서 프로젝트 심볼릭 링크 생성" → "3단계: WSL → Windows 실시간 동기화 설정"
    - mklink 설명 제거, start_mirror.sh 사용법 추가
    - Windows 클라이언트 실행 방법 간소화:
-     - 절대 경로 → 상대 경로 (`.\.venv-windows\Scripts\activate.ps1`)
+     - 절대 경로 → 상대 경로 (`.\.venv\Scripts\activate.ps1`)
      - `--active` 옵션 제거 (불필요)
      - `uv` 명령어만으로 실행 가능
    - 배포된 서버 연결 PowerShell 스크립트 개선
@@ -373,7 +373,7 @@ curl localhost:9999  # ✅ 성공!
 **Windows (테스트)**:
 ```powershell
 # 1. 가상환경 활성화 (상대 경로)
-.\.venv-windows\Scripts\activate.ps1
+.\.venv\Scripts\activate.ps1
 
 # 2. 클라이언트 실행 (상대 경로)
 uv run client
@@ -410,7 +410,7 @@ uv run client
 >
 > **Windows 테스트 환경**:
 > - ✅ 동기화 스크립트 실행 필수: `./scripts/start_mirror.sh /mnt/d/Data/Develop/screen-party-mirrored`
-> - ✅ Windows에서 상대 경로 사용 가능 (`.\.venv-windows\Scripts\activate.ps1`)
+> - ✅ Windows에서 상대 경로 사용 가능 (`.\.venv\Scripts\activate.ps1`)
 > - ✅ `--active` 옵션 불필요 (`uv run client`만으로 실행)
 >
 > **주의사항**:
