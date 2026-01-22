@@ -115,3 +115,26 @@ class DrawingHandler:
                 alpha=alpha,
             )
             asyncio.create_task(self._send_color_change(msg.to_dict()))
+
+    def on_hide_my_drawings_changed(self, hide: bool):
+        """본인 그림 숨김 옵션 변경 시 호출
+
+        Args:
+            hide: True이면 본인 그림 숨김, False이면 표시
+        """
+        # State 업데이트
+        self.window.state.set_hide_my_drawings(hide)
+
+        # Canvas에 설정 전달
+        self.window.canvas_manager.main_canvas.set_hide_my_drawings(hide)
+
+        # 오버레이 캔버스에도 적용 (생성되어 있는 경우)
+        if self.window.state.overlay_window:
+            overlay_canvas = self.window.state.overlay_window.get_canvas()
+            overlay_canvas.set_hide_my_drawings(hide)
+
+        # 로깅
+        if hide:
+            logger.info("Hide my drawings enabled")
+        else:
+            logger.info("Hide my drawings disabled")

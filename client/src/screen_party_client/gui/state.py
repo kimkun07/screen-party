@@ -41,6 +41,7 @@ class AppState:
     overlay_created: bool = False
     resize_mode_active: bool = False
     drawing_mode_active: bool = False
+    hide_my_drawings: bool = False
 
     # Observers (callbacks when state changes)
     _observers: List[Callable[[], None]] = field(default_factory=list, repr=False)
@@ -215,6 +216,15 @@ class AppState:
         self.current_alpha = max(0.0, min(1.0, alpha))
         if self.user_id:
             self.update_participant_alpha(self.user_id, alpha)
+
+    def set_hide_my_drawings(self, hide: bool):
+        """Set hide my drawings state
+
+        Args:
+            hide: True to hide user's own drawings
+        """
+        self.hide_my_drawings = hide
+        self.notify_observers()
 
     # === UI State ===
 

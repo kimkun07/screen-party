@@ -77,6 +77,9 @@ class DrawingCanvas(QWidget):
         self.pen_width = pen_width
         self.pen_alpha = pen_alpha
 
+        # 본인 그림 숨김 설정
+        self.hide_my_drawings = False
+
         # 자신의 드로잉
         self.my_fitter = IncrementalFitter(
             trigger_count=trigger_count,
@@ -250,6 +253,10 @@ class DrawingCanvas(QWidget):
 
         # 1. 다른 사용자의 드로잉 렌더링
         for line_id, line_data in self.remote_lines.items():
+            # 본인 그림 숨김 옵션이 활성화되어 있고, 이 라인이 본인 것이면 스킵
+            if self.hide_my_drawings and line_data.user_id == self.user_id:
+                continue
+
             # 알파값 적용
             color = QColor(line_data.color)
             color.setAlphaF(line_data.alpha)
@@ -267,25 +274,26 @@ class DrawingCanvas(QWidget):
             if not line_data.is_complete and len(line_data.current_raw_points) >= 2:
                 self._draw_raw_points(painter, line_data.current_raw_points)
 
-        # 2. 내 드로잉 렌더링
-        if self.my_fitter.is_drawing or len(self.my_fitter.finalized_segments) > 0:
-            # user_colors에서 내 색상 참조 (색상 변경 시 즉시 반영됨)
-            my_color = self.user_colors.get(self.user_id, self.pen_color)
-            # None 체크 (만약 user_colors와 pen_color 모두 None이면 기본값 사용)
-            if my_color is None:
-                my_color = _get_default_pen_color()
-            pen = QPen(my_color, self.pen_width)
-            pen.setCapStyle(Qt.PenCapStyle.RoundCap)
-            pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
-            painter.setPen(pen)
+        # 2. 내 드로잉 렌더링 (본인 그림 숨김 옵션이 비활성화되어 있을 때만)
+        if not self.hide_my_drawings:
+            if self.my_fitter.is_drawing or len(self.my_fitter.finalized_segments) > 0:
+                # user_colors에서 내 색상 참조 (색상 변경 시 즉시 반영됨)
+                my_color = self.user_colors.get(self.user_id, self.pen_color)
+                # None 체크 (만약 user_colors와 pen_color 모두 None이면 기본값 사용)
+                if my_color is None:
+                    my_color = _get_default_pen_color()
+                pen = QPen(my_color, self.pen_width)
+                pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+                pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+                painter.setPen(pen)
 
-            # finalized_segments: 베지어 곡선
-            for segment in self.my_fitter.finalized_segments:
-                self._draw_bezier_segment(painter, segment)
+                # finalized_segments: 베지어 곡선
+                for segment in self.my_fitter.finalized_segments:
+                    self._draw_bezier_segment(painter, segment)
 
-            # current_raw_points: 직선
-            if len(self.my_fitter.raw_buffer) >= 2:
-                self._draw_raw_points(painter, self.my_fitter.raw_buffer)
+                # current_raw_points: 직선
+                if len(self.my_fitter.raw_buffer) >= 2:
+                    self._draw_raw_points(painter, self.my_fitter.raw_buffer)
 
     def _draw_bezier_segment(self, painter: QPainter, segment: BezierSegment):
         """베지어 세그먼트를 매끄러운 곡선으로 렌더링"""
@@ -453,6 +461,15 @@ class DrawingCanvas(QWidget):
         """펜 초기 투명도 변경 (0.0 ~ 1.0, 신규 곡선에만 적용)"""
         self.pen_alpha = max(0.0, min(1.0, alpha))
         self.update()
+
+    def set_hide_my_drawings(self, hide: bool):
+        """본인 그림 숨김 설정
+
+        Args:
+            hide: True이면 본인 그림 숨김, False이면 표시
+        """
+        self.hide_my_drawings = hide
+        self.update()  # 화면 갱신
 
     # === 수신 메시지 처리 ===
 

@@ -36,6 +36,9 @@ class OverlayManager:
             canvas = overlay_window.get_canvas()
             self.window.canvas_manager.set_overlay_canvas(canvas)
 
+            # 현재 상태 적용
+            canvas.set_hide_my_drawings(self.window.state.hide_my_drawings)
+
             # DrawingCanvas 시그널 연결
             self.window.drawing_handler._connect_drawing_signals(canvas)
 

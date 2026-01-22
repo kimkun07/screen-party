@@ -228,6 +228,9 @@ class UIBuilder:
         # Alpha 슬라이더
         self._create_alpha_slider()
 
+        # 본인 그림 숨김 체크박스
+        self._create_hide_my_drawings_checkbox()
+
         # 그림 모두 지우기 버튼
         self.window.clear_drawings_button = QPushButton("그림 모두 지우기")
         self.window.clear_drawings_button.setMinimumHeight(40)
@@ -329,6 +332,19 @@ class UIBuilder:
             lambda value: self.window.drawing_handler.on_alpha_changed(value, alpha_label)
         )
         self.window.overlay_group_layout.addWidget(self.window.alpha_slider)
+
+    def _create_hide_my_drawings_checkbox(self):
+        """본인 그림 숨김 체크박스 생성"""
+        from PyQt6.QtWidgets import QCheckBox
+
+        self.window.hide_my_drawings_checkbox = QCheckBox("내가 그린 그림 숨기기")
+        self.window.hide_my_drawings_checkbox.setChecked(False)
+        self.window.hide_my_drawings_checkbox.stateChanged.connect(
+            lambda state: self.window.drawing_handler.on_hide_my_drawings_changed(
+                state == Qt.CheckState.Checked.value
+            )
+        )
+        self.window.overlay_group_layout.addWidget(self.window.hide_my_drawings_checkbox)
 
     def _create_participants_group(self, layout: QVBoxLayout):
         """참여자 그룹 생성"""
